@@ -8,6 +8,7 @@ services:
       - "${BACKEND_PORT}:8000"
     volumes:
       - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       - postgres
     environment:
@@ -16,6 +17,23 @@ services:
       DATABASE_NAME: ${POSTGRES_DB}
       DATABASE_USER: ${POSTGRES_USER}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+
+  frontend:
+      build:
+        context: ./frontend
+        dockerfile: Dockerfile
+      container_name: priorizai_frontend
+      ports:
+        - "3000:3000"
+      volumes:
+        - ./frontend:/app
+        - /app/node_modules
+        - /app/.next
+      environment:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+        WATCHPACK_POLLING: "true"
+      depends_on:
+        - backend
 
   postgres:
     image: postgres:16
@@ -28,18 +46,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: priorizai_frontend
-    ports:
-      - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
-    depends_on:
-      - backend
 
 volumes:
   postgres_data:

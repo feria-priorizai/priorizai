@@ -79,3 +79,14 @@ docker compose down -v
 Backend: http://localhost:8000 
 Swagger: http://localhost:8000/docs 
 PostgreSQL: localhost:5432
+
+
+## Levantar Jenkins
+
+```powershell
+docker run -d `
+  --name jenkins `
+  -p 8080:8080 `
+  -p 50000:50000 `
+  -v jenkins_home:/var/jenkins_home `
+  jenkins/jenkins:lts

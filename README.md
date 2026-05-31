@@ -81,12 +81,19 @@ Swagger: http://localhost:8000/docs
 PostgreSQL: localhost:5432
 
 
-## Levantar Jenkins
+## Jenkins
 
-```powershell
-docker run -d `
-  --name jenkins `
-  -p 8080:8080 `
-  -p 50000:50000 `
-  -v jenkins_home:/var/jenkins_home `
-  jenkins/jenkins:lts
+Se configuró Jenkins ejecutándose en Docker para automatizar la integración continua del proyecto.
+
+Validaciones ejecutadas automáticamente:
+
+- Ruff
+- Black
+- Mypy
+- Pytest
+- Construcción de imagen Docker del backend
+
+Para levantar Jenkins localmente:
+
+```bash
+docker compose -f docker-compose.jenkins.yml up --build -d

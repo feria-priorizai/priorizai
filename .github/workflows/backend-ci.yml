@@ -1,0 +1,33 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+  push:
+    branches:
+      - develop
+
+jobs:
+  backend-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t priorizai-backend ./backend
+
+      - name: Ruff
+        run: docker run --rm priorizai-backend ruff check .
+
+      - name: Black
+        run: docker run --rm priorizai-backend black --check .
+
+      - name: Mypy
+        run: docker run --rm priorizai-backend mypy .
+
+      - name: Pytest
+        run: docker run --rm priorizai-backend pytest

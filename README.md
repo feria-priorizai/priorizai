@@ -79,3 +79,21 @@ docker compose down -v
 Backend: http://localhost:8000 
 Swagger: http://localhost:8000/docs 
 PostgreSQL: localhost:5432
+
+
+## Jenkins
+
+Se configuró Jenkins ejecutándose en Docker para automatizar la integración continua del proyecto.
+
+Validaciones ejecutadas automáticamente:
+
+- Ruff
+- Black
+- Mypy
+- Pytest
+- Construcción de imagen Docker del backend
+
+Para levantar Jenkins localmente:
+
+```bash
+docker compose -f docker-compose.jenkins.yml up --build -d

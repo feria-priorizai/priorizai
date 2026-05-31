@@ -1,4 +1,4 @@
-name: Backend CI
+name: CI
 
 on:
   pull_request:
@@ -31,3 +31,6 @@ jobs:
 
       - name: Pytest
         run: docker run --rm priorizai-backend pytest
+
+      - name: Build frontend image
+        run: docker build -t priorizai-frontend ./frontend

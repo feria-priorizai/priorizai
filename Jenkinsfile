@@ -31,5 +31,11 @@ pipeline {
                 sh 'docker run --rm priorizai-backend pytest'
             }
         }
+
+        stage('Build frontend image') {
+            steps {
+                sh 'docker build -t priorizai-frontend ./frontend'
+            }
+        }
     }
 }

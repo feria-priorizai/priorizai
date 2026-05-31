@@ -2,56 +2,33 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout') {
+        stage('Build backend image') {
             steps {
-                checkout scm
-            }
-        }
-
-        stage('Install dependencies') {
-            steps {
-                dir('backend') {
-                    sh 'python -m pip install --upgrade pip'
-                    sh 'pip install -r requirements.txt'
-                }
+                sh 'docker build -t priorizai-backend ./backend'
             }
         }
 
         stage('Ruff') {
             steps {
-                dir('backend') {
-                    sh 'ruff check .'
-                }
+                sh 'docker run --rm priorizai-backend ruff check .'
             }
         }
 
         stage('Black') {
             steps {
-                dir('backend') {
-                    sh 'black --check .'
-                }
+                sh 'docker run --rm priorizai-backend black --check .'
             }
         }
 
         stage('Mypy') {
             steps {
-                dir('backend') {
-                    sh 'mypy .'
-                }
+                sh 'docker run --rm priorizai-backend mypy .'
             }
         }
 
         stage('Pytest') {
             steps {
-                dir('backend') {
-                    sh 'pytest'
-                }
-            }
-        }
-
-        stage('Docker build') {
-            steps {
-                sh 'docker build -t priorizai-backend ./backend'
+                sh 'docker run --rm priorizai-backend pytest'
             }
         }
     }

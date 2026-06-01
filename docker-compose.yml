@@ -17,6 +17,7 @@ services:
       DATABASE_NAME: ${POSTGRES_DB}
       DATABASE_USER: ${POSTGRES_USER}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
 
   frontend:
       build:

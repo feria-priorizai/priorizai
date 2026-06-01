@@ -37,5 +37,17 @@ pipeline {
                 sh 'docker build -t priorizai-frontend ./frontend'
             }
         }
+
+        stage('Frontend lint') {
+            steps {
+                sh 'docker run --rm priorizai-frontend npm run lint'
+            }
+        }
+
+        stage('Frontend build') {
+            steps {
+                sh 'docker run --rm priorizai-frontend npm run build'
+            }
+        }
     }
 }

@@ -34,3 +34,9 @@ jobs:
 
       - name: Build frontend image
         run: docker build -t priorizai-frontend ./frontend
+
+      - name: Frontend lint
+        run: docker run --rm priorizai-frontend npm run lint
+
+      - name: Frontend build
+        run: docker run --rm priorizai-frontend npm run build

@@ -2,6 +2,9 @@
 line-length = 88
 target-version = "py313"
 
+[tool.ruff.lint]
+extend-select = ["N", "B", "I", "UP"]
+
 [tool.black]
 line-length = 88
 target-version = ["py313"]
@@ -10,8 +13,13 @@ target-version = ["py313"]
 python_version = "3.13"
 strict = false
 ignore_missing_imports = true
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 pythonpath = ["."]
+addopts = "-ra"

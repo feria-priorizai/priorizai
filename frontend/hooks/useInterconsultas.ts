@@ -69,8 +69,30 @@ export function useInterconsultas(): UseInterconsultasReturn {
   }, []);
 
   useEffect(() => {
-    cargar();
-  }, [cargar]);
+    let activo = true;
+
+    obtenerInterconsultas()
+      .then((data) => {
+        if (activo) {
+          setTodasLasInterconsultas(data);
+          setError(null);
+        }
+      })
+      .catch(() => {
+        if (activo) {
+          setError("Error al cargar las interconsultas");
+        }
+      })
+      .finally(() => {
+        if (activo) {
+          setCargando(false);
+        }
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   /** Aplica los filtros activos sobre la lista completa */
   const interconsultasFiltradas = todasLasInterconsultas.filter((ic) => {
@@ -131,11 +153,11 @@ export function useInterconsultas(): UseInterconsultasReturn {
 /** Hook para obtener una interconsulta individual por ID */
 export function useInterconsultaDetalle(id: string) {
   const [interconsulta, setInterconsulta] = useState<Interconsulta | null>(null);
-  const [cargando, setCargando] = useState(true);
+  const [estadoCarga, setEstadoCarga] = useState({ id, cargando: true });
   const [error, setError] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
-    setCargando(true);
+    setEstadoCarga({ id, cargando: true });
     setError(null);
     try {
       const data = await obtenerInterconsultaPorId(id);
@@ -144,13 +166,35 @@ export function useInterconsultaDetalle(id: string) {
     } catch {
       setError("Error al cargar la interconsulta");
     } finally {
-      setCargando(false);
+      setEstadoCarga({ id, cargando: false });
     }
   }, [id]);
 
   useEffect(() => {
-    cargar();
-  }, [cargar]);
+    let activo = true;
+
+    obtenerInterconsultaPorId(id)
+      .then((data) => {
+        if (activo) {
+          setInterconsulta(data);
+          setError(data ? null : "Interconsulta no encontrada");
+        }
+      })
+      .catch(() => {
+        if (activo) {
+          setError("Error al cargar la interconsulta");
+        }
+      })
+      .finally(() => {
+        if (activo) {
+          setEstadoCarga({ id, cargando: false });
+        }
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [id]);
 
   /** Actualiza la prioridad y refresca el estado local */
   const cambiarPrioridad = async (
@@ -171,6 +215,8 @@ export function useInterconsultaDetalle(id: string) {
       return false;
     }
   };
+
+  const cargando = estadoCarga.id !== id || estadoCarga.cargando;
 
   return { interconsulta, cargando, error, cambiarPrioridad, recargar: cargar };
 }

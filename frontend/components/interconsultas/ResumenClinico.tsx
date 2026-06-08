@@ -23,16 +23,27 @@ interface ResumenClinicoProps {
 }
 
 export default function ResumenClinico({ pacienteId }: ResumenClinicoProps) {
-  const [resumen, setResumen] = useState<ResumenClinicoPaciente | null>(null);
-  const [cargando, setCargando] = useState(true);
+  const [resultado, setResultado] = useState<{
+    pacienteId: string;
+    resumen: ResumenClinicoPaciente | null;
+  } | null>(null);
 
   useEffect(() => {
-    setCargando(true);
+    let activo = true;
+
     obtenerResumenClinico(pacienteId).then((data) => {
-      setResumen(data);
-      setCargando(false);
+      if (activo) {
+        setResultado({ pacienteId, resumen: data });
+      }
     });
+
+    return () => {
+      activo = false;
+    };
   }, [pacienteId]);
+
+  const cargando = resultado?.pacienteId !== pacienteId;
+  const resumen = resultado?.resumen ?? null;
 
   if (cargando) {
     return (

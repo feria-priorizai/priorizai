@@ -3,12 +3,14 @@ import io
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
 from app.core.database import SessionLocal, engine
-from sqlalchemy import text
-from app.models import Base, InterconsultaJSON
+from app.models import Base
+
+UPLOAD_CSV_FILE = File(...)
 
 app = FastAPI()
 
@@ -34,9 +36,10 @@ def health() -> dict[str, str]:
 
 
 @app.post("/upload-csv")
-async def upload_csv(file: UploadFile = File(...)) -> dict[str, int]:
-    allowed_types = {"text/csv", "application/vnd.ms-excel", "text/plain"}
-    if not (file.content_type in allowed_types or (file.filename or "").lower().endswith(".csv")):
+async def upload_csv(file: UploadFile = UPLOAD_CSV_FILE) -> dict[str, int]:
+    allowed_types = {"text/csv", "application/vnd.ms-excel", "application/csv"}
+    filename = (file.filename or "").lower()
+    if not (file.content_type in allowed_types or filename.endswith(".csv")):
         raise HTTPException(
             status_code=400,
             detail="El archivo debe ser un CSV válido",
@@ -49,7 +52,7 @@ async def upload_csv(file: UploadFile = File(...)) -> dict[str, int]:
         raise HTTPException(
             status_code=400,
             detail="El CSV debe estar codificado en UTF-8",
-        )
+        ) from None
 
     sample = texto[:4096]
     try:
@@ -67,7 +70,7 @@ async def upload_csv(file: UploadFile = File(...)) -> dict[str, int]:
         raise HTTPException(
             status_code=400,
             detail=f"Error al parsear el CSV: {e}",
-        )
+        ) from e
 
     if not reader_rows:
         raise HTTPException(
@@ -132,17 +135,21 @@ async def upload_csv(file: UploadFile = File(...)) -> dict[str, int]:
 
     session = SessionLocal()
     try:
-        filas_json = []
+        filas_json: list[dict[str, object]] = []
         for idx, fila in enumerate(filas, start=1):
             # Normalizar claves y valores: quitar BOM, NBSP y espacios extra
-            datos = {}
+            datos: dict[str, object] = {}
             for clave, valor in fila.items():
                 if clave is None:
                     continue
-                clave_norm = clave.replace("\ufeff", "").replace("\xa0", " ").strip().upper()
-                valor_norm = (valor or "")
+                clave_norm = (
+                    clave.replace("\ufeff", "").replace("\xa0", " ").strip().upper()
+                )
+                valor_norm = valor or ""
                 if isinstance(valor_norm, str):
-                    valor_norm = valor_norm.replace("\ufeff", "").replace("\xa0", " ").strip()
+                    valor_norm = (
+                        valor_norm.replace("\ufeff", "").replace("\xa0", " ").strip()
+                    )
                 datos[clave_norm] = valor_norm
 
             # Validar y convertir EDAD con mensajes útiles
@@ -165,40 +172,40 @@ async def upload_csv(file: UploadFile = File(...)) -> dict[str, int]:
                         f"El campo EDAD debe ser un número entero en la fila {idx}. "
                         f"Valor recibido: '{raw_edad}'"
                     ),
-                )
+                ) from None
             filas_json.append(datos)
 
-            # Insert each parsed fila into the table, populating existing
-            # columns. Do NOT store the JSON blob — user requested column storage.
-            insert_sql = text(
-                """
-                INSERT INTO interconsultas
-                ("ESPEC_ORIGEN", "EDAD", "SEXO", "ESPEC_DESTINO", "PRIORIDAD",
-                 "HISTORIA_CLINICA", "FUNDAMENTOS_DIAGNOSTICO", "EXAMENES_COMPLEMENTARIOS",
-                 "MOTIVO_INTERCONSULTA")
-                VALUES
-                (:ESPEC_ORIGEN, :EDAD, :SEXO, :ESPEC_DESTINO, :PRIORIDAD,
-                 :HISTORIA_CLINICA, :FUNDAMENTOS_DIAGNOSTICO, :EXAMENES_COMPLEMENTARIOS,
-                 :MOTIVO_INTERCONSULTA)
-                """
-            )
+        # Insert each parsed fila into the table, populating existing columns.
+        # Do NOT store the JSON blob — user requested column storage.
+        insert_sql = text("""
+            INSERT INTO interconsultas
+            ("ESPEC_ORIGEN", "EDAD", "SEXO", "ESPEC_DESTINO", "PRIORIDAD",
+             "HISTORIA_CLINICA", "FUNDAMENTOS_DIAGNOSTICO", "EXAMENES_COMPLEMENTARIOS",
+             "MOTIVO_INTERCONSULTA")
+            VALUES
+            (:ESPEC_ORIGEN, :EDAD, :SEXO, :ESPEC_DESTINO, :PRIORIDAD,
+             :HISTORIA_CLINICA, :FUNDAMENTOS_DIAGNOSTICO, :EXAMENES_COMPLEMENTARIOS,
+             :MOTIVO_INTERCONSULTA)
+            """)
 
-            for fila in filas_json:
-                params = {
-                    "ESPEC_ORIGEN": fila.get("ESPEC_ORIGEN", ""),
-                    "EDAD": fila.get("EDAD"),
-                    "SEXO": fila.get("SEXO", ""),
-                    "ESPEC_DESTINO": fila.get("ESPEC_DESTINO", ""),
-                    "PRIORIDAD": fila.get("PRIORIDAD", ""),
-                    "HISTORIA_CLINICA": fila.get("HISTORIA_CLINICA", ""),
-                    "FUNDAMENTOS_DIAGNOSTICO": fila.get("FUNDAMENTOS_DIAGNOSTICO", ""),
-                    "EXAMENES_COMPLEMENTARIOS": fila.get("EXAMENES_COMPLEMENTARIOS", ""),
-                    "MOTIVO_INTERCONSULTA": fila.get("MOTIVO_INTERCONSULTA", ""),
-                }
-                session.execute(insert_sql, params)
+        for fila_json in filas_json:
+            params: dict[str, object | None] = {
+                "ESPEC_ORIGEN": fila_json.get("ESPEC_ORIGEN", ""),
+                "EDAD": fila_json.get("EDAD"),
+                "SEXO": fila_json.get("SEXO", ""),
+                "ESPEC_DESTINO": fila_json.get("ESPEC_DESTINO", ""),
+                "PRIORIDAD": fila_json.get("PRIORIDAD", ""),
+                "HISTORIA_CLINICA": fila_json.get("HISTORIA_CLINICA", ""),
+                "FUNDAMENTOS_DIAGNOSTICO": fila_json.get("FUNDAMENTOS_DIAGNOSTICO", ""),
+                "EXAMENES_COMPLEMENTARIOS": fila_json.get(
+                    "EXAMENES_COMPLEMENTARIOS", ""
+                ),
+                "MOTIVO_INTERCONSULTA": fila_json.get("MOTIVO_INTERCONSULTA", ""),
+            }
+            session.execute(insert_sql, params)
 
-            session.commit()
-            return {"inserted": len(filas_json), "stored": len(filas_json)}
+        session.commit()
+        return {"inserted": len(filas_json), "stored": len(filas_json)}
     except HTTPException:
         session.rollback()
         raise
@@ -207,6 +214,6 @@ async def upload_csv(file: UploadFile = File(...)) -> dict[str, int]:
         raise HTTPException(
             status_code=500,
             detail=f"Error en la base de datos: {error}",
-        )
+        ) from error
     finally:
         session.close()

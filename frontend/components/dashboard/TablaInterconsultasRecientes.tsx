@@ -107,9 +107,15 @@ export default function TablaInterconsultasRecientes({
                   <BadgeEstado estado={ic.estado} />
                 </td>
                 <td className="px-5 py-3">
-                  <span className="text-sm font-semibold">
-                    {ic.priorizacionIA.confianza}%
-                  </span>
+                  {ic.priorizacionIA.priorizada ?? true ? (
+                    <span className="text-sm font-semibold">
+                      {ic.priorizacionIA.confianza}%
+                    </span>
+                  ) : (
+                    <span className="text-sm text-[var(--text-muted)]">
+                      Sin priorizar
+                    </span>
+                  )}
                 </td>
                 <td className="px-5 py-3 text-[var(--text-secondary)]">
                   {formatearFecha(ic.fechaIngreso)}

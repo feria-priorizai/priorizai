@@ -5,7 +5,6 @@ __pycache__/
 
 # C extensions
 *.so
-
 # Distribution / packaging
 .Python
 build/
@@ -219,3 +218,9 @@ __marimo__/
 
 # Environment
 .env
+
+# Data (datasets, muestras y predicciones — no versionar)
+/data/
+
+# Models
+/models/

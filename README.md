@@ -86,3 +86,25 @@ Detener Jenkins:
 ```bash
 docker compose -f docker-compose.jenkins.yml down
 ```
+
+## Priorización de interconsultas (modelo RigoBERTa)
+
+El script [`scripts/predict_interconsultas.py`](scripts/predict_interconsultas.py)
+predice la prioridad (alta / media / baja) de cada interconsulta con el modelo
+RigoBERTa fine-tuneado.
+
+Requiere `pandas`, `torch` y `transformers` (entorno conda `HealthPytorch`) y la
+carpeta `models/` con el modelo y el tokenizer. Configurá las rutas en las
+variables del inicio del script (`MODEL_PATH`, `INPUT_PATH`, `OUTPUT_PATH`) y
+ejecutá:
+
+```bash
+python scripts/predict_interconsultas.py
+```
+
+El CSV de salida agrega `texto` (las columnas concatenadas), `prob_baja_%`,
+`prob_media_%`, `prob_alta_%` y `prediccion`.
+
+> **Nota:** el modelo trae labels genéricos (`LABEL_0/1/2`); el script los nombra
+> con `FALLBACK_ID2LABEL`. Verificá que ese orden coincida con el `LabelEncoder`
+> del entrenamiento, sino las probabilidades quedan mal asignadas.

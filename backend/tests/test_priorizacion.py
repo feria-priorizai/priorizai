@@ -116,3 +116,58 @@ def test_priorizar_interconsultas_retorna_404_si_falta_id() -> None:
 
     assert response.status_code == 404
     assert response.json()["detail"] == {"interconsultas_no_encontradas": ["ic-x"]}
+
+
+def test_priorizar_interconsultas_pendientes_respeta_limit() -> None:
+    db = TestingSessionLocal()
+    for index in range(3):
+        db.add(
+            Interconsulta(
+                id=f"ic-p-{index}",
+                espec_origen="Medicina General",
+                edad=50 + index,
+                sexo="F",
+                espec_destino="Cardiologia",
+                prioridad_original_csv="Media",
+                historia_clinica="Antecedentes clinicos",
+                fundamentos_diagnostico="Fundamentos",
+                examenes_complementarios="",
+                motivo_interconsulta="Control",
+            )
+        )
+    db.add(
+        Interconsulta(
+            id="ic-ya-priorizada",
+            espec_origen="Medicina General",
+            edad=70,
+            sexo="M",
+            espec_destino="Neurologia",
+            prioridad_original_csv="Alta",
+            historia_clinica="Antecedentes",
+            fundamentos_diagnostico="Fundamentos",
+            examenes_complementarios="",
+            motivo_interconsulta="Control",
+            prioridad_sugerida_modelo="media",
+            confianza_modelo=80.0,
+        )
+    )
+    db.commit()
+    db.close()
+
+    response = client.post("/api/interconsultas/priorizar-pendientes?limit=2")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 2
+
+    db = TestingSessionLocal()
+    priorizadas = (
+        db.query(Interconsulta)
+        .filter(Interconsulta.prioridad_sugerida_modelo == "alta")
+        .count()
+    )
+    ya_priorizada = db.get(Interconsulta, "ic-ya-priorizada")
+    assert priorizadas == 2
+    assert ya_priorizada is not None
+    assert ya_priorizada.prioridad_sugerida_modelo == "media"
+    db.close()

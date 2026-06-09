@@ -18,6 +18,7 @@ import Link from "next/link";
 import { useInterconsultaDetalle } from "@/hooks/useInterconsultas";
 import DetalleInterconsulta from "@/components/interconsultas/DetalleInterconsulta";
 import TarjetaPriorizacionIA from "@/components/interconsultas/TarjetaPriorizacionIA";
+import BotonPriorizarIA from "@/components/interconsultas/BotonPriorizarIA";
 import FormularioModificarPrioridad from "@/components/interconsultas/FormularioModificarPrioridad";
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
@@ -28,7 +29,7 @@ interface PageProps {
 
 export default function InterconsultaDetallePage({ params }: PageProps) {
   const { id } = use(params);
-  const { interconsulta, cargando, error, cambiarPrioridad } =
+  const { interconsulta, cargando, error, cambiarPrioridad, priorizarConIA } =
     useInterconsultaDetalle(id);
 
   if (cargando) {
@@ -90,6 +91,11 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
             priorizacion={interconsulta.priorizacionIA}
             prioridadActual={interconsulta.prioridadActual}
             fueModificada={fueModificada}
+          />
+
+          <BotonPriorizarIA
+            priorizada={interconsulta.priorizacionIA.priorizada ?? true}
+            onPriorizar={priorizarConIA}
           />
 
           {/* Formulario para modificar prioridad (HdU02) */}

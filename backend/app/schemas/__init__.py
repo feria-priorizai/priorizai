@@ -1,3 +1,4 @@
+from app.schemas.interconsulta import InterconsultaResponse
 from app.schemas.priorizacion import (
     PriorizarInterconsultasRequest,
     PriorizarInterconsultasResponse,
@@ -7,6 +8,7 @@ from app.schemas.priorizacion import (
 
 __all__ = [
     "ProbabilidadesPrioridad",
+    "InterconsultaResponse",
     "PriorizarInterconsultasRequest",
     "PriorizarInterconsultasResponse",
     "ResultadoPriorizacion",

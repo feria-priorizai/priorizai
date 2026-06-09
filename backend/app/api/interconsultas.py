@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import nullslast, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.interconsulta import Interconsulta
+from app.schemas.interconsulta import InterconsultaResponse
 from app.schemas.priorizacion import (
     PriorizarInterconsultasRequest,
     PriorizarInterconsultasResponse,
@@ -16,6 +17,38 @@ DbSession = Depends(get_db)
 PriorizadorDependency = Depends(get_priorizador)
 
 
+@router.get("", response_model=list[InterconsultaResponse])
+def listar_interconsultas(
+    limit: int = 100,
+    offset: int = 0,
+    db: Session = DbSession,
+) -> list[Interconsulta]:
+    stmt = (
+        select(Interconsulta)
+        .order_by(
+            nullslast(Interconsulta.confianza_modelo.desc()),
+            Interconsulta.created_at.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
+    )
+    return list(db.scalars(stmt).all())
+
+
+@router.get("/{interconsulta_id}", response_model=InterconsultaResponse)
+def obtener_interconsulta(
+    interconsulta_id: str,
+    db: Session = DbSession,
+) -> Interconsulta:
+    interconsulta = db.get(Interconsulta, interconsulta_id)
+    if interconsulta is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interconsulta no encontrada",
+        )
+    return interconsulta
+
+
 @router.post("/priorizar", response_model=PriorizarInterconsultasResponse)
 def priorizar_interconsultas(
     payload: PriorizarInterconsultasRequest,
@@ -23,14 +56,28 @@ def priorizar_interconsultas(
     priorizador: PriorizadorRigoBerta = PriorizadorDependency,
 ) -> PriorizarInterconsultasResponse:
     interconsultas = _buscar_interconsultas(db, payload.ids)
-    try:
-        resultados = priorizador.predecir(interconsultas)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"No se pudo ejecutar el modelo predictivo: {exc}",
-        ) from exc
+    resultados = _predecir_o_503(priorizador, interconsultas)
+    _guardar_resultados(db, interconsultas, resultados)
+    return PriorizarInterconsultasResponse(
+        total=len(resultados),
+        resultados=resultados,
+    )
 
+
+@router.post("/priorizar-pendientes", response_model=PriorizarInterconsultasResponse)
+def priorizar_interconsultas_pendientes(
+    limit: int = Query(default=25, ge=1, le=500),
+    db: Session = DbSession,
+    priorizador: PriorizadorRigoBerta = PriorizadorDependency,
+) -> PriorizarInterconsultasResponse:
+    stmt = (
+        select(Interconsulta)
+        .where(Interconsulta.prioridad_sugerida_modelo.is_(None))
+        .order_by(Interconsulta.created_at.desc())
+        .limit(limit)
+    )
+    interconsultas = list(db.scalars(stmt).all())
+    resultados = _predecir_o_503(priorizador, interconsultas)
     _guardar_resultados(db, interconsultas, resultados)
     return PriorizarInterconsultasResponse(
         total=len(resultados),
@@ -50,6 +97,19 @@ def _buscar_interconsultas(db: Session, ids: list[str]) -> list[Interconsulta]:
             detail={"interconsultas_no_encontradas": faltantes},
         )
     return interconsultas
+
+
+def _predecir_o_503(
+    priorizador: PriorizadorRigoBerta,
+    interconsultas: list[Interconsulta],
+) -> list[ResultadoPriorizacion]:
+    try:
+        return priorizador.predecir(interconsultas)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"No se pudo ejecutar el modelo predictivo: {exc}",
+        ) from exc
 
 
 def _guardar_resultados(

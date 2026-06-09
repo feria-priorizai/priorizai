@@ -14,6 +14,7 @@ import {
   obtenerInterconsultas,
   obtenerInterconsultaPorId,
   modificarPrioridad,
+  priorizarInterconsulta,
 } from "@/services/interconsultas";
 import { usuarioActual } from "@/data/mock";
 
@@ -36,7 +37,7 @@ interface UseInterconsultasReturn {
     nuevaPrioridad: NivelPrioridad,
     motivo: string
   ) => Promise<boolean>;
-  recargar: () => void;
+  recargar: () => Promise<void>;
 }
 
 /** Filtros por defecto al inicializar */
@@ -218,5 +219,24 @@ export function useInterconsultaDetalle(id: string) {
 
   const cargando = estadoCarga.id !== id || estadoCarga.cargando;
 
-  return { interconsulta, cargando, error, cambiarPrioridad, recargar: cargar };
+  const priorizarConIA = async (): Promise<boolean> => {
+    try {
+      const actualizada = await priorizarInterconsulta(id);
+      setInterconsulta(actualizada);
+      setError(null);
+      return true;
+    } catch {
+      setError("Error al ejecutar la priorizacion con IA");
+      return false;
+    }
+  };
+
+  return {
+    interconsulta,
+    cargando,
+    error,
+    cambiarPrioridad,
+    priorizarConIA,
+    recargar: cargar,
+  };
 }

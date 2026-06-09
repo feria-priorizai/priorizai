@@ -32,7 +32,6 @@ const itemsNavegacion: ItemNavegacion[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [archivoCSV, setArchivoCSV] = useState<File | null>(null);
   const [estadoCSV, setEstadoCSV] = useState<string | null>(null);
   const [notificationType, setNotificationType] = useState<"success" | "error" | null>(null);
   const [notificationVisible, setNotificationVisible] = useState(false);
@@ -52,15 +51,14 @@ export default function Sidebar() {
 
     setEstadoCSV(null);
     setNotificationType(null);
-    if (!archivo.name.toLowerCase().endsWith(".csv")) {
-      setArchivoCSV(null);
-      setEstadoCSV("Solo se permiten archivos CSV.");
+    const nombreArchivo = archivo.name.toLowerCase();
+    if (!nombreArchivo.endsWith(".csv") && !nombreArchivo.endsWith(".xlsx")) {
+      setEstadoCSV("Solo se permiten archivos CSV o XLSX.");
       setNotificationType("error");
       setNotificationVisible(true);
       return;
     }
 
-    setArchivoCSV(archivo);
     setSubiendoCSV(true);
 
     try {
@@ -72,9 +70,8 @@ export default function Sidebar() {
       setEstadoCSV(
         error instanceof Error
           ? error.message
-          : "Error al cargar el archivo CSV.",
+          : "Error al cargar el archivo.",
       );
-      setArchivoCSV(null);
       setNotificationType("error");
       setNotificationVisible(true);
     } finally {
@@ -162,13 +159,13 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Carga de CSV desde el sidebar */}
+      {/* Carga de CSV/XLSX desde el sidebar */}
       <div className="border-t border-white/10 px-4 py-4">
         <div className="mb-4">
           <input
             ref={inputCsvRef}
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             className="hidden"
             onChange={manejarSeleccionCSV}
           />
@@ -178,7 +175,7 @@ export default function Sidebar() {
             disabled={subiendoCSV}
             className="flex w-full items-center justify-center rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--sidebar-active)] hover:text-[var(--sidebar-text-active)] disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {subiendoCSV ? "Subiendo CSV..." : "Cargar CSV"}
+            {subiendoCSV ? "Subiendo archivo..." : "Cargar archivo"}
           </button>
           
         </div>

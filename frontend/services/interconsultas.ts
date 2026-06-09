@@ -45,6 +45,9 @@ export async function obtenerResumenClinico(
   return resumenesClinicosMock[pacienteId] ?? null;
 }
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+
 /** Actualiza la prioridad de una interconsulta (HdU02) */
 export async function modificarPrioridad(
   interconsultaId: string,
@@ -78,4 +81,25 @@ export async function modificarPrioridad(
   interconsulta.fechaActualizacion = new Date().toISOString();
 
   return { ...interconsulta };
+}
+
+export async function subirCsvInterconsultas(
+  archivo: File,
+): Promise<{ inserted: number }> {
+  const formData = new FormData();
+  formData.append("file", archivo);
+
+  const respuesta = await fetch(`${API_BASE}/upload-csv`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!respuesta.ok) {
+    const error = await respuesta.json().catch(() => null);
+    throw new Error(
+      error?.detail || "Error al enviar el CSV al backend",
+    );
+  }
+
+  return respuesta.json();
 }

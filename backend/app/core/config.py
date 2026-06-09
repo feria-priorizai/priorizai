@@ -15,6 +15,9 @@ class Settings:
     database_name: str = os.getenv("DATABASE_NAME", "priorizai_db")
     database_user: str = os.getenv("DATABASE_USER", "priorizai_user")
     database_password: str = os.getenv("DATABASE_PASSWORD", "priorizai_password")
+    model_path: str = os.getenv("MODEL_PATH", "/models")
+    model_max_length: int = int(os.getenv("MODEL_MAX_LENGTH", "512"))
+    model_batch_size: int = int(os.getenv("MODEL_BATCH_SIZE", "16"))
 
     @property
     def database_url(self) -> str:

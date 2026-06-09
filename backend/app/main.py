@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.api.interconsultas import router as interconsultas_router
 from app.core.config import settings
 from app.core.database import SessionLocal, engine
 from app.models import Base
@@ -23,6 +24,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(interconsultas_router)
 
 
 @app.get("/")

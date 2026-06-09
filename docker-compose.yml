@@ -4,10 +4,12 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: priorizai_backend
+    gpus: all
     ports:
       - "${BACKEND_PORT}:8000"
     volumes:
       - ./backend:/app
+      - ./:/workspace
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       postgres:
@@ -19,6 +21,7 @@ services:
       DATABASE_USER: ${POSTGRES_USER}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      MODEL_PATH: /workspace/models
 
   frontend:
       build:

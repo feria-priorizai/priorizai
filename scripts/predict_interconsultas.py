@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import sys
 import unicodedata
+from pathlib import Path
 
 import pandas as pd
 import torch
@@ -32,13 +33,14 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 # Ruta de la CARPETA del modelo fine-tuneado. from_pretrained carga desde el
 # directorio (que adentro tiene model.safetensors, config.json y el tokenizer),
 # no desde el archivo .safetensors suelto.
-MODEL_PATH = r"D:\FERIA\priorizai\models"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+MODEL_PATH = PROJECT_ROOT / "models"
 
 # Ruta del CSV de entrada (las interconsultas a priorizar).
-INPUT_PATH = r"D:\FERIA\priorizai\data\muestra_100.csv"
+INPUT_PATH = PROJECT_ROOT / "ic_historicas_new.xlsx - Sheet 1.csv"
 
 # Ruta del CSV de salida (las predicciones con probabilidades).
-OUTPUT_PATH = r"D:\FERIA\priorizai\data\predicciones_100.csv"
+OUTPUT_PATH = PROJECT_ROOT / "data" / "predicciones_ic_historicas.csv"
 
 # Columnas del CSV que se concatenan (en este orden) para formar el texto de
 # entrada del modelo. Son las columnas del dataset de interconsultas.
@@ -68,6 +70,44 @@ FALLBACK_ID2LABEL = {0: "baja", 1: "media", 2: "alta"}
 # ---------------------------------------------------------------------------
 # Utilidades
 # ---------------------------------------------------------------------------
+
+def validate_model_dir(model_path: Path) -> None:
+    """Verifica los archivos minimos antes de cargar Transformers."""
+    if not model_path.exists():
+        sys.exit(f"[error] No existe la carpeta del modelo: {model_path}")
+
+    files = {path.name for path in model_path.iterdir() if path.is_file()}
+    if not files:
+        sys.exit(
+            f"[error] La carpeta del modelo esta vacia: {model_path}\n"
+            "        Copia ahi config.json, pesos del modelo y archivos del tokenizer."
+        )
+
+    required = {"config.json"}
+    missing = sorted(required - files)
+    if missing:
+        sys.exit(
+            f"[error] Faltan archivos del modelo en {model_path}: {missing}"
+        )
+
+    has_weights = bool(
+        {"model.safetensors", "pytorch_model.bin", "tf_model.h5"} & files
+    )
+    if not has_weights:
+        sys.exit(
+            f"[error] No se encontraron pesos del modelo en {model_path}. "
+            "Esperaba model.safetensors o pytorch_model.bin."
+        )
+
+    has_tokenizer = bool(
+        {"tokenizer.json", "tokenizer.model", "spiece.model", "vocab.txt", "vocab.json"}
+        & files
+    )
+    if not has_tokenizer:
+        sys.exit(
+            f"[error] No se encontraron archivos de tokenizer en {model_path}. "
+            "Esperaba tokenizer.json, tokenizer.model, spiece.model, vocab.txt o vocab.json."
+        )
 
 def _normalize(text: str) -> str:
     """minúsculas, sin tildes, sin espacios extra — para comparar nombres de clase."""
@@ -157,30 +197,69 @@ def predict(texts, model, tokenizer, device, max_length, batch_size):
 # ---------------------------------------------------------------------------
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Predicción de prioridad de interconsultas con RigoBERTa.")
-    p.add_argument("--text-columns", nargs="+", default=TEXT_COLUMNS,
-                   help="Columnas a concatenar como texto (por defecto todas las del dataset).")
-    p.add_argument("--max-length", type=int, default=512, help="Longitud máxima de tokens (default 512).")
-    p.add_argument("--batch-size", type=int, default=16, help="Tamaño de batch (default 16).")
-    p.add_argument("--sep", default=",", help="Separador del CSV de entrada (default ',').")
+    p = argparse.ArgumentParser(
+        description="Prediccion de prioridad de interconsultas con RigoBERTa."
+    )
+    p.add_argument(
+        "--model-path",
+        default=str(MODEL_PATH),
+        help="Carpeta del modelo fine-tuneado (default: ./models).",
+    )
+    p.add_argument(
+        "--input-path",
+        default=str(INPUT_PATH),
+        help="CSV de entrada a priorizar.",
+    )
+    p.add_argument(
+        "--output-path",
+        default=str(OUTPUT_PATH),
+        help="CSV de salida con predicciones.",
+    )
+    p.add_argument(
+        "--text-columns",
+        nargs="+",
+        default=TEXT_COLUMNS,
+        help="Columnas a concatenar como texto.",
+    )
+    p.add_argument(
+        "--max-length",
+        type=int,
+        default=512,
+        help="Longitud maxima de tokens (default 512).",
+    )
+    p.add_argument(
+        "--batch-size",
+        type=int,
+        default=16,
+        help="Tamano de batch (default 16).",
+    )
+    p.add_argument("--sep", default=",", help="Separador del CSV de entrada.")
     return p.parse_args()
 
 
 def main():
     args = parse_args()
+    model_path = Path(args.model_path)
+    input_path = Path(args.input_path)
+    output_path = Path(args.output_path)
+
+    validate_model_dir(model_path)
+    if not input_path.exists():
+        sys.exit(f"[error] No existe el CSV de entrada: {input_path}")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[info] Dispositivo: {device}")
 
-    print(f"[info] Cargando modelo desde: {MODEL_PATH}")
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-    model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
+    print(f"[info] Cargando modelo desde: {model_path}")
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    model = AutoModelForSequenceClassification.from_pretrained(model_path)
     model.to(device).eval()
 
     label_names = resolve_label_names(model.config, model.config.num_labels)
 
-    print(f"[info] Leyendo CSV: {INPUT_PATH}")
-    df = pd.read_csv(INPUT_PATH, sep=args.sep)
+    print(f"[info] Leyendo CSV: {input_path}")
+    df = pd.read_csv(input_path, sep=args.sep)
     print(f"[info] {len(df)} filas, {len(df.columns)} columnas.")
 
     texts = build_texts(df, args.text_columns)
@@ -200,8 +279,8 @@ def main():
     pred_idx = probs.argmax(dim=-1).numpy()
     out["prediccion"] = [label_names[i] for i in pred_idx]
 
-    out.to_csv(OUTPUT_PATH, index=False, encoding="utf-8-sig")
-    print(f"[ok] Predicciones escritas en: {OUTPUT_PATH}")
+    out.to_csv(output_path, index=False, encoding="utf-8-sig")
+    print(f"[ok] Predicciones escritas en: {output_path}")
     print(out[["prediccion"] + [f"prob_{c}_%" for c in PRIORITY_ORDER if c in name_to_idx]].head().to_string())
 
 

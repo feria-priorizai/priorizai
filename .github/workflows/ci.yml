@@ -12,6 +12,20 @@ on:
 jobs:
   backend-quality:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: priorizai_user
+          POSTGRES_PASSWORD: priorizai_password
+          POSTGRES_DB: priorizai_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U priorizai_user -d priorizai_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout repository
@@ -30,7 +44,14 @@ jobs:
         run: docker run --rm priorizai-backend mypy .
 
       - name: Pytest
-        run: docker run --rm priorizai-backend pytest
+        run: |
+          docker run --rm --network host \
+            -e DATABASE_HOST=localhost \
+            -e DATABASE_PORT=5432 \
+            -e DATABASE_NAME=priorizai_db \
+            -e DATABASE_USER=priorizai_user \
+            -e DATABASE_PASSWORD=priorizai_password \
+            priorizai-backend pytest
 
       - name: Build frontend image
         run: docker build -t priorizai-frontend ./frontend

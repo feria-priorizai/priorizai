@@ -1,27 +1,9 @@
-/**
- * Lista del historial de modificaciones de prioridad (HdU02).
- *
- * Criterio de aceptación HdU02:
- * "El sistema permite visualizar un registro histórico de
- * modificaciones hechas a la interconsulta."
- */
-
 import type { ModificacionPrioridad } from "@/types";
 import BadgePrioridad from "@/components/ui/BadgePrioridad";
+import { formatearFechaHoraChile } from "@/utils/fechas";
 
 interface HistorialModificacionesProps {
   modificaciones: ModificacionPrioridad[];
-}
-
-/** Formatea fecha ISO a formato legible */
-function formatearFecha(fechaISO: string): string {
-  return new Date(fechaISO).toLocaleDateString("es-CL", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 export default function HistorialModificaciones({
@@ -49,7 +31,7 @@ export default function HistorialModificaciones({
           Historial de modificaciones
         </h3>
         <p className="text-sm text-[var(--text-secondary)]">
-          {modificaciones.length} modificación
+          {modificaciones.length} modificacion
           {modificaciones.length !== 1 ? "es" : ""} registrada
           {modificaciones.length !== 1 ? "s" : ""}
         </p>
@@ -58,25 +40,22 @@ export default function HistorialModificaciones({
       <div className="flex flex-col divide-y divide-[var(--border-light)]">
         {[...modificaciones].reverse().map((mod) => (
           <div key={mod.id} className="flex flex-col gap-3 px-5 py-4">
-            {/* Encabezado: quién y cuándo */}
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-[var(--text-primary)]">
                 {mod.medicoResponsable}
               </span>
               <span className="text-xs text-[var(--text-muted)]">
-                {formatearFecha(mod.fecha)}
+                {formatearFechaHoraChile(mod.fecha)}
               </span>
             </div>
 
-            {/* Cambio de prioridad visualizado */}
             <div className="flex items-center gap-2">
               <BadgePrioridad prioridad={mod.prioridadAnterior} />
-              <span className="text-[var(--text-muted)]">→</span>
+              <span className="text-[var(--text-muted)]">{"->"}</span>
               <BadgePrioridad prioridad={mod.prioridadNueva} />
             </div>
 
-            {/* Motivo */}
-            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+            <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
               {mod.motivo}
             </p>
           </div>

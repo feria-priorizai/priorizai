@@ -3,6 +3,27 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class ModificarPrioridadRequest(BaseModel):
+    prioridad: str
+    motivo: str
+    medico_responsable: str
+
+
+class ModificarEstadoRequest(BaseModel):
+    estado: str
+
+
+class ModificacionPrioridadResponse(BaseModel):
+    id: str
+    prioridad_anterior: str | None
+    prioridad_nueva: str
+    motivo: str
+    medico_responsable: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class InterconsultaResponse(BaseModel):
     id: str
     espec_origen: str
@@ -20,7 +41,9 @@ class InterconsultaResponse(BaseModel):
     prob_media: float | None
     prob_alta: float | None
     prioridad_actual: str | None
+    estado: str
     created_at: datetime
     updated_at: datetime
+    modificaciones: list[ModificacionPrioridadResponse] = []
 
     model_config = {"from_attributes": True}

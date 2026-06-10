@@ -1,44 +1,26 @@
 "use client";
 
-/**
- * Tabla con las interconsultas más recientes del dashboard.
- * Muestra un resumen rápido con nombre, prioridad, estado y fecha.
- * Al hacer clic en una fila, navega al detalle de la interconsulta.
- *
- * Relacionado con HdU05: visualizar carga de trabajo.
- * Relacionado con HdU06: orden por prioridad y fecha (esperado).
- */
-
 import Link from "next/link";
 import type { Interconsulta } from "@/types";
 import BadgePrioridad from "@/components/ui/BadgePrioridad";
 import BadgeEstado from "@/components/ui/BadgeEstado";
+import { formatearFechaHoraChile } from "@/utils/fechas";
 
 interface TablaInterconsultasRecientesProps {
   interconsultas: Interconsulta[];
 }
 
-/** Formatea una fecha ISO a formato legible chileno (dd/mm/aaaa HH:mm) */
-function formatearFecha(fechaISO: string): string {
-  const fecha = new Date(fechaISO);
-  return fecha.toLocaleDateString("es-CL", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export default function TablaInterconsultasRecientes({
   interconsultas,
 }: TablaInterconsultasRecientesProps) {
-  /** Ordena por prioridad (alta > media > baja) y luego por fecha de ingreso */
-  const ordenPrioridad = { alta: 0, media: 1, baja: 2 };
   const ordenadas = [...interconsultas].sort((a, b) => {
     const difPrioridad =
-      ordenPrioridad[a.prioridadActual] - ordenPrioridad[b.prioridadActual];
-    if (difPrioridad !== 0) return difPrioridad;
+      obtenerOrdenPrioridad(a) - obtenerOrdenPrioridad(b);
+
+    if (difPrioridad !== 0) {
+      return difPrioridad;
+    }
+
     return new Date(b.fechaIngreso).getTime() - new Date(a.fechaIngreso).getTime();
   });
 
@@ -64,7 +46,7 @@ export default function TablaInterconsultasRecientes({
                 RUT
               </th>
               <th className="px-5 py-3 font-medium text-[var(--text-secondary)]">
-                Diagnóstico
+                Diagnostico
               </th>
               <th className="px-5 py-3 font-medium text-[var(--text-secondary)]">
                 Prioridad
@@ -101,13 +83,23 @@ export default function TablaInterconsultasRecientes({
                   {ic.diagnostico}
                 </td>
                 <td className="px-5 py-3">
-                  <BadgePrioridad prioridad={ic.prioridadActual} />
+                  {ic.esValidaParaPriorizacion === false ? (
+                    <span className="text-sm text-[var(--text-muted)]">
+                      No aplica
+                    </span>
+                  ) : (
+                    <BadgePrioridad prioridad={ic.prioridadActual} />
+                  )}
                 </td>
                 <td className="px-5 py-3">
                   <BadgeEstado estado={ic.estado} />
                 </td>
                 <td className="px-5 py-3">
-                  {ic.priorizacionIA.priorizada ?? true ? (
+                  {ic.esValidaParaPriorizacion === false ? (
+                    <span className="inline-flex rounded-full border border-[var(--prioridad-media-border)] bg-[var(--prioridad-media-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--prioridad-media)]">
+                      Interconsulta invalida
+                    </span>
+                  ) : ic.priorizacionIA.priorizada ?? true ? (
                     <span className="text-sm font-semibold">
                       {ic.priorizacionIA.confianza}%
                     </span>
@@ -118,7 +110,7 @@ export default function TablaInterconsultasRecientes({
                   )}
                 </td>
                 <td className="px-5 py-3 text-[var(--text-secondary)]">
-                  {formatearFecha(ic.fechaIngreso)}
+                  {formatearFechaHoraChile(ic.fechaIngreso)}
                 </td>
               </tr>
             ))}
@@ -133,4 +125,13 @@ export default function TablaInterconsultasRecientes({
       )}
     </div>
   );
+}
+
+function obtenerOrdenPrioridad(interconsulta: Interconsulta): number {
+  if (interconsulta.esValidaParaPriorizacion === false) {
+    return 99;
+  }
+
+  const ordenPrioridad = { alta: 0, media: 1, baja: 2 };
+  return ordenPrioridad[interconsulta.prioridadActual];
 }

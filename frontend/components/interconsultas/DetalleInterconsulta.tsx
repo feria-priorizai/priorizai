@@ -1,28 +1,12 @@
 "use client";
 
-/**
- * Información general de la interconsulta en la vista de detalle.
- * Muestra datos del paciente, especialidad, diagnóstico, motivo
- * y estado actual de la interconsulta.
- */
-
 import type { Interconsulta } from "@/types";
-import BadgePrioridad from "@/components/ui/BadgePrioridad";
 import BadgeEstado from "@/components/ui/BadgeEstado";
+import BadgePrioridad from "@/components/ui/BadgePrioridad";
+import { formatearFechaHoraChileLarga } from "@/utils/fechas";
 
 interface DetalleInterconsultaProps {
   interconsulta: Interconsulta;
-}
-
-/** Formatea fecha ISO a formato legible */
-function formatearFecha(fechaISO: string): string {
-  return new Date(fechaISO).toLocaleDateString("es-CL", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 export default function DetalleInterconsulta({
@@ -36,17 +20,30 @@ export default function DetalleInterconsulta({
             {ic.pacienteNombre}
           </h3>
           <p className="text-sm text-[var(--text-secondary)]">
-            RUT: {ic.pacienteRut} — {ic.pacienteEdad} años
+            RUT: {ic.pacienteRut} - {ic.pacienteEdad} años
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <BadgePrioridad prioridad={ic.prioridadActual} tamano="lg" />
+          {ic.esValidaParaPriorizacion !== false && (
+            <BadgePrioridad prioridad={ic.prioridadActual} tamano="lg" />
+          )}
           <BadgeEstado estado={ic.estado} />
         </div>
       </div>
 
+      {ic.esValidaParaPriorizacion === false && (
+        <div className="border-b border-[var(--border)] bg-[var(--prioridad-media-bg)] px-5 py-3">
+          <p className="text-sm font-medium text-[var(--prioridad-media)]">
+            Interconsulta invalida para priorizacion IA
+          </p>
+          <p className="text-sm text-[var(--text-secondary)]">
+            No contiene antecedentes clinicos suficientes para ejecutar el
+            modelo predictivo.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
-        {/* Columna izquierda */}
         <div className="flex flex-col gap-3">
           <div>
             <span className="text-xs font-medium text-[var(--text-muted)]">
@@ -56,13 +53,13 @@ export default function DetalleInterconsulta({
           </div>
           <div>
             <span className="text-xs font-medium text-[var(--text-muted)]">
-              Centro de origen
+              Especialidad de origen
             </span>
             <p className="text-sm text-[var(--text-primary)]">{ic.centroOrigen}</p>
           </div>
           <div>
             <span className="text-xs font-medium text-[var(--text-muted)]">
-              Diagnóstico
+              Diagnostico
             </span>
             <p className="text-sm font-medium text-[var(--text-primary)]">
               {ic.diagnostico}
@@ -70,27 +67,25 @@ export default function DetalleInterconsulta({
           </div>
         </div>
 
-        {/* Columna derecha */}
         <div className="flex flex-col gap-3">
           <div>
             <span className="text-xs font-medium text-[var(--text-muted)]">
               Fecha de ingreso
             </span>
             <p className="text-sm text-[var(--text-primary)]">
-              {formatearFecha(ic.fechaIngreso)}
+              {formatearFechaHoraChileLarga(ic.fechaIngreso)}
             </p>
           </div>
           <div>
             <span className="text-xs font-medium text-[var(--text-muted)]">
-              Última actualización
+              Ultima actualizacion
             </span>
             <p className="text-sm text-[var(--text-primary)]">
-              {formatearFecha(ic.fechaActualizacion)}
+              {formatearFechaHoraChileLarga(ic.fechaActualizacion)}
             </p>
           </div>
         </div>
 
-        {/* Motivo de interconsulta (ocupa ancho completo) */}
         <div className="md:col-span-2">
           <span className="text-xs font-medium text-[var(--text-muted)]">
             Motivo de interconsulta

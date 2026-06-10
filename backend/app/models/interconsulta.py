@@ -1,10 +1,14 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import DateTime, Float, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+
+
+def utc_now() -> datetime:
+    return datetime.now(UTC)
 
 
 class Interconsulta(Base):
@@ -37,15 +41,26 @@ class Interconsulta(Base):
     prob_media: Mapped[float | None] = mapped_column(Float, nullable=True)
     prob_alta: Mapped[float | None] = mapped_column(Float, nullable=True)
     prioridad_actual: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    estado: Mapped[str] = mapped_column(
+        String(20),
+        default="pendiente",
+        nullable=False,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=utc_now,
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=utc_now,
+        onupdate=utc_now,
         nullable=False,
+    )
+    modificaciones = relationship(
+        "ModificacionPrioridad",
+        back_populates="interconsulta",
+        cascade="all, delete-orphan",
+        order_by="ModificacionPrioridad.created_at.desc()",
     )

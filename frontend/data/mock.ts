@@ -132,7 +132,7 @@ export const interconsultasMock: Interconsulta[] = [
     diagnostico: "Dolor torácico atípico",
     motivoInterconsulta:
       "Paciente con episodios de dolor torácico no relacionado con esfuerzo, duración variable. Troponinas negativas x2. ECG sin cambios isquémicos. Fumador activo, dislipidémico.",
-    estado: "derivada",
+    estado: "revisada",
     prioridadActual: "media",
     priorizacionIA: {
       nivelSugerido: "baja",
@@ -165,7 +165,7 @@ export const interconsultasMock: Interconsulta[] = [
     diagnostico: "Control post infarto agudo al miocardio",
     motivoInterconsulta:
       "Paciente con IAM hace 3 meses, tratada con angioplastía + stent. Actualmente estable con tratamiento óptimo. Requiere control cardiológico de seguimiento.",
-    estado: "agendada",
+    estado: "revisada",
     prioridadActual: "media",
     priorizacionIA: {
       nivelSugerido: "media",

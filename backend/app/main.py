@@ -1,18 +1,20 @@
 import csv
 import io
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from openpyxl import load_workbook
-from sqlalchemy import text
+from sqlalchemy import inspect, select, text
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.api.interconsultas import router as interconsultas_router
 from app.core.config import settings
 from app.core.database import SessionLocal, engine
-from app.models import Base
+from app.models import Base, Interconsulta
+from app.services.priorizador import get_priorizador
 
 UPLOAD_FILE = File(...)
 
@@ -204,17 +206,17 @@ def _guardar_interconsultas(
             INSERT INTO interconsultas
             (id, espec_origen, edad, sexo, espec_destino, prioridad_original_csv,
              historia_clinica, fundamentos_diagnostico, examenes_complementarios,
-             motivo_interconsulta, created_at, updated_at)
+             motivo_interconsulta, estado, created_at, updated_at)
             VALUES
             (:id, :espec_origen, :edad, :sexo, :espec_destino, :prioridad_original_csv,
              :historia_clinica, :fundamentos_diagnostico, :examenes_complementarios,
-             :motivo_interconsulta, :created_at, :updated_at)
+             :motivo_interconsulta, :estado, :created_at, :updated_at)
             """)
 
         ids_insertados: list[str] = []
         for fila_json in filas_json:
             interconsulta_id = str(uuid4())
-            ahora = datetime.utcnow()
+            ahora = datetime.now(UTC)
             params: dict[str, object | None] = {
                 "id": interconsulta_id,
                 "espec_origen": fila_json.get("ESPEC_ORIGEN", ""),
@@ -228,19 +230,24 @@ def _guardar_interconsultas(
                     "EXAMENES_COMPLEMENTARIOS", ""
                 ),
                 "motivo_interconsulta": fila_json.get("MOTIVO_INTERCONSULTA", ""),
+                "estado": "pendiente",
                 "created_at": ahora,
                 "updated_at": ahora,
             }
             session.execute(insert_sql, params)
             ids_insertados.append(interconsulta_id)
 
+        priorizadas = _priorizar_interconsultas_insertadas(session, ids_insertados)
         session.commit()
         return {
             "inserted": len(filas_json),
             "stored": len(filas_json),
             "file_type": tipo_archivo,
-            "prioritized": 0,
-            "prioritization_status": "pending",
+            "prioritized": priorizadas,
+            "prioritization_status": _estado_priorizacion(
+                total=len(filas_json),
+                priorizadas=priorizadas,
+            ),
             "ids": ids_insertados,
         }
     except HTTPException:
@@ -256,6 +263,65 @@ def _guardar_interconsultas(
         session.close()
 
 
+def _asegurar_columnas_interconsultas() -> None:
+    inspector = inspect(engine)
+    columnas = {columna["name"] for columna in inspector.get_columns("interconsultas")}
+    if "estado" in columnas:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "ALTER TABLE interconsultas "
+                "ADD COLUMN estado VARCHAR(20) DEFAULT 'pendiente' NOT NULL"
+            )
+        )
+
+
+def _priorizar_interconsultas_insertadas(session: Session, ids: list[str]) -> int:
+    interconsultas = list(
+        session.scalars(
+            select(Interconsulta).where(Interconsulta.id.in_(ids)),
+        ).all(),
+    )
+    validas = [
+        interconsulta
+        for interconsulta in interconsultas
+        if _tiene_informacion_clinica(interconsulta)
+    ]
+    resultados = get_priorizador().predecir(validas)
+    por_id = {interconsulta.id: interconsulta for interconsulta in validas}
+
+    for resultado in resultados:
+        interconsulta = por_id[resultado.id]
+        interconsulta.prioridad_sugerida_modelo = resultado.prioridad
+        interconsulta.confianza_modelo = resultado.confianza
+        interconsulta.prob_baja = resultado.probabilidades.baja
+        interconsulta.prob_media = resultado.probabilidades.media
+        interconsulta.prob_alta = resultado.probabilidades.alta
+        interconsulta.prioridad_actual = resultado.prioridad
+
+    return len(resultados)
+
+
+def _tiene_informacion_clinica(interconsulta: Interconsulta) -> bool:
+    campos = [
+        interconsulta.historia_clinica,
+        interconsulta.fundamentos_diagnostico,
+        interconsulta.examenes_complementarios,
+        interconsulta.motivo_interconsulta,
+    ]
+    return any(bool(campo and campo.strip()) for campo in campos)
+
+
+def _estado_priorizacion(total: int, priorizadas: int) -> str:
+    if priorizadas == total:
+        return "completed"
+    if priorizadas == 0:
+        return "skipped"
+    return "partial"
+
+
 def _normalizar_encabezado(valor: object) -> str:
     return _normalizar_valor(valor).upper()
 
@@ -266,3 +332,6 @@ def _normalizar_valor(valor: object) -> str:
     if isinstance(valor, float) and valor.is_integer():
         valor = int(valor)
     return str(valor).replace("\ufeff", "").replace("\xa0", " ").strip()
+
+
+_asegurar_columnas_interconsultas()

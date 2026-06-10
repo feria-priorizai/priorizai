@@ -118,6 +118,36 @@ def test_priorizar_interconsultas_retorna_404_si_falta_id() -> None:
     assert response.json()["detail"] == {"interconsultas_no_encontradas": ["ic-x"]}
 
 
+def test_priorizar_interconsulta_invalida_retorna_422() -> None:
+    db = TestingSessionLocal()
+    db.add(
+        Interconsulta(
+            id="ic-invalida",
+            espec_origen="Medicina General",
+            edad=30,
+            sexo="F",
+            espec_destino="Cardiologia",
+            prioridad_original_csv="Media",
+            historia_clinica="",
+            fundamentos_diagnostico="",
+            examenes_complementarios="",
+            motivo_interconsulta="",
+        )
+    )
+    db.commit()
+    db.close()
+
+    response = client.post(
+        "/api/interconsultas/priorizar",
+        json={"ids": ["ic-invalida"]},
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert "informacion clinica suficiente" in detail["message"]
+    assert detail["interconsultas_invalidas"] == ["ic-invalida"]
+
+
 def test_priorizar_interconsultas_pendientes_respeta_limit() -> None:
     db = TestingSessionLocal()
     for index in range(3):
@@ -170,4 +200,185 @@ def test_priorizar_interconsultas_pendientes_respeta_limit() -> None:
     assert priorizadas == 2
     assert ya_priorizada is not None
     assert ya_priorizada.prioridad_sugerida_modelo == "media"
+    db.close()
+
+
+def test_priorizar_pendientes_omite_interconsultas_invalidas() -> None:
+    db = TestingSessionLocal()
+    db.add(
+        Interconsulta(
+            id="ic-p-valida",
+            espec_origen="Medicina General",
+            edad=60,
+            sexo="F",
+            espec_destino="Cardiologia",
+            prioridad_original_csv="Media",
+            historia_clinica="Dolor toracico",
+            fundamentos_diagnostico="Evaluacion",
+            examenes_complementarios="",
+            motivo_interconsulta="Control",
+        )
+    )
+    db.add(
+        Interconsulta(
+            id="ic-p-invalida",
+            espec_origen="Medicina General",
+            edad=61,
+            sexo="F",
+            espec_destino="Cardiologia",
+            prioridad_original_csv="Media",
+            historia_clinica="",
+            fundamentos_diagnostico="",
+            examenes_complementarios="",
+            motivo_interconsulta="",
+        )
+    )
+    db.commit()
+    db.close()
+
+    response = client.post("/api/interconsultas/priorizar-pendientes?limit=10")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["resultados"][0]["id"] == "ic-p-valida"
+
+
+def test_priorizar_pendientes_omite_interconsultas_con_espacios() -> None:
+    db = TestingSessionLocal()
+    db.add(
+        Interconsulta(
+            id="ic-p-espacios",
+            espec_origen="Medicina General",
+            edad=61,
+            sexo="F",
+            espec_destino="Cardiologia",
+            prioridad_original_csv="Media",
+            historia_clinica="   ",
+            fundamentos_diagnostico="",
+            examenes_complementarios="",
+            motivo_interconsulta="",
+        )
+    )
+    db.commit()
+    db.close()
+
+    response = client.post("/api/interconsultas/priorizar-pendientes?limit=10")
+
+    assert response.status_code == 200
+    assert response.json() == {"total": 0, "resultados": []}
+
+
+def test_modificar_prioridad_persiste_historial() -> None:
+    db = TestingSessionLocal()
+    db.add(
+        Interconsulta(
+            id="ic-mod-001",
+            espec_origen="Medicina General",
+            edad=44,
+            sexo="F",
+            espec_destino="Dermatologia",
+            prioridad_original_csv="Media",
+            historia_clinica="Lesion cutanea",
+            fundamentos_diagnostico="Sospecha clinica",
+            examenes_complementarios="",
+            motivo_interconsulta="Evaluacion",
+            prioridad_actual="media",
+        )
+    )
+    db.commit()
+    db.close()
+
+    response = client.patch(
+        "/api/interconsultas/ic-mod-001/prioridad",
+        json={
+            "prioridad": "alta",
+            "motivo": "Lesion de rapido crecimiento",
+            "medico_responsable": "Dra. Test",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["prioridad_actual"] == "alta"
+    assert len(body["modificaciones"]) == 1
+    modificacion = body["modificaciones"][0]
+    assert modificacion["prioridad_anterior"] == "media"
+    assert modificacion["prioridad_nueva"] == "alta"
+    assert modificacion["motivo"] == "Lesion de rapido crecimiento"
+    assert modificacion["medico_responsable"] == "Dra. Test"
+
+    db = TestingSessionLocal()
+    actualizada = db.get(Interconsulta, "ic-mod-001")
+    assert actualizada is not None
+    assert actualizada.prioridad_actual == "alta"
+    db.close()
+
+
+def test_modificar_prioridad_rechaza_motivo_vacio() -> None:
+    db = TestingSessionLocal()
+    db.add(
+        Interconsulta(
+            id="ic-mod-002",
+            espec_origen="Medicina General",
+            edad=44,
+            sexo="F",
+            espec_destino="Dermatologia",
+            prioridad_original_csv="Media",
+            historia_clinica="Lesion cutanea",
+            fundamentos_diagnostico="Sospecha clinica",
+            examenes_complementarios="",
+            motivo_interconsulta="Evaluacion",
+            prioridad_actual="media",
+        )
+    )
+    db.commit()
+    db.close()
+
+    response = client.patch(
+        "/api/interconsultas/ic-mod-002/prioridad",
+        json={
+            "prioridad": "alta",
+            "motivo": "   ",
+            "medico_responsable": "Dra. Test",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "El motivo de modificacion es obligatorio"
+
+
+def test_modificar_estado_persiste_revision() -> None:
+    db = TestingSessionLocal()
+    db.add(
+        Interconsulta(
+            id="ic-estado-001",
+            espec_origen="Medicina General",
+            edad=44,
+            sexo="F",
+            espec_destino="Dermatologia",
+            prioridad_original_csv="Media",
+            historia_clinica="Lesion cutanea",
+            fundamentos_diagnostico="Sospecha clinica",
+            examenes_complementarios="",
+            motivo_interconsulta="Evaluacion",
+            prioridad_actual="media",
+            estado="pendiente",
+        )
+    )
+    db.commit()
+    db.close()
+
+    response = client.patch(
+        "/api/interconsultas/ic-estado-001/estado",
+        json={"estado": "revisada"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["estado"] == "revisada"
+
+    db = TestingSessionLocal()
+    actualizada = db.get(Interconsulta, "ic-estado-001")
+    assert actualizada is not None
+    assert actualizada.estado == "revisada"
     db.close()

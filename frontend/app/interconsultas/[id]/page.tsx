@@ -1,24 +1,11 @@
 "use client";
 
-/**
- * Página de detalle de una interconsulta.
- * Integra las tres historias de usuario del MVP:
- *
- * - HdU01: Priorización automática (TarjetaPriorizacionIA)
- * - HdU02: Modificación de prioridad (FormularioModificarPrioridad + HistorialModificaciones)
- * - HdU03: Historial clínico resumido (ResumenClinico)
- *
- * Layout en dos columnas:
- * - Izquierda (2/3): Detalle general + Resumen clínico
- * - Derecha (1/3): Priorización IA + Modificar + Historial
- */
-
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
+import type { Interconsulta } from "@/types";
 import { useInterconsultaDetalle } from "@/hooks/useInterconsultas";
 import DetalleInterconsulta from "@/components/interconsultas/DetalleInterconsulta";
 import TarjetaPriorizacionIA from "@/components/interconsultas/TarjetaPriorizacionIA";
-import BotonPriorizarIA from "@/components/interconsultas/BotonPriorizarIA";
 import FormularioModificarPrioridad from "@/components/interconsultas/FormularioModificarPrioridad";
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
@@ -29,8 +16,9 @@ interface PageProps {
 
 export default function InterconsultaDetallePage({ params }: PageProps) {
   const { id } = use(params);
-  const { interconsulta, cargando, error, cambiarPrioridad, priorizarConIA } =
+  const { interconsulta, cargando, error, cambiarPrioridad, cambiarEstado } =
     useInterconsultaDetalle(id);
+  const [actualizandoEstado, setActualizandoEstado] = useState(false);
 
   if (cargando) {
     return (
@@ -58,53 +46,72 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
     );
   }
 
-  /** Determina si la prioridad fue modificada respecto a la sugerencia IA */
+  const esValida = interconsulta.esValidaParaPriorizacion ?? true;
   const fueModificada =
+    esValida &&
     interconsulta.prioridadActual !==
-    interconsulta.priorizacionIA.nivelSugerido;
+      interconsulta.priorizacionIA.nivelSugerido;
+
+  const marcarComoRevisada = async () => {
+    setActualizandoEstado(true);
+    await cambiarEstado("revisada");
+    setActualizandoEstado(false);
+  };
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Enlace para volver al listado */}
       <Link
         href="/interconsultas"
         className="inline-flex items-center gap-1 text-sm text-[var(--primary)] hover:underline"
       >
-        ← Volver al listado
+        {"<-"} Volver al listado
       </Link>
 
-      {/* Layout principal en dos columnas */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Columna izquierda: información general y resumen clínico */}
         <div className="flex flex-col gap-6 lg:col-span-2">
-          {/* Datos generales de la interconsulta */}
           <DetalleInterconsulta interconsulta={interconsulta} />
-
-          {/* Resumen clínico del paciente (HdU03) */}
           <ResumenClinico pacienteId={interconsulta.pacienteId} />
         </div>
 
-        {/* Columna derecha: priorización y acciones */}
         <div className="flex flex-col gap-6">
-          {/* Resultado de la priorización automática (HdU01) */}
-          <TarjetaPriorizacionIA
-            priorizacion={interconsulta.priorizacionIA}
-            prioridadActual={interconsulta.prioridadActual}
-            fueModificada={fueModificada}
-          />
+          {esValida && (
+            <TarjetaPriorizacionIA
+              priorizacion={interconsulta.priorizacionIA}
+              prioridadActual={interconsulta.prioridadActual}
+              fueModificada={fueModificada}
+            />
+          )}
 
-          <BotonPriorizarIA
-            priorizada={interconsulta.priorizacionIA.priorizada ?? true}
-            onPriorizar={priorizarConIA}
-          />
+          {interconsulta.estado === "pendiente" && (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)]">
+              <button
+                type="button"
+                onClick={marcarComoRevisada}
+                disabled={actualizandoEstado}
+                className="w-full rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--primary-dark)] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {actualizandoEstado ? "Actualizando..." : "Marcar como revisada"}
+              </button>
+            </div>
+          )}
 
-          {/* Formulario para modificar prioridad (HdU02) */}
-          <FormularioModificarPrioridad
-            prioridadActual={interconsulta.prioridadActual}
-            onModificar={cambiarPrioridad}
-          />
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)]">
+            <button
+              type="button"
+              onClick={() => descargarInterconsultaJson(interconsulta)}
+              className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]"
+            >
+              Exportar interconsulta en formato JSON
+            </button>
+          </div>
 
-          {/* Historial de cambios (HdU02) */}
+          {esValida && (
+            <FormularioModificarPrioridad
+              prioridadActual={interconsulta.prioridadActual}
+              onModificar={cambiarPrioridad}
+            />
+          )}
+
           <HistorialModificaciones
             modificaciones={interconsulta.historialModificaciones}
           />
@@ -112,4 +119,23 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
       </div>
     </div>
   );
+}
+
+function descargarInterconsultaJson(interconsulta: Interconsulta) {
+  const payload = {
+    exportadoEn: new Date().toISOString(),
+    formato: "priorizai.interconsulta.v1",
+    interconsulta,
+  };
+  const contenido = JSON.stringify(payload, null, 2);
+  const blob = new Blob([contenido], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `interconsulta-${interconsulta.id}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }

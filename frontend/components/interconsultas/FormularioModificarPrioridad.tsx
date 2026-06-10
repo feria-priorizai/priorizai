@@ -1,28 +1,18 @@
 "use client";
 
-/**
- * Formulario para modificar manualmente la prioridad de una interconsulta (HdU02).
- *
- * Criterios de aceptación HdU02:
- * - El médico puede modificar manualmente la prioridad.
- * - Al confirmar, el sistema actualiza y confirma la recepción.
- * - Si la prioridad es incorrecta, permite corregirla para redirigir al SISLE.
- */
-
 import { useState } from "react";
+import type { FormEvent } from "react";
 import type { NivelPrioridad } from "@/types";
 
 interface FormularioModificarPrioridadProps {
   prioridadActual: NivelPrioridad;
-  /** Callback al confirmar la modificación */
   onModificar: (nuevaPrioridad: NivelPrioridad, motivo: string) => Promise<boolean>;
 }
 
-/** Opciones de prioridad disponibles con etiqueta descriptiva */
 const opcionesPrioridad: { valor: NivelPrioridad; etiqueta: string }[] = [
-  { valor: "alta", etiqueta: "Alta - Atención urgente" },
-  { valor: "media", etiqueta: "Media - Atención preferente" },
-  { valor: "baja", etiqueta: "Baja - Atención electiva" },
+  { valor: "alta", etiqueta: "Alta - Atencion urgente" },
+  { valor: "media", etiqueta: "Media - Atencion preferente" },
+  { valor: "baja", etiqueta: "Baja - Atencion electiva" },
 ];
 
 export default function FormularioModificarPrioridad({
@@ -38,12 +28,10 @@ export default function FormularioModificarPrioridad({
     texto: string;
   } | null>(null);
 
-  /** Valida y envía la modificación de prioridad */
-  const manejarEnvio = async (e: React.FormEvent) => {
+  const manejarEnvio = async (e: FormEvent) => {
     e.preventDefault();
     setMensaje(null);
 
-    /* Validación: no enviar si no cambió la prioridad */
     if (nuevaPrioridad === prioridadActual) {
       setMensaje({
         tipo: "error",
@@ -52,17 +40,17 @@ export default function FormularioModificarPrioridad({
       return;
     }
 
-    /* Validación: motivo obligatorio */
     if (!motivo.trim()) {
       setMensaje({
         tipo: "error",
-        texto: "Debe ingresar un motivo para la modificación.",
+        texto: "Debe ingresar un motivo para la modificacion.",
       });
       return;
     }
 
     setEnviando(true);
     const exito = await onModificar(nuevaPrioridad, motivo.trim());
+    setEnviando(false);
 
     if (exito) {
       setMensaje({
@@ -70,13 +58,13 @@ export default function FormularioModificarPrioridad({
         texto: "Prioridad modificada exitosamente. El cambio ha sido registrado.",
       });
       setMotivo("");
-    } else {
-      setMensaje({
-        tipo: "error",
-        texto: "Error al modificar la prioridad. Intente nuevamente.",
-      });
+      return;
     }
-    setEnviando(false);
+
+    setMensaje({
+      tipo: "error",
+      texto: "Error al modificar la prioridad. Intente nuevamente.",
+    });
   };
 
   return (
@@ -86,12 +74,11 @@ export default function FormularioModificarPrioridad({
           Modificar prioridad
         </h3>
         <p className="text-sm text-[var(--text-secondary)]">
-          Corrija la prioridad si el criterio clínico difiere de la sugerencia
+          Corrija la prioridad si el criterio clinico difiere de la sugerencia.
         </p>
       </div>
 
       <form onSubmit={manejarEnvio} className="flex flex-col gap-4 p-5">
-        {/* Selector de nueva prioridad */}
         <div className="flex flex-col gap-1.5">
           <label
             htmlFor="nueva-prioridad"
@@ -115,25 +102,23 @@ export default function FormularioModificarPrioridad({
           </select>
         </div>
 
-        {/* Motivo de la modificación */}
         <div className="flex flex-col gap-1.5">
           <label
             htmlFor="motivo-modificacion"
             className="text-sm font-medium text-[var(--text-primary)]"
           >
-            Motivo de la modificación *
+            Motivo de la modificacion *
           </label>
           <textarea
             id="motivo-modificacion"
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
-            placeholder="Ingrese el criterio clínico que justifica el cambio de prioridad..."
+            placeholder="Ingrese el criterio clinico que justifica el cambio de prioridad..."
             rows={3}
             className="resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]"
           />
         </div>
 
-        {/* Mensaje de confirmación o error */}
         {mensaje && (
           <div
             className={`rounded-lg px-4 py-3 text-sm ${
@@ -146,13 +131,12 @@ export default function FormularioModificarPrioridad({
           </div>
         )}
 
-        {/* Botón de envío */}
         <button
           type="submit"
           disabled={enviando}
-          className="rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--primary-dark)] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--primary-dark)] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {enviando ? "Guardando..." : "Confirmar modificación"}
+          {enviando ? "Guardando..." : "Confirmar modificacion"}
         </button>
       </form>
     </div>

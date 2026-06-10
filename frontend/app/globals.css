@@ -36,11 +36,6 @@
   --estado-pendiente-bg: #eef2ff;
   --estado-revisada: #0891b2;
   --estado-revisada-bg: #ecfeff;
-  --estado-derivada: #7c3aed;
-  --estado-derivada-bg: #f5f3ff;
-  --estado-agendada: #059669;
-  --estado-agendada-bg: #ecfdf5;
-
   /* Colores de confianza del modelo IA */
   --confianza-alta: #16a34a;
   --confianza-media: #d97706;

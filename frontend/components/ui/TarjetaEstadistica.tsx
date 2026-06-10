@@ -1,14 +1,9 @@
-/**
- * Tarjeta reutilizable para mostrar métricas en el dashboard.
- * Ej: "Total interconsultas", "Pendientes", "Prioridad alta".
- */
+import type { ReactNode } from "react";
 
 interface TarjetaEstadisticaProps {
   titulo: string;
   valor: number | string;
-  /** Icono o emoji representativo (se usa texto por simplicidad en MVP) */
-  icono: string;
-  /** Color de acento para el valor */
+  icono: ReactNode;
   colorAccento?: string;
 }
 
@@ -20,7 +15,7 @@ export default function TarjetaEstadistica({
 }: TarjetaEstadisticaProps) {
   return (
     <div className="flex items-center gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)]">
-      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--primary-light)] text-2xl">
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--primary-light)] text-[var(--primary)]">
         {icono}
       </div>
       <div>

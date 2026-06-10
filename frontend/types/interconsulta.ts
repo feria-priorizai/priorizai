@@ -5,11 +5,7 @@
 
 export type NivelPrioridad = "alta" | "media" | "baja";
 
-export type EstadoInterconsulta =
-  | "pendiente"
-  | "revisada"
-  | "derivada"
-  | "agendada";
+export type EstadoInterconsulta = "pendiente" | "revisada";
 
 export interface ResultadoPriorizacion {
   nivelSugerido: NivelPrioridad;
@@ -38,6 +34,7 @@ export interface Interconsulta {
   centroOrigen: string;
   diagnostico: string;
   motivoInterconsulta: string;
+  esValidaParaPriorizacion?: boolean;
   estado: EstadoInterconsulta;
   prioridadActual: NivelPrioridad;
   priorizacionIA: ResultadoPriorizacion;

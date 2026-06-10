@@ -1,10 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import nullslast, select
-from sqlalchemy.orm import Session
+from sqlalchemy import func, nullslast, or_, select
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
 from app.models.interconsulta import Interconsulta
-from app.schemas.interconsulta import InterconsultaResponse
+from app.models.modificacion_prioridad import ModificacionPrioridad
+from app.schemas.interconsulta import (
+    InterconsultaResponse,
+    ModificarEstadoRequest,
+    ModificarPrioridadRequest,
+)
 from app.schemas.priorizacion import (
     PriorizarInterconsultasRequest,
     PriorizarInterconsultasResponse,
@@ -25,6 +30,7 @@ def listar_interconsultas(
 ) -> list[Interconsulta]:
     stmt = (
         select(Interconsulta)
+        .options(selectinload(Interconsulta.modificaciones))
         .order_by(
             nullslast(Interconsulta.confianza_modelo.desc()),
             Interconsulta.created_at.desc(),
@@ -40,13 +46,98 @@ def obtener_interconsulta(
     interconsulta_id: str,
     db: Session = DbSession,
 ) -> Interconsulta:
-    interconsulta = db.get(Interconsulta, interconsulta_id)
+    interconsulta = db.scalar(
+        select(Interconsulta)
+        .options(selectinload(Interconsulta.modificaciones))
+        .where(Interconsulta.id == interconsulta_id)
+    )
     if interconsulta is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Interconsulta no encontrada",
         )
     return interconsulta
+
+
+@router.patch("/{interconsulta_id}/prioridad", response_model=InterconsultaResponse)
+def modificar_prioridad_interconsulta(
+    interconsulta_id: str,
+    payload: ModificarPrioridadRequest,
+    db: Session = DbSession,
+) -> Interconsulta:
+    nueva_prioridad = _normalizar_prioridad(payload.prioridad)
+    motivo = payload.motivo.strip()
+    medico_responsable = payload.medico_responsable.strip()
+    if not motivo:
+        raise HTTPException(
+            status_code=422,
+            detail="El motivo de modificacion es obligatorio",
+        )
+    if not medico_responsable:
+        raise HTTPException(
+            status_code=422,
+            detail="El medico responsable es obligatorio",
+        )
+
+    interconsulta = db.scalar(
+        select(Interconsulta)
+        .options(selectinload(Interconsulta.modificaciones))
+        .where(Interconsulta.id == interconsulta_id)
+    )
+    if interconsulta is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interconsulta no encontrada",
+        )
+
+    prioridad_anterior = interconsulta.prioridad_actual
+    interconsulta.prioridad_actual = nueva_prioridad
+    db.add(
+        ModificacionPrioridad(
+            interconsulta_id=interconsulta.id,
+            prioridad_anterior=prioridad_anterior,
+            prioridad_nueva=nueva_prioridad,
+            motivo=motivo,
+            medico_responsable=medico_responsable,
+        )
+    )
+    db.commit()
+    actualizada = db.scalar(
+        select(Interconsulta)
+        .options(selectinload(Interconsulta.modificaciones))
+        .where(Interconsulta.id == interconsulta_id)
+    )
+    assert actualizada is not None
+    return actualizada
+
+
+@router.patch("/{interconsulta_id}/estado", response_model=InterconsultaResponse)
+def modificar_estado_interconsulta(
+    interconsulta_id: str,
+    payload: ModificarEstadoRequest,
+    db: Session = DbSession,
+) -> Interconsulta:
+    nuevo_estado = _normalizar_estado(payload.estado)
+    interconsulta = db.scalar(
+        select(Interconsulta)
+        .options(selectinload(Interconsulta.modificaciones))
+        .where(Interconsulta.id == interconsulta_id)
+    )
+    if interconsulta is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interconsulta no encontrada",
+        )
+
+    interconsulta.estado = nuevo_estado
+    db.commit()
+    actualizada = db.scalar(
+        select(Interconsulta)
+        .options(selectinload(Interconsulta.modificaciones))
+        .where(Interconsulta.id == interconsulta_id)
+    )
+    assert actualizada is not None
+    return actualizada
 
 
 @router.post("/priorizar", response_model=PriorizarInterconsultasResponse)
@@ -56,6 +147,7 @@ def priorizar_interconsultas(
     priorizador: PriorizadorRigoBerta = PriorizadorDependency,
 ) -> PriorizarInterconsultasResponse:
     interconsultas = _buscar_interconsultas(db, payload.ids)
+    _validar_interconsultas_para_prediccion(interconsultas)
     resultados = _predecir_o_503(priorizador, interconsultas)
     _guardar_resultados(db, interconsultas, resultados)
     return PriorizarInterconsultasResponse(
@@ -73,6 +165,7 @@ def priorizar_interconsultas_pendientes(
     stmt = (
         select(Interconsulta)
         .where(Interconsulta.prioridad_sugerida_modelo.is_(None))
+        .where(_condicion_con_informacion_clinica())
         .order_by(Interconsulta.created_at.desc())
         .limit(limit)
     )
@@ -97,6 +190,66 @@ def _buscar_interconsultas(db: Session, ids: list[str]) -> list[Interconsulta]:
             detail={"interconsultas_no_encontradas": faltantes},
         )
     return interconsultas
+
+
+def _normalizar_prioridad(prioridad: str) -> str:
+    prioridad_normalizada = prioridad.strip().lower()
+    if prioridad_normalizada not in {"alta", "media", "baja"}:
+        raise HTTPException(
+            status_code=422,
+            detail="La prioridad debe ser alta, media o baja",
+        )
+    return prioridad_normalizada
+
+
+def _normalizar_estado(estado: str) -> str:
+    estado_normalizado = estado.strip().lower()
+    if estado_normalizado not in {"pendiente", "revisada"}:
+        raise HTTPException(
+            status_code=422,
+            detail="El estado debe ser pendiente o revisada",
+        )
+    return estado_normalizado
+
+
+def _validar_interconsultas_para_prediccion(
+    interconsultas: list[Interconsulta],
+) -> None:
+    invalidas = [
+        interconsulta.id
+        for interconsulta in interconsultas
+        if not _tiene_informacion_clinica(interconsulta)
+    ]
+    if invalidas:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": (
+                    "No se puede realizar una prediccion de prioridad porque "
+                    "la interconsulta no contiene informacion clinica suficiente"
+                ),
+                "interconsultas_invalidas": invalidas,
+            },
+        )
+
+
+def _tiene_informacion_clinica(interconsulta: Interconsulta) -> bool:
+    campos = [
+        interconsulta.historia_clinica,
+        interconsulta.fundamentos_diagnostico,
+        interconsulta.examenes_complementarios,
+        interconsulta.motivo_interconsulta,
+    ]
+    return any(bool(campo and campo.strip()) for campo in campos)
+
+
+def _condicion_con_informacion_clinica():
+    return or_(
+        func.length(func.trim(Interconsulta.historia_clinica)) > 0,
+        func.length(func.trim(Interconsulta.fundamentos_diagnostico)) > 0,
+        func.length(func.trim(Interconsulta.examenes_complementarios)) > 0,
+        func.length(func.trim(Interconsulta.motivo_interconsulta)) > 0,
+    )
 
 
 def _predecir_o_503(

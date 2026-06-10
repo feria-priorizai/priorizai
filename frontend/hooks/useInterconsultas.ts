@@ -1,46 +1,52 @@
 "use client";
 
-/**
- * Hook personalizado para gestionar el estado de las interconsultas.
- * Centraliza la lógica de carga, filtrado y modificación de prioridades.
- *
- * Separa la lógica de negocio de la presentación para facilitar
- * la migración futura al backend real.
- */
-
-import { useState, useEffect, useCallback } from "react";
-import type { Interconsulta, NivelPrioridad, EstadoInterconsulta } from "@/types";
+import { useCallback, useEffect, useState } from "react";
+import type { EstadoInterconsulta, Interconsulta, NivelPrioridad } from "@/types";
 import {
-  obtenerInterconsultas,
-  obtenerInterconsultaPorId,
+  EVENTO_INTERCONSULTAS_ACTUALIZADAS,
+  modificarEstadoInterconsulta,
   modificarPrioridad,
+  obtenerInterconsultaPorId,
+  obtenerInterconsultas,
   priorizarInterconsulta,
 } from "@/services/interconsultas";
 import { usuarioActual } from "@/data/mock";
 
-/** Filtros aplicables a la lista de interconsultas */
 export interface FiltrosInterconsulta {
   prioridad: NivelPrioridad | "todas";
   estado: EstadoInterconsulta | "todos";
   busqueda: string;
 }
 
-/** Estado retornado por el hook */
 interface UseInterconsultasReturn {
   interconsultas: Interconsulta[];
   cargando: boolean;
   error: string | null;
+  totalInterconsultas: number;
+  pendientesPriorizables: number;
+  pendientesInvalidas: number;
   filtros: FiltrosInterconsulta;
   actualizarFiltros: (nuevosFiltros: Partial<FiltrosInterconsulta>) => void;
   cambiarPrioridad: (
     id: string,
     nuevaPrioridad: NivelPrioridad,
-    motivo: string
+    motivo: string,
   ) => Promise<boolean>;
   recargar: () => Promise<void>;
 }
 
-/** Filtros por defecto al inicializar */
+interface EstadoListado {
+  interconsultas: Interconsulta[];
+  cargando: boolean;
+  error: string | null;
+}
+
+interface EstadoDetalle {
+  id: string;
+  interconsulta: Interconsulta | null;
+  error: string | null;
+}
+
 const filtrosIniciales: FiltrosInterconsulta = {
   prioridad: "todas",
   estado: "todos",
@@ -48,45 +54,43 @@ const filtrosIniciales: FiltrosInterconsulta = {
 };
 
 export function useInterconsultas(): UseInterconsultasReturn {
-  const [todasLasInterconsultas, setTodasLasInterconsultas] = useState<
-    Interconsulta[]
-  >([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [estado, setEstado] = useState<EstadoListado>({
+    interconsultas: [],
+    cargando: true,
+    error: null,
+  });
   const [filtros, setFiltros] = useState<FiltrosInterconsulta>(filtrosIniciales);
 
-  /** Carga las interconsultas desde el servicio */
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    setError(null);
+  const recargar = useCallback(async () => {
+    setEstado((prev) => ({ ...prev, cargando: true, error: null }));
     try {
       const data = await obtenerInterconsultas();
-      setTodasLasInterconsultas(data);
+      setEstado({ interconsultas: data, cargando: false, error: null });
     } catch {
-      setError("Error al cargar las interconsultas");
-    } finally {
-      setCargando(false);
+      setEstado({
+        interconsultas: [],
+        cargando: false,
+        error: "Error al cargar las interconsultas",
+      });
     }
   }, []);
 
   useEffect(() => {
     let activo = true;
 
-    obtenerInterconsultas()
+    void obtenerInterconsultas()
       .then((data) => {
         if (activo) {
-          setTodasLasInterconsultas(data);
-          setError(null);
+          setEstado({ interconsultas: data, cargando: false, error: null });
         }
       })
       .catch(() => {
         if (activo) {
-          setError("Error al cargar las interconsultas");
-        }
-      })
-      .finally(() => {
-        if (activo) {
-          setCargando(false);
+          setEstado({
+            interconsultas: [],
+            cargando: false,
+            error: "Error al cargar las interconsultas",
+          });
         }
       });
 
@@ -95,100 +99,129 @@ export function useInterconsultas(): UseInterconsultasReturn {
     };
   }, []);
 
-  /** Aplica los filtros activos sobre la lista completa */
-  const interconsultasFiltradas = todasLasInterconsultas.filter((ic) => {
-    if (filtros.prioridad !== "todas" && ic.prioridadActual !== filtros.prioridad)
-      return false;
-    if (filtros.estado !== "todos" && ic.estado !== filtros.estado)
-      return false;
-    if (filtros.busqueda) {
-      const termino = filtros.busqueda.toLowerCase();
-      return (
-        ic.pacienteNombre.toLowerCase().includes(termino) ||
-        ic.pacienteRut.includes(termino) ||
-        ic.diagnostico.toLowerCase().includes(termino)
+  useEffect(() => {
+    const manejarActualizacion = () => {
+      void recargar();
+    };
+
+    window.addEventListener(
+      EVENTO_INTERCONSULTAS_ACTUALIZADAS,
+      manejarActualizacion,
+    );
+
+    return () => {
+      window.removeEventListener(
+        EVENTO_INTERCONSULTAS_ACTUALIZADAS,
+        manejarActualizacion,
       );
+    };
+  }, [recargar]);
+
+  const interconsultasFiltradas = estado.interconsultas.filter((ic) => {
+    if (filtros.prioridad !== "todas" && ic.prioridadActual !== filtros.prioridad) {
+      return false;
     }
-    return true;
+    if (filtros.estado !== "todos" && ic.estado !== filtros.estado) {
+      return false;
+    }
+    if (!filtros.busqueda) {
+      return true;
+    }
+
+    const termino = filtros.busqueda.toLowerCase();
+    return (
+      ic.pacienteNombre.toLowerCase().includes(termino) ||
+      ic.pacienteRut.includes(termino) ||
+      ic.diagnostico.toLowerCase().includes(termino)
+    );
   });
 
-  /** Actualiza los filtros de forma parcial */
   const actualizarFiltros = (nuevosFiltros: Partial<FiltrosInterconsulta>) => {
     setFiltros((prev) => ({ ...prev, ...nuevosFiltros }));
   };
 
-  /** Modifica la prioridad de una interconsulta (HdU02) */
+  const pendientesPriorizables = estado.interconsultas.filter(
+    (ic) =>
+      ic.priorizacionIA.priorizada !== true &&
+      ic.esValidaParaPriorizacion !== false,
+  ).length;
+  const pendientesInvalidas = estado.interconsultas.filter(
+    (ic) =>
+      ic.priorizacionIA.priorizada !== true &&
+      ic.esValidaParaPriorizacion === false,
+  ).length;
+
   const cambiarPrioridad = async (
     id: string,
     nuevaPrioridad: NivelPrioridad,
-    motivo: string
+    motivo: string,
   ): Promise<boolean> => {
     try {
       const actualizada = await modificarPrioridad(
         id,
         nuevaPrioridad,
         motivo,
-        usuarioActual.nombre
+        usuarioActual.nombre,
       );
-      setTodasLasInterconsultas((prev) =>
-        prev.map((ic) => (ic.id === actualizada.id ? actualizada : ic))
-      );
+      setEstado((prev) => ({
+        ...prev,
+        interconsultas: prev.interconsultas.map((ic) =>
+          ic.id === actualizada.id ? actualizada : ic,
+        ),
+      }));
       return true;
     } catch {
-      setError("Error al modificar la prioridad");
+      setEstado((prev) => ({
+        ...prev,
+        error: "Error al modificar la prioridad",
+      }));
       return false;
     }
   };
 
   return {
     interconsultas: interconsultasFiltradas,
-    cargando,
-    error,
+    cargando: estado.cargando,
+    error: estado.error,
+    totalInterconsultas: estado.interconsultas.length,
+    pendientesPriorizables,
+    pendientesInvalidas,
     filtros,
     actualizarFiltros,
     cambiarPrioridad,
-    recargar: cargar,
+    recargar,
   };
 }
 
-/** Hook para obtener una interconsulta individual por ID */
 export function useInterconsultaDetalle(id: string) {
-  const [interconsulta, setInterconsulta] = useState<Interconsulta | null>(null);
-  const [estadoCarga, setEstadoCarga] = useState({ id, cargando: true });
-  const [error, setError] = useState<string | null>(null);
-
-  const cargar = useCallback(async () => {
-    setEstadoCarga({ id, cargando: true });
-    setError(null);
-    try {
-      const data = await obtenerInterconsultaPorId(id);
-      setInterconsulta(data);
-      if (!data) setError("Interconsulta no encontrada");
-    } catch {
-      setError("Error al cargar la interconsulta");
-    } finally {
-      setEstadoCarga({ id, cargando: false });
-    }
-  }, [id]);
+  const [estado, setEstado] = useState<EstadoDetalle>({
+    id,
+    interconsulta: null,
+    error: null,
+  });
 
   useEffect(() => {
     let activo = true;
 
-    obtenerInterconsultaPorId(id)
+    void obtenerInterconsultaPorId(id)
       .then((data) => {
-        if (activo) {
-          setInterconsulta(data);
-          setError(data ? null : "Interconsulta no encontrada");
+        if (!activo) {
+          return;
         }
+
+        setEstado({
+          id,
+          interconsulta: data,
+          error: data ? null : "Interconsulta no encontrada",
+        });
       })
       .catch(() => {
         if (activo) {
-          setError("Error al cargar la interconsulta");
-        }
-      })
-      .finally(() => {
-        if (activo) {
-          setEstadoCarga({ id, cargando: false });
+          setEstado({
+            id,
+            interconsulta: null,
+            error: "Error al cargar la interconsulta",
+          });
         }
       });
 
@@ -197,46 +230,88 @@ export function useInterconsultaDetalle(id: string) {
     };
   }, [id]);
 
-  /** Actualiza la prioridad y refresca el estado local */
+  const recargar = useCallback(async () => {
+    try {
+      const data = await obtenerInterconsultaPorId(id);
+      setEstado({
+        id,
+        interconsulta: data,
+        error: data ? null : "Interconsulta no encontrada",
+      });
+    } catch {
+      setEstado({
+        id,
+        interconsulta: null,
+        error: "Error al cargar la interconsulta",
+      });
+    }
+  }, [id]);
+
   const cambiarPrioridad = async (
     nuevaPrioridad: NivelPrioridad,
-    motivo: string
+    motivo: string,
   ): Promise<boolean> => {
     try {
       const actualizada = await modificarPrioridad(
         id,
         nuevaPrioridad,
         motivo,
-        usuarioActual.nombre
+        usuarioActual.nombre,
       );
-      setInterconsulta(actualizada);
+      setEstado({ id, interconsulta: actualizada, error: null });
       return true;
     } catch {
-      setError("Error al modificar la prioridad");
+      setEstado((prev) => ({
+        ...prev,
+        error: "Error al modificar la prioridad",
+      }));
       return false;
     }
   };
-
-  const cargando = estadoCarga.id !== id || estadoCarga.cargando;
 
   const priorizarConIA = async (): Promise<boolean> => {
     try {
       const actualizada = await priorizarInterconsulta(id);
-      setInterconsulta(actualizada);
-      setError(null);
+      setEstado({ id, interconsulta: actualizada, error: null });
       return true;
-    } catch {
-      setError("Error al ejecutar la priorizacion con IA");
+    } catch (error) {
+      setEstado((prev) => ({
+        ...prev,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Error al ejecutar la priorizacion con IA",
+      }));
       return false;
     }
   };
 
+  const cambiarEstado = async (
+    nuevoEstado: EstadoInterconsulta,
+  ): Promise<boolean> => {
+    try {
+      const actualizada = await modificarEstadoInterconsulta(id, nuevoEstado);
+      setEstado({ id, interconsulta: actualizada, error: null });
+      return true;
+    } catch {
+      setEstado((prev) => ({
+        ...prev,
+        error: "Error al actualizar el estado",
+      }));
+      return false;
+    }
+  };
+
+  const cargando =
+    estado.id !== id || (estado.interconsulta === null && estado.error === null);
+
   return {
-    interconsulta,
+    interconsulta: estado.id === id ? estado.interconsulta : null,
     cargando,
-    error,
+    error: estado.id === id ? estado.error : null,
     cambiarPrioridad,
     priorizarConIA,
-    recargar: cargar,
+    cambiarEstado,
+    recargar,
   };
 }

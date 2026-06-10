@@ -1,109 +1,120 @@
 "use client";
 
-/**
- * Barra lateral de navegación principal.
- * Muestra las secciones del sistema según el contexto del MVP:
- * - Dashboard
- * - Interconsultas (lista y gestión)
- * - Info del usuario actual
- *
- * Preparado para agregar más secciones (configuración, reportes, etc.)
- * cuando se implementen las historias de usuario adicionales.
- */
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useRef, useState, useEffect, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { usuarioActual } from "@/data/mock";
-import { subirCsvInterconsultas } from "@/services/interconsultas";
+import {
+  EVENTO_INTERCONSULTAS_ACTUALIZADAS,
+  subirCsvInterconsultas,
+} from "@/services/interconsultas";
 
-/** Elemento del menú de navegación */
 interface ItemNavegacion {
   nombre: string;
   ruta: string;
-  icono: string;
+  icono: "dashboard" | "interconsultas";
 }
 
-/** Secciones disponibles en el MVP */
+interface NotificacionCarga {
+  tipo: "success" | "error";
+  titulo: string;
+  detalle: string;
+}
+
 const itemsNavegacion: ItemNavegacion[] = [
-  { nombre: "Dashboard", ruta: "/dashboard", icono: "📊" },
-  { nombre: "Interconsultas", ruta: "/interconsultas", icono: "📋" },
+  { nombre: "Dashboard", ruta: "/dashboard", icono: "dashboard" },
+  { nombre: "Interconsultas", ruta: "/interconsultas", icono: "interconsultas" },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [estadoCSV, setEstadoCSV] = useState<string | null>(null);
-  const [notificationType, setNotificationType] = useState<"success" | "error" | null>(null);
-  const [notificationVisible, setNotificationVisible] = useState(false);
-  const [subiendoCSV, setSubiendoCSV] = useState(false);
-  const inputCsvRef = useRef<HTMLInputElement | null>(null);
+  const [notificacion, setNotificacion] = useState<NotificacionCarga | null>(
+    null,
+  );
+  const [subiendoArchivo, setSubiendoArchivo] = useState(false);
+  const inputArchivoRef = useRef<HTMLInputElement | null>(null);
 
-  /** Verifica si una ruta está activa (incluye sub-rutas) */
   const esRutaActiva = (ruta: string) => pathname.startsWith(ruta);
 
-  const manejarAbrirSelectorCSV = () => {
-    inputCsvRef.current?.click();
+  const manejarAbrirSelector = () => {
+    inputArchivoRef.current?.click();
   };
 
-  const manejarSeleccionCSV = async (e: ChangeEvent<HTMLInputElement>) => {
+  const manejarSeleccionArchivo = async (e: ChangeEvent<HTMLInputElement>) => {
     const archivo = e.target.files?.[0] ?? null;
-    if (!archivo) return;
+    e.target.value = "";
 
-    setEstadoCSV(null);
-    setNotificationType(null);
-    const nombreArchivo = archivo.name.toLowerCase();
-    if (!nombreArchivo.endsWith(".csv") && !nombreArchivo.endsWith(".xlsx")) {
-      setEstadoCSV("Solo se permiten archivos CSV o XLSX.");
-      setNotificationType("error");
-      setNotificationVisible(true);
+    if (!archivo) {
       return;
     }
 
-    setSubiendoCSV(true);
+    const nombreArchivo = archivo.name.toLowerCase();
+    if (!nombreArchivo.endsWith(".csv") && !nombreArchivo.endsWith(".xlsx")) {
+      setNotificacion({
+        tipo: "error",
+        titulo: "Archivo no valido",
+        detalle: "Sube un archivo CSV o XLSX.",
+      });
+      return;
+    }
+
+    setSubiendoArchivo(true);
+    setNotificacion(null);
 
     try {
-      await subirCsvInterconsultas(archivo);
-      setEstadoCSV(`${archivo.name} cargado con éxito`);
-      setNotificationType("success");
-      setNotificationVisible(true);
+      const resultado = await subirCsvInterconsultas(archivo);
+      const total = resultado.stored ?? resultado.inserted;
+      const priorizadas = resultado.prioritized ?? 0;
+      window.dispatchEvent(new Event(EVENTO_INTERCONSULTAS_ACTUALIZADAS));
+      setNotificacion({
+        tipo: "success",
+        titulo: "Carga completada",
+        detalle: `${archivo.name}: ${total} interconsulta${
+          total !== 1 ? "s" : ""
+        } guardada${
+          total !== 1 ? "s" : ""
+        }. ${priorizadas} priorizada${priorizadas !== 1 ? "s" : ""} con IA.`,
+      });
     } catch (error) {
-      setEstadoCSV(
-        error instanceof Error
-          ? error.message
-          : "Error al cargar el archivo.",
-      );
-      setNotificationType("error");
-      setNotificationVisible(true);
+      setNotificacion({
+        tipo: "error",
+        titulo: "No se pudo cargar",
+        detalle:
+          error instanceof Error
+            ? error.message
+            : "Revisa el archivo e intenta nuevamente.",
+      });
     } finally {
-      setSubiendoCSV(false);
+      setSubiendoArchivo(false);
     }
   };
 
-  // Auto-dismiss notification after 5 seconds
   useEffect(() => {
-    if (!notificationVisible) return;
-    const t = setTimeout(() => {
-      setNotificationVisible(false);
-      setEstadoCSV(null);
-      setNotificationType(null);
-    }, 5000);
-    return () => clearTimeout(t);
-  }, [notificationVisible]);
+    if (!notificacion) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setNotificacion(null);
+    }, 6000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [notificacion]);
 
   return (
     <aside className="flex h-full w-64 flex-col bg-[var(--sidebar-bg)] text-[var(--sidebar-text)]">
-      {/* Logo y nombre del sistema */}
       <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--primary)] text-white font-bold text-sm">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--primary)] text-sm font-bold text-white">
           PA
         </div>
         <div>
           <h1 className="text-base font-bold text-white">PriorizAI</h1>
-          <p className="text-xs text-[var(--sidebar-text)]">Sistema de priorización</p>
+          <p className="text-xs text-[var(--sidebar-text)]">
+            Sistema de priorizacion
+          </p>
         </div>
       </div>
 
-      {/* Navegación principal */}
       <nav className="flex-1 px-3 py-4">
         <ul className="flex flex-col gap-1">
           {itemsNavegacion.map((item) => {
@@ -118,7 +129,9 @@ export default function Sidebar() {
                       : "text-[var(--sidebar-text)] hover:bg-[var(--sidebar-active)] hover:text-[var(--sidebar-text-active)]"
                   }`}
                 >
-                  <span className="text-lg">{item.icono}</span>
+                  <span className="flex h-6 w-6 items-center justify-center rounded bg-white/10">
+                    <IconoNavegacion tipo={item.icono} />
+                  </span>
                   {item.nombre}
                 </Link>
               </li>
@@ -127,61 +140,58 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      {/* Notification area: appears above the separator and the upload button */}
-      {notificationVisible && estadoCSV && (
-        <div className="px-4 py-3">
+      {notificacion && (
+        <div className="px-4 pb-3">
           <div
             role="status"
             aria-live="polite"
-            className={`relative rounded-md px-3 py-2 text-sm shadow-sm transition-opacity ${
-              notificationType === "success" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"
+            className={`rounded-lg border px-3 py-3 text-sm shadow-sm ${
+              notificacion.tipo === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                : "border-red-200 bg-red-50 text-red-900"
             }`}
           >
-            <button
-              aria-label="Cerrar notificación"
-              onClick={() => {
-                setNotificationVisible(false);
-                setEstadoCSV(null);
-                setNotificationType(null);
-              }}
-              className="absolute top-1 right-1 rounded p-1 text-xs font-medium hover:bg-white/30"
-            >
-              ✖
-            </button>
-
-            <div className="flex items-start gap-2">
-              <div className="text-lg mt-0.5">{notificationType === "success" ? "✅" : "❌"}</div>
-              <div className="min-w-0 break-words whitespace-normal">
-                <p>{estadoCSV}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-semibold">{notificacion.titulo}</p>
+                <p className="mt-1 break-words text-xs leading-relaxed">
+                  {notificacion.detalle}
+                </p>
               </div>
+              <button
+                type="button"
+                aria-label="Cerrar notificacion"
+                onClick={() => setNotificacion(null)}
+                className="rounded px-1.5 py-0.5 text-xs font-semibold hover:bg-black/10"
+              >
+                X
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Carga de CSV/XLSX desde el sidebar */}
       <div className="border-t border-white/10 px-4 py-4">
         <div className="mb-4">
           <input
-            ref={inputCsvRef}
+            ref={inputArchivoRef}
             type="file"
             accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             className="hidden"
-            onChange={manejarSeleccionCSV}
+            onChange={manejarSeleccionArchivo}
           />
           <button
             type="button"
-            onClick={manejarAbrirSelectorCSV}
-            disabled={subiendoCSV}
+            onClick={manejarAbrirSelector}
+            disabled={subiendoArchivo}
             className="flex w-full items-center justify-center rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--sidebar-active)] hover:text-[var(--sidebar-text-active)] disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {subiendoCSV ? "Subiendo archivo..." : "Cargar archivo"}
+            {subiendoArchivo ? "Cargando archivo..." : "Cargar archivo"}
           </button>
-          
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--primary)] text-white text-xs font-bold">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--primary)] text-xs font-bold text-white">
             {usuarioActual.nombre
               .split(" ")
               .map((n) => n[0])
@@ -199,5 +209,44 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
+  );
+}
+
+function IconoNavegacion({ tipo }: { tipo: ItemNavegacion["icono"] }) {
+  if (tipo === "dashboard") {
+    return (
+      <IconoBase>
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </IconoBase>
+    );
+  }
+
+  return (
+    <IconoBase>
+      <rect x="8" y="2" width="8" height="4" rx="1" />
+      <path d="M9 4H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2" />
+      <path d="M9 12h6" />
+      <path d="M9 16h4" />
+    </IconoBase>
+  );
+}
+
+function IconoBase({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {children}
+    </svg>
   );
 }

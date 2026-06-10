@@ -1,11 +1,18 @@
-import type { Interconsulta, NivelPrioridad } from "@/types/interconsulta";
+import type {
+  EstadoInterconsulta,
+  Interconsulta,
+  NivelPrioridad,
+} from "@/types/interconsulta";
 import type { ResumenClinicoPaciente } from "@/types/paciente";
-import { interconsultasMock, resumenesClinicosMock } from "@/data/mock";
+import { resumenesClinicosMock } from "@/data/mock";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ??
   process.env.NEXT_PUBLIC_API_BASE_URL ??
   "http://localhost:8000";
+
+export const EVENTO_INTERCONSULTAS_ACTUALIZADAS =
+  "priorizai:interconsultas-actualizadas";
 
 type PrioridadApi = string | null | undefined;
 
@@ -26,8 +33,19 @@ interface InterconsultaApi {
   prob_media: number | null;
   prob_alta: number | null;
   prioridad_actual: string | null;
+  estado: string;
   created_at: string;
   updated_at: string;
+  modificaciones?: ModificacionPrioridadApi[];
+}
+
+interface ModificacionPrioridadApi {
+  id: string;
+  prioridad_anterior: string | null;
+  prioridad_nueva: string;
+  motivo: string;
+  medico_responsable: string;
+  created_at: string;
 }
 
 interface PriorizarResponse {
@@ -80,7 +98,7 @@ export async function priorizarInterconsulta(id: string): Promise<Interconsulta>
   if (!respuesta.ok) {
     const error = await respuesta.json().catch(() => null);
     throw new Error(
-      error?.detail || "No se pudo ejecutar la priorizacion con IA"
+      obtenerMensajeError(error?.detail, "No se pudo ejecutar la priorizacion con IA")
     );
   }
 
@@ -110,7 +128,10 @@ export async function priorizarInterconsultasPendientes(
   if (!respuesta.ok) {
     const error = await respuesta.json().catch(() => null);
     throw new Error(
-      error?.detail || "No se pudo priorizar el lote de interconsultas"
+      obtenerMensajeError(
+        error?.detail,
+        "No se pudo priorizar el lote de interconsultas"
+      )
     );
   }
 
@@ -136,7 +157,7 @@ export async function obtenerResumenClinico(
   return {
     pacienteId: interconsulta.id,
     nombre: `Paciente ${interconsulta.id.slice(0, 8)}`,
-    rut: "No disponible",
+    rut: "XX.XXX.XXX-X",
     edad: interconsulta.edad,
     sexo: normalizarSexo(interconsulta.sexo),
     prevision: "No disponible",
@@ -162,40 +183,73 @@ export async function obtenerResumenClinico(
     ],
     factoresRiesgo: [],
     informacionSuficiente: tieneInformacion,
+    camposInterconsulta: {
+      historiaClinica: interconsulta.historia_clinica,
+      fundamentosDiagnostico: interconsulta.fundamentos_diagnostico,
+      examenesComplementarios: interconsulta.examenes_complementarios ?? "",
+      motivoInterconsulta: interconsulta.motivo_interconsulta,
+    },
   };
 }
 
-/** Actualiza la prioridad de una interconsulta (HdU02, aun en mock local). */
+/** Actualiza la prioridad de una interconsulta y guarda el historial (HdU02). */
 export async function modificarPrioridad(
   interconsultaId: string,
   nuevaPrioridad: NivelPrioridad,
   motivo: string,
   medicoResponsable: string
 ): Promise<Interconsulta> {
-  const interconsulta = interconsultasMock.find(
-    (ic) => ic.id === interconsultaId
+  const respuesta = await fetch(
+    `${API_BASE}/api/interconsultas/${interconsultaId}/prioridad`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prioridad: nuevaPrioridad,
+        motivo,
+        medico_responsable: medicoResponsable,
+      }),
+    }
   );
-  if (!interconsulta) throw new Error("Interconsulta no encontrada");
 
-  const modificacion = {
-    id: `mod-${Date.now()}`,
-    prioridadAnterior: interconsulta.prioridadActual,
-    prioridadNueva: nuevaPrioridad,
-    motivo,
-    medicoResponsable,
-    fecha: new Date().toISOString(),
-  };
+  if (!respuesta.ok) {
+    const error = await respuesta.json().catch(() => null);
+    throw new Error(error?.detail || "No se pudo modificar la prioridad");
+  }
 
-  interconsulta.prioridadActual = nuevaPrioridad;
-  interconsulta.historialModificaciones.push(modificacion);
-  interconsulta.fechaActualizacion = new Date().toISOString();
+  return mapearInterconsulta((await respuesta.json()) as InterconsultaApi);
+}
 
-  return { ...interconsulta };
+export async function modificarEstadoInterconsulta(
+  interconsultaId: string,
+  estado: EstadoInterconsulta,
+): Promise<Interconsulta> {
+  const respuesta = await fetch(
+    `${API_BASE}/api/interconsultas/${interconsultaId}/estado`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado }),
+    },
+  );
+
+  if (!respuesta.ok) {
+    const error = await respuesta.json().catch(() => null);
+    throw new Error(error?.detail || "No se pudo actualizar el estado");
+  }
+
+  return mapearInterconsulta((await respuesta.json()) as InterconsultaApi);
 }
 
 export async function subirCsvInterconsultas(
   archivo: File
-): Promise<{ inserted: number; prioritized?: number }> {
+): Promise<{
+  inserted: number;
+  stored?: number;
+  file_type?: string;
+  prioritized?: number;
+  prioritization_status?: string;
+}> {
   const formData = new FormData();
   formData.append("file", archivo);
 
@@ -228,6 +282,7 @@ async function obtenerInterconsultaApiPorId(
 function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
   const prioridadSugerida = normalizarPrioridad(api.prioridad_sugerida_modelo);
   const estaPriorizada = prioridadSugerida !== null;
+  const esValidaParaPriorizacion = tieneInformacionClinica(api);
   const prioridadActual =
     normalizarPrioridad(api.prioridad_actual) ??
     prioridadSugerida ??
@@ -239,7 +294,7 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
     id: api.id,
     pacienteId: api.id,
     pacienteNombre: `Paciente ${api.id.slice(0, 8)}`,
-    pacienteRut: "No disponible",
+    pacienteRut: "XX.XXX.XXX-X",
     pacienteEdad: api.edad,
     especialidad: api.espec_destino,
     centroOrigen: api.espec_origen,
@@ -248,7 +303,8 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
       "Sin diagnostico registrado",
     motivoInterconsulta:
       api.motivo_interconsulta || "Sin motivo de interconsulta registrado",
-    estado: api.prioridad_sugerida_modelo ? "revisada" : "pendiente",
+    esValidaParaPriorizacion,
+    estado: normalizarEstado(api.estado),
     prioridadActual,
     priorizacionIA: {
       nivelSugerido: prioridadSugerida ?? prioridadActual,
@@ -263,10 +319,28 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
         ? "Priorizacion generada por el modelo predictivo con los datos clinicos disponibles."
         : "Interconsulta aun sin priorizacion automatica registrada.",
     },
-    historialModificaciones: [],
+    historialModificaciones: (api.modificaciones ?? []).map((modificacion) => ({
+      id: modificacion.id,
+      prioridadAnterior:
+        normalizarPrioridad(modificacion.prioridad_anterior) ?? prioridadActual,
+      prioridadNueva:
+        normalizarPrioridad(modificacion.prioridad_nueva) ?? prioridadActual,
+      motivo: modificacion.motivo,
+      medicoResponsable: modificacion.medico_responsable,
+      fecha: modificacion.created_at,
+    })),
     fechaIngreso: api.created_at,
     fechaActualizacion: api.updated_at,
   };
+}
+
+function tieneInformacionClinica(api: InterconsultaApi): boolean {
+  return [
+    api.historia_clinica,
+    api.fundamentos_diagnostico,
+    api.examenes_complementarios,
+    api.motivo_interconsulta,
+  ].some((campo) => Boolean(campo?.trim()));
 }
 
 function normalizarPrioridad(prioridad: PrioridadApi): NivelPrioridad | null {
@@ -303,4 +377,21 @@ function construirResumenCamposClinicos(interconsulta: InterconsultaApi): string
     .filter(([, valor]) => Boolean(valor?.trim()))
     .map(([label, valor]) => `${label}: ${valor}`)
     .join("\n\n");
+}
+
+function normalizarEstado(estado: string): EstadoInterconsulta {
+  return estado.trim().toLowerCase() === "revisada" ? "revisada" : "pendiente";
+}
+
+function obtenerMensajeError(detail: unknown, fallback: string): string {
+  if (typeof detail === "string") return detail;
+  if (
+    detail &&
+    typeof detail === "object" &&
+    "message" in detail &&
+    typeof detail.message === "string"
+  ) {
+    return detail.message;
+  }
+  return fallback;
 }

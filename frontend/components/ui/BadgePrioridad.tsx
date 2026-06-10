@@ -34,11 +34,11 @@ export default function BadgePrioridad({
   tamano = "sm",
 }: BadgePrioridadProps) {
   const estiloTamano =
-    tamano === "lg" ? "px-3 py-1.5 text-sm" : "px-2 py-0.5 text-xs";
+    tamano === "lg" ? "px-2.5 py-0.5 text-sm" : "px-2 py-0.5 text-xs";
 
   return (
     <span
-      className={`inline-flex items-center font-semibold rounded-full border ${estilosPrioridad[prioridad]} ${estiloTamano}`}
+      className={`inline-flex w-fit items-center rounded-full border font-semibold leading-tight ${estilosPrioridad[prioridad]} ${estiloTamano}`}
     >
       {etiquetasPrioridad[prioridad]}
     </span>

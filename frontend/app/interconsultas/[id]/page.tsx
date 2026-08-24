@@ -9,6 +9,7 @@ import TarjetaPriorizacionIA from "@/components/interconsultas/TarjetaPriorizaci
 import FormularioModificarPrioridad from "@/components/interconsultas/FormularioModificarPrioridad";
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
+import { formatearFechaHoraChileLarga } from "@/utils/fechas";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -92,6 +93,19 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
               >
                 {actualizandoEstado ? "Actualizando..." : "Marcar como revisada"}
               </button>
+            </div>
+          )}
+
+          {interconsulta.estado === "revisada" && (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)]">
+              <div className="flex items-center gap-2 text-sm font-medium text-[var(--estado-revisada)]">
+                <span aria-hidden>{"✓"}</span>
+                <span>Interconsulta revisada</span>
+              </div>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                Revisada el{" "}
+                {formatearFechaHoraChileLarga(interconsulta.fechaActualizacion)}
+              </p>
             </div>
           )}
 

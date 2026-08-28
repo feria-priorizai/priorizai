@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import DateTime, Float, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -46,7 +46,21 @@ class Interconsulta(Base):
         default="pendiente",
         nullable=False,
     )
+    motivo_sin_prioridad: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     fecha_emision: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    bandera_roja: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+    terminos_bandera_roja: Mapped[str | None] = mapped_column(Text, nullable=True)
+    prioridad_forzada_por_regla: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,

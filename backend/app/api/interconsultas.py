@@ -9,12 +9,14 @@ from app.schemas.interconsulta import (
     InterconsultaResponse,
     ModificarEstadoRequest,
     ModificarPrioridadRequest,
+    ReevaluarBanderasResponse,
 )
 from app.schemas.priorizacion import (
     PriorizarInterconsultasRequest,
     PriorizarInterconsultasResponse,
     ResultadoPriorizacion,
 )
+from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
 from app.services.priorizador import PriorizadorRigoBerta, get_priorizador
 
 router = APIRouter(prefix="/api/interconsultas", tags=["interconsultas"])
@@ -104,6 +106,10 @@ def modificar_prioridad_interconsulta(
 
     prioridad_anterior = interconsulta.prioridad_actual
     interconsulta.prioridad_actual = nueva_prioridad
+    # D5/D7: una vez que el medico decide, la prioridad ya no vino de la regla de
+    # banderas rojas. La bandera (bandera_roja/terminos_bandera_roja) se mantiene:
+    # sigue siendo informacion valida sobre el texto, solo deja de forzar.
+    interconsulta.prioridad_forzada_por_regla = False
     db.add(
         ModificacionPrioridad(
             interconsulta_id=interconsulta.id,
@@ -150,6 +156,44 @@ def modificar_estado_interconsulta(
     )
     assert actualizada is not None
     return actualizada
+
+
+@router.post("/reevaluar-banderas", response_model=ReevaluarBanderasResponse)
+def reevaluar_banderas_rojas(
+    db: Session = DbSession,
+) -> ReevaluarBanderasResponse:
+    """Re-evalua las banderas rojas de todas las interconsultas (RF7 / D6): util
+    tras editar el catalogo de terminos de alarma, ya que las interconsultas
+    cargadas antes del cambio no se reevaluan solas."""
+    interconsultas = list(db.scalars(select(Interconsulta)).all())
+
+    ids_con_modificacion = _ids_con_modificacion_previa(
+        db, [interconsulta.id for interconsulta in interconsultas]
+    )
+
+    total_con_bandera = 0
+    for interconsulta in interconsultas:
+        resultado = aplicar_banderas_a_interconsulta(
+            interconsulta,
+            ya_modificada_por_medico=interconsulta.id in ids_con_modificacion,
+        )
+        if resultado.bandera_roja:
+            total_con_bandera += 1
+
+    db.commit()
+    return ReevaluarBanderasResponse(
+        total_evaluadas=len(interconsultas),
+        total_con_bandera_roja=total_con_bandera,
+    )
+
+
+def _ids_con_modificacion_previa(db: Session, ids: list[str]) -> set[str]:
+    if not ids:
+        return set()
+    stmt = select(ModificacionPrioridad.interconsulta_id).where(
+        ModificacionPrioridad.interconsulta_id.in_(ids)
+    )
+    return set(db.scalars(stmt).all())
 
 
 @router.post("/priorizar", response_model=PriorizarInterconsultasResponse)

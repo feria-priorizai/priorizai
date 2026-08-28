@@ -24,6 +24,11 @@ class ModificacionPrioridadResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ReevaluarBanderasResponse(BaseModel):
+    total_evaluadas: int
+    total_con_bandera_roja: int
+
+
 class InterconsultaResponse(BaseModel):
     id: str
     espec_origen: str
@@ -42,7 +47,11 @@ class InterconsultaResponse(BaseModel):
     prob_alta: float | None
     prioridad_actual: str | None
     estado: str
+    motivo_sin_prioridad: str | None
     fecha_emision: datetime | None
+    bandera_roja: bool
+    terminos_bandera_roja: str | None
+    prioridad_forzada_por_regla: bool
     created_at: datetime
     updated_at: datetime
     modificaciones: list[ModificacionPrioridadResponse] = []

@@ -14,6 +14,7 @@ from app.api.interconsultas import router as interconsultas_router
 from app.core.config import settings
 from app.core.database import SessionLocal, engine
 from app.models import Base, Interconsulta
+from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
 from app.services.priorizador import get_priorizador
 
 UPLOAD_FILE = File(...)
@@ -206,11 +207,13 @@ def _guardar_interconsultas(
             INSERT INTO interconsultas
             (id, espec_origen, edad, sexo, espec_destino, prioridad_original_csv,
              historia_clinica, fundamentos_diagnostico, examenes_complementarios,
-             motivo_interconsulta, fecha_emision, estado, created_at, updated_at)
+             motivo_interconsulta, fecha_emision, estado, bandera_roja,
+             prioridad_forzada_por_regla, created_at, updated_at)
             VALUES
             (:id, :espec_origen, :edad, :sexo, :espec_destino, :prioridad_original_csv,
              :historia_clinica, :fundamentos_diagnostico, :examenes_complementarios,
-             :motivo_interconsulta, :fecha_emision, :estado, :created_at, :updated_at)
+             :motivo_interconsulta, :fecha_emision, :estado, :bandera_roja,
+             :prioridad_forzada_por_regla, :created_at, :updated_at)
             """)
 
         ids_insertados: list[str] = []
@@ -232,6 +235,8 @@ def _guardar_interconsultas(
                 "motivo_interconsulta": fila_json.get("MOTIVO_INTERCONSULTA", ""),
                 "fecha_emision": _parsear_fecha_emision(fila_json.get("FECHA_EMISION")),
                 "estado": "pendiente",
+                "bandera_roja": False,
+                "prioridad_forzada_por_regla": False,
                 "created_at": ahora,
                 "updated_at": ahora,
             }
@@ -266,7 +271,11 @@ def _guardar_interconsultas(
 
 COLUMNAS_NUEVAS = {
     "estado": "VARCHAR(20) DEFAULT 'pendiente' NOT NULL",
+    "motivo_sin_prioridad": "TEXT",
     "fecha_emision": "TIMESTAMP",
+    "bandera_roja": "BOOLEAN DEFAULT false NOT NULL",
+    "terminos_bandera_roja": "TEXT",
+    "prioridad_forzada_por_regla": "BOOLEAN DEFAULT false NOT NULL",
 }
 
 
@@ -299,9 +308,20 @@ def _priorizar_interconsultas_insertadas(session: Session, ids: list[str]) -> in
         for interconsulta in interconsultas
         if _tiene_informacion_clinica(interconsulta)
     ]
-    resultados = get_priorizador().predecir(validas)
-    por_id = {interconsulta.id: interconsulta for interconsulta in validas}
 
+    for interconsulta in validas:
+        aplicar_banderas_a_interconsulta(interconsulta, ya_modificada_por_medico=False)
+
+    try:
+        resultados = get_priorizador().predecir(validas)
+    except Exception as exc:
+        for interconsulta in validas:
+            interconsulta.motivo_sin_prioridad = (
+                f"No se pudo ejecutar el modelo predictivo: {exc}"
+            )
+        return 0
+
+    por_id = {interconsulta.id: interconsulta for interconsulta in validas}
     for resultado in resultados:
         interconsulta = por_id[resultado.id]
         interconsulta.prioridad_sugerida_modelo = resultado.prioridad
@@ -309,7 +329,8 @@ def _priorizar_interconsultas_insertadas(session: Session, ids: list[str]) -> in
         interconsulta.prob_baja = resultado.probabilidades.baja
         interconsulta.prob_media = resultado.probabilidades.media
         interconsulta.prob_alta = resultado.probabilidades.alta
-        interconsulta.prioridad_actual = resultado.prioridad
+        if not interconsulta.prioridad_forzada_por_regla:
+            interconsulta.prioridad_actual = resultado.prioridad
 
     return len(resultados)
 

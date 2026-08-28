@@ -73,6 +73,11 @@ def _tokenizar_frase(frase: str) -> tuple[str, ...]:
 
 @lru_cache(maxsize=1)
 def cargar_catalogo() -> list[TerminoCatalogo]:
+    """El catalogo se lee una vez por proceso. Al ser un archivo versionado en el
+    repositorio (D4), cambiarlo implica un despliegue, que reinicia el proceso y
+    relee el archivo. Si mas adelante se agrega el CRUD de terminos, esta cache
+    debe invalidarse al guardar (cargar_catalogo.cache_clear()), o el endpoint de
+    reevaluacion seguira usando el catalogo viejo."""
     with CATALOGO_PATH.open(encoding="utf-8") as archivo:
         datos = yaml.safe_load(archivo)
 

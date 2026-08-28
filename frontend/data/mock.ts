@@ -48,6 +48,7 @@ export const interconsultasMock: Interconsulta[] = [
       justificacion:
         "FEVI reducida (35%) con síntomas de descompensación activa. Edad avanzada con factores de riesgo cardiovascular múltiples. Requiere evaluación urgente para prevenir hospitalización.",
     },
+    fechaEmision: null,
     historialModificaciones: [],
     fechaIngreso: "2026-06-05T09:30:00",
     fechaActualizacion: "2026-06-05T09:30:00",
@@ -71,6 +72,7 @@ export const interconsultasMock: Interconsulta[] = [
       justificacion:
         "Hipertensión resistente sin emergencia hipertensiva actual. Sin signos de daño de órgano blanco. Requiere evaluación especializada pero no urgente.",
     },
+    fechaEmision: null,
     historialModificaciones: [],
     fechaIngreso: "2026-06-04T14:15:00",
     fechaActualizacion: "2026-06-05T10:00:00",
@@ -94,6 +96,7 @@ export const interconsultasMock: Interconsulta[] = [
       justificacion:
         "Paciente joven asintomático con soplo funcional probable. Sin factores de riesgo adicionales. Evaluación electiva recomendada.",
     },
+    fechaEmision: null,
     historialModificaciones: [],
     fechaIngreso: "2026-06-03T11:00:00",
     fechaActualizacion: "2026-06-03T11:00:00",
@@ -117,6 +120,7 @@ export const interconsultasMock: Interconsulta[] = [
       justificacion:
         "FA con respuesta ventricular rápida en paciente con alto riesgo tromboembólico (CHA2DS2-VASc 5). Requiere anticoagulación urgente y control de frecuencia. Riesgo de ACV elevado.",
     },
+    fechaEmision: null,
     historialModificaciones: [],
     fechaIngreso: "2026-06-05T08:00:00",
     fechaActualizacion: "2026-06-05T08:00:00",
@@ -140,6 +144,7 @@ export const interconsultasMock: Interconsulta[] = [
       justificacion:
         "Dolor torácico atípico con biomarcadores negativos. Bajo riesgo de síndrome coronario agudo. Evaluación ambulatoria recomendada.",
     },
+    fechaEmision: null,
     historialModificaciones: [
       {
         id: "mod-001",
@@ -173,6 +178,7 @@ export const interconsultasMock: Interconsulta[] = [
       justificacion:
         "Post IAM estable con revascularización exitosa. Control de seguimiento necesario pero sin urgencia. Adherencia al tratamiento adecuada.",
     },
+    fechaEmision: null,
     historialModificaciones: [],
     fechaIngreso: "2026-06-01T09:00:00",
     fechaActualizacion: "2026-06-03T14:00:00",
@@ -196,6 +202,7 @@ export const interconsultasMock: Interconsulta[] = [
       justificacion:
         "Estenosis aórtica severa con síntomas (síncope + disnea). Mortalidad elevada sin intervención. Requiere evaluación quirúrgica urgente.",
     },
+    fechaEmision: null,
     historialModificaciones: [],
     fechaIngreso: "2026-06-06T07:45:00",
     fechaActualizacion: "2026-06-06T07:45:00",
@@ -219,6 +226,7 @@ export const interconsultasMock: Interconsulta[] = [
       justificacion:
         "TSVP recurrente en corazón estructuralmente sano. Candidata a estudio electrofisiológico electivo. Sin riesgo vital inmediato.",
     },
+    fechaEmision: null,
     historialModificaciones: [],
     fechaIngreso: "2026-06-05T15:20:00",
     fechaActualizacion: "2026-06-05T15:20:00",

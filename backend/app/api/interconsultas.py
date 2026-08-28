@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, nullslast, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
@@ -21,6 +21,17 @@ router = APIRouter(prefix="/api/interconsultas", tags=["interconsultas"])
 DbSession = Depends(get_db)
 PriorizadorDependency = Depends(get_priorizador)
 
+# HU3-c1: prioridad descendente (alta > media > baja) y, dentro de cada prioridad,
+# fecha de emision ascendente. La prioridad se guarda como texto, asi que se
+# necesita un CASE explicito para que "alta" no ordene alfabeticamente antes que
+# "baja".
+_ORDEN_PRIORIDAD = case(
+    (Interconsulta.prioridad_actual == "alta", 0),
+    (Interconsulta.prioridad_actual == "media", 1),
+    (Interconsulta.prioridad_actual == "baja", 2),
+    else_=3,
+)
+
 
 @router.get("", response_model=list[InterconsultaResponse])
 def listar_interconsultas(
@@ -32,8 +43,9 @@ def listar_interconsultas(
         select(Interconsulta)
         .options(selectinload(Interconsulta.modificaciones))
         .order_by(
-            nullslast(Interconsulta.confianza_modelo.desc()),
-            Interconsulta.created_at.desc(),
+            _ORDEN_PRIORIDAD,
+            func.coalesce(Interconsulta.fecha_emision, Interconsulta.created_at).asc(),
+            Interconsulta.id.asc(),
         )
         .offset(offset)
         .limit(limit)

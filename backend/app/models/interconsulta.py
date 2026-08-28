@@ -46,6 +46,7 @@ class Interconsulta(Base):
         default="pendiente",
         nullable=False,
     )
+    fecha_emision: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,

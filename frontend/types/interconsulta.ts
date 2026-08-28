@@ -40,5 +40,6 @@ export interface Interconsulta {
   priorizacionIA: ResultadoPriorizacion;
   historialModificaciones: ModificacionPrioridad[];
   fechaIngreso: string;
+  fechaEmision: string | null;
   fechaActualizacion: string;
 }

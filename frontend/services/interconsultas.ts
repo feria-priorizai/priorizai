@@ -34,6 +34,7 @@ interface InterconsultaApi {
   prob_alta: number | null;
   prioridad_actual: string | null;
   estado: string;
+  fecha_emision: string | null;
   created_at: string;
   updated_at: string;
   modificaciones?: ModificacionPrioridadApi[];
@@ -319,6 +320,7 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
         ? "Priorizacion generada por el modelo predictivo con los datos clinicos disponibles."
         : "Interconsulta aun sin priorizacion automatica registrada.",
     },
+    fechaEmision: api.fecha_emision,
     historialModificaciones: (api.modificaciones ?? []).map((modificacion) => ({
       id: modificacion.id,
       prioridadAnterior:

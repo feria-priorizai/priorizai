@@ -42,6 +42,7 @@ class InterconsultaResponse(BaseModel):
     prob_alta: float | None
     prioridad_actual: str | None
     estado: str
+    fecha_emision: datetime | None
     created_at: datetime
     updated_at: datetime
     modificaciones: list[ModificacionPrioridadResponse] = []

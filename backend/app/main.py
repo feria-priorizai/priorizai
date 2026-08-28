@@ -206,11 +206,11 @@ def _guardar_interconsultas(
             INSERT INTO interconsultas
             (id, espec_origen, edad, sexo, espec_destino, prioridad_original_csv,
              historia_clinica, fundamentos_diagnostico, examenes_complementarios,
-             motivo_interconsulta, estado, created_at, updated_at)
+             motivo_interconsulta, fecha_emision, estado, created_at, updated_at)
             VALUES
             (:id, :espec_origen, :edad, :sexo, :espec_destino, :prioridad_original_csv,
              :historia_clinica, :fundamentos_diagnostico, :examenes_complementarios,
-             :motivo_interconsulta, :estado, :created_at, :updated_at)
+             :motivo_interconsulta, :fecha_emision, :estado, :created_at, :updated_at)
             """)
 
         ids_insertados: list[str] = []
@@ -230,6 +230,7 @@ def _guardar_interconsultas(
                     "EXAMENES_COMPLEMENTARIOS", ""
                 ),
                 "motivo_interconsulta": fila_json.get("MOTIVO_INTERCONSULTA", ""),
+                "fecha_emision": _parsear_fecha_emision(fila_json.get("FECHA_EMISION")),
                 "estado": "pendiente",
                 "created_at": ahora,
                 "updated_at": ahora,
@@ -263,19 +264,28 @@ def _guardar_interconsultas(
         session.close()
 
 
+COLUMNAS_NUEVAS = {
+    "estado": "VARCHAR(20) DEFAULT 'pendiente' NOT NULL",
+    "fecha_emision": "TIMESTAMP",
+}
+
+
 def _asegurar_columnas_interconsultas() -> None:
     inspector = inspect(engine)
     columnas = {columna["name"] for columna in inspector.get_columns("interconsultas")}
-    if "estado" in columnas:
+    faltantes = {
+        nombre: definicion
+        for nombre, definicion in COLUMNAS_NUEVAS.items()
+        if nombre not in columnas
+    }
+    if not faltantes:
         return
 
     with engine.begin() as connection:
-        connection.execute(
-            text(
-                "ALTER TABLE interconsultas "
-                "ADD COLUMN estado VARCHAR(20) DEFAULT 'pendiente' NOT NULL"
+        for nombre, definicion in faltantes.items():
+            connection.execute(
+                text(f"ALTER TABLE interconsultas ADD COLUMN {nombre} {definicion}")
             )
-        )
 
 
 def _priorizar_interconsultas_insertadas(session: Session, ids: list[str]) -> int:
@@ -320,6 +330,26 @@ def _estado_priorizacion(total: int, priorizadas: int) -> str:
     if priorizadas == 0:
         return "skipped"
     return "partial"
+
+
+FORMATOS_FECHA_EMISION = ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y")
+
+
+def _parsear_fecha_emision(valor: object) -> datetime | None:
+    """FECHA_EMISION es opcional (HU3-c1): no viene en COLUMNAS_ESPERADAS y aun no
+    se conoce el formato real del archivo del sistema hospitalario (D18). Si no
+    esta presente o no calza con un formato conocido, se guarda como None en vez
+    de romper la carga completa."""
+    texto = str(valor or "").strip()
+    if not texto:
+        return None
+
+    for formato in FORMATOS_FECHA_EMISION:
+        try:
+            return datetime.strptime(texto, formato).replace(tzinfo=UTC)
+        except ValueError:
+            continue
+    return None
 
 
 def _normalizar_encabezado(valor: object) -> str:

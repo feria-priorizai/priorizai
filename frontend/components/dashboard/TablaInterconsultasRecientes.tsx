@@ -14,16 +14,11 @@ interface TablaInterconsultasRecientesProps {
 export default function TablaInterconsultasRecientes({
   interconsultas,
 }: TablaInterconsultasRecientesProps) {
-  const ordenadas = [...interconsultas].sort((a, b) => {
-    const difPrioridad =
-      obtenerOrdenPrioridad(a) - obtenerOrdenPrioridad(b);
-
-    if (difPrioridad !== 0) {
-      return difPrioridad;
-    }
-
-    return new Date(b.fechaIngreso).getTime() - new Date(a.fechaIngreso).getTime();
-  });
+  // HU3-c1 y c3: el orden lo resuelve el backend (prioridad descendente ->
+  // fecha de emision ascendente -> id). No se reordena en el cliente: hacerlo
+  // duplicaba el criterio y lo contradecia, ordenando por fecha de ingreso
+  // descendente y anulando el orden correcto que ya venia de la API.
+  const ordenadas = interconsultas;
 
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
@@ -142,13 +137,4 @@ export default function TablaInterconsultasRecientes({
       )}
     </div>
   );
-}
-
-function obtenerOrdenPrioridad(interconsulta: Interconsulta): number {
-  if (interconsulta.esValidaParaPriorizacion === false) {
-    return 99;
-  }
-
-  const ordenPrioridad = { alta: 0, media: 1, baja: 2 };
-  return ordenPrioridad[interconsulta.prioridadActual];
 }

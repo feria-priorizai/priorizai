@@ -2,18 +2,25 @@
 
 import type { ResultadoPriorizacion, NivelPrioridad } from "@/types";
 import BadgePrioridad from "@/components/ui/BadgePrioridad";
+import BadgeBanderaRoja from "@/components/ui/BadgeBanderaRoja";
 import IndicadorConfianza from "@/components/ui/IndicadorConfianza";
 
 interface TarjetaPriorizacionIAProps {
   priorizacion: ResultadoPriorizacion;
   prioridadActual: NivelPrioridad;
   fueModificada: boolean;
+  /** D7: cuando la prioridad viene de una regla de banderas rojas y no del
+   * modelo, se reemplaza el porcentaje de confianza por esta marca. */
+  prioridadForzadaPorRegla?: boolean;
+  terminosBanderaRoja?: string[];
 }
 
 export default function TarjetaPriorizacionIA({
   priorizacion,
   prioridadActual,
   fueModificada,
+  prioridadForzadaPorRegla = false,
+  terminosBanderaRoja = [],
 }: TarjetaPriorizacionIAProps) {
   const estaPriorizada = priorizacion.priorizada ?? true;
 
@@ -59,9 +66,21 @@ export default function TarjetaPriorizacionIA({
           </div>
         )}
 
-        {estaPriorizada && (
-          <IndicadorConfianza porcentaje={priorizacion.confianza} />
-        )}
+        {estaPriorizada &&
+          (prioridadForzadaPorRegla ? (
+            <div className="rounded-lg border border-[var(--prioridad-alta-border)] bg-[var(--prioridad-alta-bg)] p-4">
+              <div className="mb-2">
+                <BadgeBanderaRoja terminos={terminosBanderaRoja} />
+              </div>
+              <p className="text-sm text-[var(--text-primary)]">
+                La prioridad fue forzada a &quot;Alta&quot; por el catalogo de
+                terminos de alarma, no por el modelo predictivo. El porcentaje
+                de confianza no aplica en este caso.
+              </p>
+            </div>
+          ) : (
+            <IndicadorConfianza porcentaje={priorizacion.confianza} />
+          ))}
 
         {estaPriorizada && priorizacion.probabilidades && (
           <div className="grid grid-cols-3 gap-2">

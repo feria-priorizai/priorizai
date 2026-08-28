@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { Interconsulta } from "@/types";
 import BadgePrioridad from "@/components/ui/BadgePrioridad";
+import BadgeBanderaRoja from "@/components/ui/BadgeBanderaRoja";
 import BadgeEstado from "@/components/ui/BadgeEstado";
 import { formatearFechaHoraChile } from "@/utils/fechas";
 
@@ -83,13 +84,22 @@ export default function TablaInterconsultasRecientes({
                   {ic.diagnostico}
                 </td>
                 <td className="px-5 py-3">
-                  {ic.esValidaParaPriorizacion === false ? (
-                    <span className="text-sm text-[var(--text-muted)]">
-                      No aplica
-                    </span>
-                  ) : (
-                    <BadgePrioridad prioridad={ic.prioridadActual} />
-                  )}
+                  <div className="flex flex-col items-start gap-1">
+                    {ic.esValidaParaPriorizacion === false ? (
+                      <span className="text-sm text-[var(--text-muted)]">
+                        No aplica
+                      </span>
+                    ) : ic.sinPrioridad ? (
+                      <span className="text-sm text-[var(--text-muted)]">
+                        Sin prioridad
+                      </span>
+                    ) : (
+                      <BadgePrioridad prioridad={ic.prioridadActual} />
+                    )}
+                    {ic.banderaRoja && (
+                      <BadgeBanderaRoja terminos={ic.terminosBanderaRoja} />
+                    )}
+                  </div>
                 </td>
                 <td className="px-5 py-3">
                   <BadgeEstado estado={ic.estado} />
@@ -99,12 +109,19 @@ export default function TablaInterconsultasRecientes({
                     <span className="inline-flex rounded-full border border-[var(--prioridad-media-border)] bg-[var(--prioridad-media-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--prioridad-media)]">
                       Interconsulta invalida
                     </span>
+                  ) : ic.prioridadForzadaPorRegla ? (
+                    <span className="text-sm font-semibold text-[var(--prioridad-alta)]">
+                      Regla clinica
+                    </span>
                   ) : ic.priorizacionIA.priorizada ?? true ? (
                     <span className="text-sm font-semibold">
                       {ic.priorizacionIA.confianza}%
                     </span>
                   ) : (
-                    <span className="text-sm text-[var(--text-muted)]">
+                    <span
+                      className="text-sm text-[var(--text-muted)]"
+                      title={ic.motivoSinPrioridad ?? undefined}
+                    >
                       Sin priorizar
                     </span>
                   )}

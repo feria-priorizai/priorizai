@@ -34,7 +34,11 @@ interface InterconsultaApi {
   prob_alta: number | null;
   prioridad_actual: string | null;
   estado: string;
+  motivo_sin_prioridad: string | null;
   fecha_emision: string | null;
+  bandera_roja: boolean;
+  terminos_bandera_roja: string | null;
+  prioridad_forzada_por_regla: boolean;
   created_at: string;
   updated_at: string;
   modificaciones?: ModificacionPrioridadApi[];
@@ -284,12 +288,19 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
   const prioridadSugerida = normalizarPrioridad(api.prioridad_sugerida_modelo);
   const estaPriorizada = prioridadSugerida !== null;
   const esValidaParaPriorizacion = tieneInformacionClinica(api);
-  const prioridadActual =
+  const prioridadDisponible =
     normalizarPrioridad(api.prioridad_actual) ??
     prioridadSugerida ??
-    normalizarPrioridad(api.prioridad_original_csv) ??
-    "baja";
+    normalizarPrioridad(api.prioridad_original_csv);
+  // HU2-c5: sin prioridad disponible, no se debe defaultear a "baja" (el lado
+  // inseguro). El "baja" de relleno solo satisface el tipo; sinPrioridad=true le
+  // dice a la interfaz que no lo muestre como si fuera una prioridad real.
+  const sinPrioridad = prioridadDisponible === null;
+  const prioridadActual = prioridadDisponible ?? "baja";
   const confianza = api.confianza_modelo ?? 0;
+  const terminosBanderaRoja = api.terminos_bandera_roja
+    ? api.terminos_bandera_roja.split(",").filter(Boolean)
+    : [];
 
   return {
     id: api.id,
@@ -307,6 +318,11 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
     esValidaParaPriorizacion,
     estado: normalizarEstado(api.estado),
     prioridadActual,
+    sinPrioridad,
+    motivoSinPrioridad: api.motivo_sin_prioridad,
+    banderaRoja: api.bandera_roja,
+    terminosBanderaRoja,
+    prioridadForzadaPorRegla: api.prioridad_forzada_por_regla,
     priorizacionIA: {
       nivelSugerido: prioridadSugerida ?? prioridadActual,
       confianza,

@@ -288,10 +288,13 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
   const prioridadSugerida = normalizarPrioridad(api.prioridad_sugerida_modelo);
   const estaPriorizada = prioridadSugerida !== null;
   const esValidaParaPriorizacion = tieneInformacionClinica(api);
+  // La prioridad que se muestra es la que decidio el medico o, si aun no decidio,
+  // la que sugiere el modelo. NO se cae a prioridad_original_csv: esa es la
+  // etiqueta del corpus historico (la prioridad que ya asigno un especialista) y
+  // mostrarla seria presentar la respuesta como si fuera la salida del sistema.
+  // En produccion las interconsultas llegan sin priorizar y ese campo va vacio.
   const prioridadDisponible =
-    normalizarPrioridad(api.prioridad_actual) ??
-    prioridadSugerida ??
-    normalizarPrioridad(api.prioridad_original_csv);
+    normalizarPrioridad(api.prioridad_actual) ?? prioridadSugerida;
   // HU2-c5: sin prioridad disponible, no se debe defaultear a "baja" (el lado
   // inseguro). El "baja" de relleno solo satisface el tipo; sinPrioridad=true le
   // dice a la interfaz que no lo muestre como si fuera una prioridad real.

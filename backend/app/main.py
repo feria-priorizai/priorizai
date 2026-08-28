@@ -24,12 +24,18 @@ COLUMNAS_ESPERADAS = [
     "EDAD",
     "SEXO",
     "ESPEC_DESTINO",
-    "PRIORIDAD",
     "HISTORIA_CLINICA",
     "FUNDAMENTOS_DIAGNOSTICO",
     "EXAMENES_COMPLEMENTARIOS",
     "MOTIVO_INTERCONSULTA",
 ]
+
+# PRIORIDAD no es obligatoria: en produccion la interconsulta llega SIN priorizar
+# (ese es el producto). Solo la traen los archivos historicos, donde es la
+# etiqueta que asigno un especialista. Se guarda cuando viene, para poder
+# contrastar despues el modelo contra la prioridad real, pero no se exige ni se
+# muestra como si fuera la prioridad de la interconsulta.
+COLUMNA_PRIORIDAD_OPCIONAL = "PRIORIDAD"
 
 app = FastAPI()
 
@@ -226,7 +232,9 @@ def _guardar_interconsultas(
                 "edad": fila_json.get("EDAD"),
                 "sexo": fila_json.get("SEXO", ""),
                 "espec_destino": fila_json.get("ESPEC_DESTINO", ""),
-                "prioridad_original_csv": fila_json.get("PRIORIDAD", ""),
+                "prioridad_original_csv": _texto_o_none(
+                    fila_json.get(COLUMNA_PRIORIDAD_OPCIONAL)
+                ),
                 "historia_clinica": fila_json.get("HISTORIA_CLINICA", ""),
                 "fundamentos_diagnostico": fila_json.get("FUNDAMENTOS_DIAGNOSTICO", ""),
                 "examenes_complementarios": fila_json.get(
@@ -344,6 +352,13 @@ def _estado_priorizacion(total: int, priorizadas: int) -> str:
     if priorizadas == 0:
         return "skipped"
     return "partial"
+
+
+def _texto_o_none(valor: object) -> str | None:
+    """Distingue 'no vino la columna' de 'vino vacia': ambos casos se guardan como
+    NULL, para que coalesce y las comparaciones no tengan que lidiar con ""."""
+    texto = str(valor or "").strip()
+    return texto or None
 
 
 FORMATOS_FECHA_EMISION = ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y")

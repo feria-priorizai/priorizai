@@ -27,18 +27,19 @@ router = APIRouter(prefix="/api/interconsultas", tags=["interconsultas"])
 DbSession = Depends(get_db)
 PriorizadorDependency = Depends(get_priorizador)
 
-# La prioridad que ve el medico no siempre esta en prioridad_actual: si el modelo
-# no la asigno y el medico no la modifico, la interfaz cae a la sugerencia del
-# modelo y luego a la prioridad que traia el archivo del hospital. El orden tiene
-# que usar esa misma cadena; si ordena solo por prioridad_actual, una
-# interconsulta que en pantalla dice "Alta" aparece debajo de una que dice "Baja".
-# Se normaliza a minusculas porque prioridad_original_csv llega en mayusculas, y
-# se descartan los vacios con nullif ("" no es NULL para coalesce).
+# La prioridad que ve el medico es la que decidio el (prioridad_actual) o, si aun
+# no decidio, la que sugiere el modelo. El orden usa esa misma cadena: ordenar por
+# un valor y mostrar otro hace que una interconsulta que en pantalla dice "Alta"
+# aparezca debajo de una que dice "Baja".
+#
+# prioridad_original_csv queda deliberadamente fuera: es la etiqueta que trae el
+# corpus historico (la prioridad que asigno un especialista), no una prioridad de
+# esta aplicacion. En produccion las interconsultas llegan sin priorizar, asi que
+# usarla ordenaria por la respuesta en vez de por lo que el sistema propone.
 _PRIORIDAD_EFECTIVA = func.lower(
     func.coalesce(
         func.nullif(func.trim(Interconsulta.prioridad_actual), ""),
         func.nullif(func.trim(Interconsulta.prioridad_sugerida_modelo), ""),
-        func.nullif(func.trim(Interconsulta.prioridad_original_csv), ""),
     )
 )
 

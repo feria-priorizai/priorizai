@@ -105,6 +105,71 @@ def test_upload_csv_aplica_banderas_rojas_sin_modelo_disponible(monkeypatch) -> 
         db.close()
 
 
+def test_upload_acepta_archivo_sin_columna_prioridad(monkeypatch) -> None:
+    # En produccion la interconsulta llega SIN priorizar: el archivo del sistema
+    # hospitalario no trae la columna PRIORIDAD. Exigirla rompia la carga real.
+    monkeypatch.setattr(main_module, "SessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(
+        main_module, "get_priorizador", lambda: PriorizadorNoDisponible()
+    )
+    client = TestClient(app)
+
+    csv_sin_prioridad = (
+        "ESPEC_ORIGEN,EDAD,SEXO,ESPEC_DESTINO,HISTORIA_CLINICA,"
+        "FUNDAMENTOS_DIAGNOSTICO,EXAMENES_COMPLEMENTARIOS,MOTIVO_INTERCONSULTA\n"
+        "MEDICINA GENERAL,54,MASCULINO,CARDIOLOGIA,"
+        "Paciente con dolor toracico de inicio subito,Cuadro agudo,,Evaluacion\n"
+    )
+
+    response = client.post(
+        "/upload-csv",
+        files={"file": ("sin_prioridad.csv", csv_sin_prioridad, "text/csv")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["inserted"] == 1
+
+    db = TestingSessionLocal()
+    try:
+        interconsulta = db.scalar(select(Interconsulta))
+        assert interconsulta is not None
+        assert interconsulta.prioridad_original_csv is None
+        # La bandera roja sigue funcionando sin la columna PRIORIDAD.
+        assert interconsulta.bandera_roja is True
+        assert interconsulta.prioridad_actual == "alta"
+    finally:
+        db.close()
+
+
+def test_upload_guarda_la_etiqueta_historica_cuando_viene(monkeypatch) -> None:
+    # Los archivos historicos si traen PRIORIDAD (la etiqueta del especialista).
+    # Se sigue guardando para poder contrastar despues el modelo contra ella.
+    monkeypatch.setattr(main_module, "SessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(
+        main_module, "get_priorizador", lambda: PriorizadorNoDisponible()
+    )
+    client = TestClient(app)
+
+    with FIXTURE.open("rb") as archivo:
+        response = client.post(
+            "/upload-csv",
+            files={"file": ("interconsultas.csv", archivo, "text/csv")},
+        )
+
+    assert response.status_code == 200
+
+    db = TestingSessionLocal()
+    try:
+        etiquetas = {
+            ic.historia_clinica: ic.prioridad_original_csv
+            for ic in db.scalars(select(Interconsulta)).all()
+        }
+        assert etiquetas["Paciente con dolor toracico de inicio subito"] == "MEDIA"
+        assert etiquetas["Paciente sin dolor toracico ni disnea"] == "BAJA"
+    finally:
+        db.close()
+
+
 def test_reevaluar_banderas_no_pisa_decision_medica_previa(monkeypatch) -> None:
     monkeypatch.setattr(main_module, "SessionLocal", TestingSessionLocal)
     monkeypatch.setattr(

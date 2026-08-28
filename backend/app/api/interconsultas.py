@@ -27,14 +27,29 @@ router = APIRouter(prefix="/api/interconsultas", tags=["interconsultas"])
 DbSession = Depends(get_db)
 PriorizadorDependency = Depends(get_priorizador)
 
+# La prioridad que ve el medico no siempre esta en prioridad_actual: si el modelo
+# no la asigno y el medico no la modifico, la interfaz cae a la sugerencia del
+# modelo y luego a la prioridad que traia el archivo del hospital. El orden tiene
+# que usar esa misma cadena; si ordena solo por prioridad_actual, una
+# interconsulta que en pantalla dice "Alta" aparece debajo de una que dice "Baja".
+# Se normaliza a minusculas porque prioridad_original_csv llega en mayusculas, y
+# se descartan los vacios con nullif ("" no es NULL para coalesce).
+_PRIORIDAD_EFECTIVA = func.lower(
+    func.coalesce(
+        func.nullif(func.trim(Interconsulta.prioridad_actual), ""),
+        func.nullif(func.trim(Interconsulta.prioridad_sugerida_modelo), ""),
+        func.nullif(func.trim(Interconsulta.prioridad_original_csv), ""),
+    )
+)
+
 # HU3-c1: prioridad descendente (alta > media > baja) y, dentro de cada prioridad,
 # fecha de emision ascendente. La prioridad se guarda como texto, asi que se
 # necesita un CASE explicito para que "alta" no ordene alfabeticamente antes que
-# "baja".
+# "baja". Las interconsultas sin prioridad alguna quedan al final.
 _ORDEN_PRIORIDAD = case(
-    (Interconsulta.prioridad_actual == "alta", 0),
-    (Interconsulta.prioridad_actual == "media", 1),
-    (Interconsulta.prioridad_actual == "baja", 2),
+    (_PRIORIDAD_EFECTIVA == "alta", 0),
+    (_PRIORIDAD_EFECTIVA == "media", 1),
+    (_PRIORIDAD_EFECTIVA == "baja", 2),
     else_=3,
 )
 

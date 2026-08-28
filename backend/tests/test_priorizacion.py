@@ -308,6 +308,54 @@ def test_listado_ordena_por_prioridad_y_fecha_de_emision() -> None:
     assert ids == ["ic-a1", "ic-a2", "ic-m", "ic-b"]
 
 
+def test_listado_ordena_por_la_prioridad_que_ve_el_medico() -> None:
+    # Regresion: si el modelo no priorizo y el medico no modifico, la interfaz
+    # muestra la prioridad que traia el archivo del hospital. El orden debe usar
+    # esa misma prioridad, o una interconsulta que en pantalla dice "Alta"
+    # termina debajo de una que dice "Baja" (HU3-c1).
+    db = TestingSessionLocal()
+    db.add(
+        Interconsulta(
+            id="ic-csv-baja",
+            espec_origen="Medicina General",
+            edad=35,
+            sexo="F",
+            espec_destino="Dermatologia",
+            prioridad_original_csv="BAJA",
+            historia_clinica="Lesion cutanea estable",
+            fundamentos_diagnostico="Control de rutina",
+            examenes_complementarios="",
+            motivo_interconsulta="Control",
+            prioridad_actual=None,
+            prioridad_sugerida_modelo=None,
+        )
+    )
+    db.add(
+        Interconsulta(
+            id="ic-csv-alta",
+            espec_origen="Medicina General",
+            edad=70,
+            sexo="M",
+            espec_destino="Cardiologia",
+            prioridad_original_csv="ALTA",
+            historia_clinica="Derivado con prioridad alta",
+            fundamentos_diagnostico="Cuadro cronico",
+            examenes_complementarios="",
+            motivo_interconsulta="Evaluacion",
+            prioridad_actual=None,
+            prioridad_sugerida_modelo=None,
+        )
+    )
+    db.commit()
+    db.close()
+
+    response = client.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    ids = [item["id"] for item in response.json()]
+    assert ids == ["ic-csv-alta", "ic-csv-baja"]
+
+
 def test_listado_ubica_al_final_las_interconsultas_sin_prioridad() -> None:
     db = TestingSessionLocal()
     db.add(

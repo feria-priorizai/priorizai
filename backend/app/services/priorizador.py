@@ -28,6 +28,30 @@ def normalizar_clase(texto: str) -> str:
     return texto.strip().lower()
 
 
+def aplicar_resultado(
+    interconsulta: Interconsulta,
+    resultado: ResultadoPriorizacion,
+) -> None:
+    """Vuelca la prediccion del modelo sobre la interconsulta.
+
+    Punto unico: la ingesta (main.upload_csv) y los endpoints de priorizacion
+    comparten esta funcion para que el guard de banderas rojas no quede en una
+    sola de las dos rutas.
+
+    No pisa prioridad_actual cuando la forzo una bandera roja (D5 / HU5-c3): la
+    regla determinista manda sobre la sugerencia del modelo. La sugerencia igual
+    se guarda en prioridad_sugerida_modelo, para que el medico vea ambas.
+    """
+    interconsulta.prioridad_sugerida_modelo = resultado.prioridad
+    interconsulta.confianza_modelo = resultado.confianza
+    interconsulta.prob_baja = resultado.probabilidades.baja
+    interconsulta.prob_media = resultado.probabilidades.media
+    interconsulta.prob_alta = resultado.probabilidades.alta
+    interconsulta.motivo_sin_prioridad = None
+    if not interconsulta.prioridad_forzada_por_regla:
+        interconsulta.prioridad_actual = resultado.prioridad
+
+
 def construir_texto(interconsulta: Interconsulta) -> str:
     partes = [
         interconsulta.espec_origen,

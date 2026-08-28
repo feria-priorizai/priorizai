@@ -17,7 +17,11 @@ from app.schemas.priorizacion import (
     ResultadoPriorizacion,
 )
 from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
-from app.services.priorizador import PriorizadorRigoBerta, get_priorizador
+from app.services.priorizador import (
+    PriorizadorRigoBerta,
+    aplicar_resultado,
+    get_priorizador,
+)
 
 router = APIRouter(prefix="/api/interconsultas", tags=["interconsultas"])
 DbSession = Depends(get_db)
@@ -328,11 +332,5 @@ def _guardar_resultados(
 ) -> None:
     por_id = {interconsulta.id: interconsulta for interconsulta in interconsultas}
     for resultado in resultados:
-        interconsulta = por_id[resultado.id]
-        interconsulta.prioridad_sugerida_modelo = resultado.prioridad
-        interconsulta.confianza_modelo = resultado.confianza
-        interconsulta.prob_baja = resultado.probabilidades.baja
-        interconsulta.prob_media = resultado.probabilidades.media
-        interconsulta.prob_alta = resultado.probabilidades.alta
-        interconsulta.prioridad_actual = resultado.prioridad
+        aplicar_resultado(por_id[resultado.id], resultado)
     db.commit()

@@ -15,7 +15,7 @@ from app.core.config import settings
 from app.core.database import SessionLocal, engine
 from app.models import Base, Interconsulta
 from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
-from app.services.priorizador import get_priorizador
+from app.services.priorizador import aplicar_resultado, get_priorizador
 
 UPLOAD_FILE = File(...)
 
@@ -323,14 +323,7 @@ def _priorizar_interconsultas_insertadas(session: Session, ids: list[str]) -> in
 
     por_id = {interconsulta.id: interconsulta for interconsulta in validas}
     for resultado in resultados:
-        interconsulta = por_id[resultado.id]
-        interconsulta.prioridad_sugerida_modelo = resultado.prioridad
-        interconsulta.confianza_modelo = resultado.confianza
-        interconsulta.prob_baja = resultado.probabilidades.baja
-        interconsulta.prob_media = resultado.probabilidades.media
-        interconsulta.prob_alta = resultado.probabilidades.alta
-        if not interconsulta.prioridad_forzada_por_regla:
-            interconsulta.prioridad_actual = resultado.prioridad
+        aplicar_resultado(por_id[resultado.id], resultado)
 
     return len(resultados)
 

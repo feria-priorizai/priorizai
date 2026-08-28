@@ -4,7 +4,6 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: priorizai_backend
-    gpus: all
     ports:
       - "${BACKEND_PORT}:8000"
     volumes:

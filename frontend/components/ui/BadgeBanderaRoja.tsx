@@ -5,6 +5,8 @@
  */
 
 interface BadgeBanderaRojaProps {
+  /** Nombres clinicos de los terminos, ya resueltos por el backend contra el
+   * catalogo (no los ids). */
   terminos: string[];
   tamano?: "sm" | "lg";
 }
@@ -15,7 +17,7 @@ export default function BadgeBanderaRoja({
 }: BadgeBanderaRojaProps) {
   const estiloTamano =
     tamano === "lg" ? "px-2.5 py-0.5 text-sm" : "px-2 py-0.5 text-xs";
-  const etiquetaTerminos = terminos.map(formatearTermino).join(", ");
+  const etiquetaTerminos = terminos.join(", ");
 
   return (
     <span
@@ -35,12 +37,4 @@ export default function BadgeBanderaRoja({
       )}
     </span>
   );
-}
-
-function formatearTermino(terminoId: string): string {
-  return terminoId
-    .split("_")
-    .filter(Boolean)
-    .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1))
-    .join(" ");
 }

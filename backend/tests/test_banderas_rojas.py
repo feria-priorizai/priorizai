@@ -1,8 +1,9 @@
+from app.models.interconsulta import Interconsulta
 from app.services.banderas_rojas import (
-    aplicar_deteccion,
+    aplicar_banderas_a_interconsulta,
     detectar_banderas,
     detectar_banderas_multicampo,
-    hay_bandera_afirmada,
+    nombres_de_terminos,
     terminos_afirmados,
 )
 
@@ -15,7 +16,6 @@ def test_termino_afirmado_dispara_bandera() -> None:
     assert len(detecciones) == 1
     assert detecciones[0].termino_id == "dolor_toracico"
     assert detecciones[0].asercion == "afirmado"
-    assert hay_bandera_afirmada(detecciones)
     assert terminos_afirmados(detecciones) == ["dolor_toracico"]
 
 
@@ -26,7 +26,7 @@ def test_negacion_previa_no_dispara_bandera() -> None:
 
     assert len(detecciones) == 1
     assert detecciones[0].asercion == "negado"
-    assert not hay_bandera_afirmada(detecciones)
+    assert terminos_afirmados(detecciones) == []
 
 
 def test_negacion_posterior_no_dispara_bandera() -> None:
@@ -36,7 +36,7 @@ def test_negacion_posterior_no_dispara_bandera() -> None:
 
     assert len(detecciones) == 1
     assert detecciones[0].asercion == "negado"
-    assert not hay_bandera_afirmada(detecciones)
+    assert terminos_afirmados(detecciones) == []
 
 
 def test_termino_historico_no_dispara_bandera() -> None:
@@ -47,7 +47,7 @@ def test_termino_historico_no_dispara_bandera() -> None:
     assert len(detecciones) == 1
     assert detecciones[0].termino_id == "sepsis"
     assert detecciones[0].asercion == "historico"
-    assert not hay_bandera_afirmada(detecciones)
+    assert terminos_afirmados(detecciones) == []
 
 
 def test_termino_hipotetico_no_dispara_bandera() -> None:
@@ -57,7 +57,7 @@ def test_termino_hipotetico_no_dispara_bandera() -> None:
 
     assert len(detecciones) == 1
     assert detecciones[0].asercion == "hipotetico"
-    assert not hay_bandera_afirmada(detecciones)
+    assert terminos_afirmados(detecciones) == []
 
 
 def test_pseudo_negacion_si_dispara_bandera() -> None:
@@ -68,7 +68,7 @@ def test_pseudo_negacion_si_dispara_bandera() -> None:
     assert len(detecciones) == 1
     assert detecciones[0].termino_id == "sepsis"
     assert detecciones[0].asercion == "afirmado"
-    assert hay_bandera_afirmada(detecciones)
+    assert terminos_afirmados(detecciones) == ["sepsis"]
 
 
 def test_terminador_corta_el_alcance_de_la_negacion() -> None:
@@ -87,7 +87,7 @@ def test_texto_sin_terminos_de_alarma_no_genera_detecciones() -> None:
     )
 
     assert detecciones == []
-    assert not hay_bandera_afirmada(detecciones)
+    assert terminos_afirmados(detecciones) == []
 
 
 def test_texto_vacio_no_genera_detecciones() -> None:
@@ -112,25 +112,49 @@ def test_sinonimo_del_catalogo_tambien_dispara_deteccion() -> None:
     assert detecciones[0].asercion == "afirmado"
 
 
-def test_aplicar_deteccion_fuerza_prioridad_sin_modificacion_previa() -> None:
-    resultado = aplicar_deteccion(
-        "Paciente con dolor toracico de inicio subito",
-        ya_modificada_por_medico=False,
+def _interconsulta(historia: str) -> Interconsulta:
+    return Interconsulta(
+        id="ic-test",
+        espec_origen="Medicina General",
+        edad=54,
+        sexo="M",
+        espec_destino="Cardiologia",
+        historia_clinica=historia,
+        fundamentos_diagnostico="",
+        examenes_complementarios="",
+        motivo_interconsulta="",
+    )
+
+
+def test_aplicar_banderas_fuerza_prioridad_sin_modificacion_previa() -> None:
+    interconsulta = _interconsulta("Paciente con dolor toracico de inicio subito")
+
+    resultado = aplicar_banderas_a_interconsulta(
+        interconsulta, ya_modificada_por_medico=False
     )
 
     assert resultado.bandera_roja is True
     assert resultado.terminos == ["dolor_toracico"]
     assert resultado.forzar_prioridad_alta is True
+    assert interconsulta.prioridad_actual == "alta"
+    assert interconsulta.prioridad_forzada_por_regla is True
+    assert interconsulta.terminos_bandera_roja == "dolor_toracico"
 
 
-def test_aplicar_deteccion_no_pisa_decision_medica_previa() -> None:
-    resultado = aplicar_deteccion(
-        "Paciente con dolor toracico de inicio subito",
-        ya_modificada_por_medico=True,
+def test_aplicar_banderas_no_pisa_decision_medica_previa() -> None:
+    interconsulta = _interconsulta("Paciente con dolor toracico de inicio subito")
+    interconsulta.prioridad_actual = "media"
+
+    resultado = aplicar_banderas_a_interconsulta(
+        interconsulta, ya_modificada_por_medico=True
     )
 
     assert resultado.bandera_roja is True
     assert resultado.forzar_prioridad_alta is False
+    # La bandera queda visible, pero la prioridad del medico no se toca (D5).
+    assert interconsulta.bandera_roja is True
+    assert interconsulta.prioridad_actual == "media"
+    assert interconsulta.prioridad_forzada_por_regla is not True
 
 
 def test_multicampo_no_deja_que_un_marcador_cruce_de_campo() -> None:
@@ -150,12 +174,29 @@ def test_multicampo_no_deja_que_un_marcador_cruce_de_campo() -> None:
     assert terminos_afirmados(detecciones) == ["dolor_toracico"]
 
 
-def test_aplicar_deteccion_sin_bandera_no_fuerza_nada() -> None:
-    resultado = aplicar_deteccion(
-        "Paciente control sano, sin hallazgos",
-        ya_modificada_por_medico=False,
+def test_aplicar_banderas_sin_bandera_no_fuerza_nada() -> None:
+    interconsulta = _interconsulta("Paciente control sano, sin hallazgos")
+
+    resultado = aplicar_banderas_a_interconsulta(
+        interconsulta, ya_modificada_por_medico=False
     )
 
     assert resultado.bandera_roja is False
     assert resultado.terminos == []
     assert resultado.forzar_prioridad_alta is False
+    assert interconsulta.terminos_bandera_roja is None
+
+
+def test_nombres_de_terminos_traduce_ids_al_nombre_clinico() -> None:
+    # El id se persiste por estable, pero la interfaz muestra el termino bien
+    # escrito, con tildes (HU5-c3).
+    assert nombres_de_terminos("dolor_toracico") == ["dolor torácico"]
+    assert nombres_de_terminos("dolor_toracico,sepsis") == ["dolor torácico", "sepsis"]
+
+
+def test_nombres_de_terminos_tolera_vacios_e_ids_desconocidos() -> None:
+    assert nombres_de_terminos(None) == []
+    assert nombres_de_terminos("") == []
+    # Un id que ya no esta en el catalogo se devuelve tal cual, para no perder el
+    # motivo de una bandera guardada antes de editar el catalogo.
+    assert nombres_de_terminos("termino_eliminado") == ["termino_eliminado"]

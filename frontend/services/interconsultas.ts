@@ -38,6 +38,9 @@ interface InterconsultaApi {
   fecha_emision: string | null;
   bandera_roja: boolean;
   terminos_bandera_roja: string | null;
+  /** Los mismos terminos con su nombre clinico, resueltos por el backend contra
+   * el catalogo. Es lo que se muestra; el campo anterior son los ids. */
+  terminos_bandera_roja_nombres: string[];
   prioridad_forzada_por_regla: boolean;
   created_at: string;
   updated_at: string;
@@ -301,9 +304,7 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
   const sinPrioridad = prioridadDisponible === null;
   const prioridadActual = prioridadDisponible ?? "baja";
   const confianza = api.confianza_modelo ?? 0;
-  const terminosBanderaRoja = api.terminos_bandera_roja
-    ? api.terminos_bandera_roja.split(",").filter(Boolean)
-    : [];
+  const terminosBanderaRoja = api.terminos_bandera_roja_nombres ?? [];
 
   return {
     id: api.id,

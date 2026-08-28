@@ -217,19 +217,6 @@ def _resultado_desde_detecciones(
     )
 
 
-def aplicar_deteccion(
-    texto: str, *, ya_modificada_por_medico: bool
-) -> ResultadoDeteccion:
-    """Evalua un texto y decide si corresponde forzar la prioridad (RF7 / HU5-c3).
-
-    Si el medico ya modifico manualmente la prioridad, la bandera se muestra pero
-    no se vuelve a forzar (D5): la decision del medico prevalece.
-    """
-    return _resultado_desde_detecciones(
-        detectar_banderas(texto), ya_modificada_por_medico=ya_modificada_por_medico
-    )
-
-
 def detectar_banderas_multicampo(campos: Iterable[str]) -> list[Deteccion]:
     """Evalua cada campo de forma independiente y junta las detecciones.
 
@@ -261,13 +248,27 @@ def aplicar_banderas_a_interconsulta(
     return resultado
 
 
-def hay_bandera_afirmada(detecciones: list[Deteccion]) -> bool:
-    return any(deteccion.asercion == "afirmado" for deteccion in detecciones)
-
-
 def terminos_afirmados(detecciones: list[Deteccion]) -> list[str]:
     vistos: list[str] = []
     for deteccion in detecciones:
         if deteccion.asercion == "afirmado" and deteccion.termino_id not in vistos:
             vistos.append(deteccion.termino_id)
     return vistos
+
+
+def nombres_de_terminos(ids: str | None) -> list[str]:
+    """Traduce los ids persistidos al nombre canonico del catalogo.
+
+    Se persiste el id porque es la clave estable (D4), pero la interfaz debe
+    mostrar el termino clinico bien escrito ("dolor toracico" con tilde), no el id
+    con guiones bajos. Un id que ya no exista en el catalogo se devuelve tal cual,
+    para no perder el motivo de una bandera guardada antes de editar el catalogo.
+    """
+    if not ids:
+        return []
+    por_id = {termino.id: termino.canonico for termino in cargar_catalogo()}
+    return [
+        por_id.get(termino_id, termino_id)
+        for termino_id in (parte.strip() for parte in ids.split(","))
+        if termino_id
+    ]

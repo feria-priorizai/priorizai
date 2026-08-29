@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import type { Interconsulta, NivelPrioridad } from "@/types";
 import { useInterconsultaDetalle } from "@/hooks/useInterconsultas";
@@ -11,6 +11,8 @@ import BotonPriorizarIA from "@/components/interconsultas/BotonPriorizarIA";
 import FormularioModificarPrioridad from "@/components/interconsultas/FormularioModificarPrioridad";
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
+import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
+import { exportarInterconsulta } from "@/utils/exportUtils";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -41,8 +43,18 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
     cambiarEstado,
     priorizarConIA,
   } = useInterconsultaDetalle(id);
+  const { config, usuario, setUsuario } = useConfiguracionExport();
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
   const [formatoSeleccionado, setFormatoSeleccionado] = useState<FormatoExportacion>("json");
+
+  // Inicializar usuario en el context de configuración
+  useEffect(() => {
+    setUsuario({
+      id: "1",
+      nombre: usuarioActual.nombre,
+      rol: "medico", // Default a médico, admin se configuraría desde auth real
+    });
+  }, [setUsuario]);
 
   if (cargando) {
     return (
@@ -94,6 +106,11 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
       await cambiarEstado("revisada");
     }
     return exito;
+  };
+
+  const manejarExport = () => {
+    if (!interconsulta) return;
+    exportarInterconsulta(interconsulta, formatoSeleccionado, config);
   };
 
   return (
@@ -157,7 +174,7 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
               </select>
               <button
                 type="button"
-                onClick={() => exportarInterconsulta(interconsulta, formatoSeleccionado)}
+                onClick={manejarExport}
                 className="w-full rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--primary-dark)]"
               >
                 Descargar {FORMATOS_EXPORTACION.find((f) => f.valor === formatoSeleccionado)?.etiqueta}
@@ -187,147 +204,4 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
       </div>
     </div>
   );
-}
-
-function exportarInterconsulta(interconsulta: Interconsulta, formato: FormatoExportacion) {
-  switch (formato) {
-    case "json":
-      return descargarInterconsultaJson(interconsulta);
-    case "csv":
-      return descargarInterconsultaCsv(interconsulta);
-    case "xlsx":
-      return descargarInterconsultaXlsx(interconsulta);
-  }
-}
-
-function descargarInterconsultaJson(interconsulta: Interconsulta) {
-  const payload = {
-    exportadoEn: new Date().toISOString(),
-    formato: "priorizai.interconsulta.v1",
-    interconsulta,
-  };
-  const contenido = JSON.stringify(payload, null, 2);
-  const blob = new Blob([contenido], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = `interconsulta-${interconsulta.id}.json`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
-
-function descargarInterconsultaCsv(interconsulta: Interconsulta) {
-  const ia = interconsulta.priorizacionIA;
-  const filas = [
-    [
-      "ID",
-      "Paciente Nombre",
-      "Paciente RUT",
-      "Paciente Edad",
-      "Especialidad",
-      "Centro Origen",
-      "Diagnóstico",
-      "Motivo Interconsulta",
-      "Estado",
-      "Prioridad Actual",
-      "Prioridad IA Sugerida",
-      "Confianza IA",
-      "Justificación IA",
-      "Fecha Ingreso",
-      "Fecha Actualización",
-      "Exportado En",
-      "Formato",
-    ],
-    [
-      interconsulta.id,
-      interconsulta.pacienteNombre,
-      interconsulta.pacienteRut,
-      String(interconsulta.pacienteEdad),
-      interconsulta.especialidad,
-      interconsulta.centroOrigen,
-      interconsulta.diagnostico,
-      interconsulta.motivoInterconsulta,
-      interconsulta.estado,
-      interconsulta.prioridadActual,
-      ia.nivelSugerido,
-      String(ia.confianza),
-      ia.justificacion,
-      interconsulta.fechaIngreso,
-      interconsulta.fechaActualizacion,
-      new Date().toISOString(),
-      "priorizai.interconsulta.v1",
-    ],
-  ];
-
-  const contenido = filas.map((fila) => fila.map(celda => `"${String(celda).replace(/"/g, '""')}"`).join(",")).join("\n");
-  const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = `interconsulta-${interconsulta.id}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
-
-function descargarInterconsultaXlsx(interconsulta: Interconsulta) {
-  // MVP: generar CSV y renombrar a .xlsx (Excel lo abre correctamente)
-  const ia = interconsulta.priorizacionIA;
-  const filas = [
-    [
-      "ID",
-      "Paciente Nombre",
-      "Paciente RUT",
-      "Paciente Edad",
-      "Especialidad",
-      "Centro Origen",
-      "Diagnóstico",
-      "Motivo Interconsulta",
-      "Estado",
-      "Prioridad Actual",
-      "Prioridad IA Sugerida",
-      "Confianza IA",
-      "Justificación IA",
-      "Fecha Ingreso",
-      "Fecha Actualización",
-      "Exportado En",
-      "Formato",
-    ],
-    [
-      interconsulta.id,
-      interconsulta.pacienteNombre,
-      interconsulta.pacienteRut,
-      String(interconsulta.pacienteEdad),
-      interconsulta.especialidad,
-      interconsulta.centroOrigen,
-      interconsulta.diagnostico,
-      interconsulta.motivoInterconsulta,
-      interconsulta.estado,
-      interconsulta.prioridadActual,
-      ia.nivelSugerido,
-      String(ia.confianza),
-      ia.justificacion,
-      interconsulta.fechaIngreso,
-      interconsulta.fechaActualizacion,
-      new Date().toISOString(),
-      "priorizai.interconsulta.v1",
-    ],
-  ];
-
-  const contenido = filas.map((fila) => fila.map(celda => `"${String(celda).replace(/"/g, '""')}"`).join(",")).join("\n");
-  const blob = new Blob([contenido], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = `interconsulta-${interconsulta.id}.xlsx`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
 }

@@ -7,8 +7,11 @@
  * para mantener una estructura visual consistente.
  */
 
+"use client";
+
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import { ConfiguracionProvider } from "@/context/ConfiguracionContext";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -16,17 +19,19 @@ interface AppShellProps {
 
 export default function AppShell({ children }: AppShellProps) {
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Sidebar fijo */}
-      <Sidebar />
+    <ConfiguracionProvider>
+      <div className="flex h-screen overflow-hidden">
+        {/* Sidebar fijo */}
+        <Sidebar />
 
-      {/* Área de contenido principal */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto bg-[var(--background)] p-6 custom-scrollbar">
-          {children}
-        </main>
+        {/* Área de contenido principal */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-y-auto bg-[var(--background)] p-6 custom-scrollbar">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </ConfiguracionProvider>
   );
 }

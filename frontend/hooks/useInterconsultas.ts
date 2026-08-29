@@ -53,6 +53,13 @@ const filtrosIniciales: FiltrosInterconsulta = {
   busqueda: "",
 };
 
+/** Avisa al resto de la app (listado, dashboard) que hay datos frescos. */
+function notificarActualizacion(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(EVENTO_INTERCONSULTAS_ACTUALIZADAS));
+  }
+}
+
 export function useInterconsultas(): UseInterconsultasReturn {
   const [estado, setEstado] = useState<EstadoListado>({
     interconsultas: [],
@@ -259,6 +266,7 @@ export function useInterconsultaDetalle(id: string) {
         usuarioActual.nombre,
       );
       setEstado({ id, interconsulta: actualizada, error: null });
+      notificarActualizacion();
       return true;
     } catch {
       setEstado((prev) => ({
@@ -273,6 +281,7 @@ export function useInterconsultaDetalle(id: string) {
     try {
       const actualizada = await priorizarInterconsulta(id);
       setEstado({ id, interconsulta: actualizada, error: null });
+      notificarActualizacion();
       return true;
     } catch (error) {
       setEstado((prev) => ({
@@ -292,6 +301,7 @@ export function useInterconsultaDetalle(id: string) {
     try {
       const actualizada = await modificarEstadoInterconsulta(id, nuevoEstado);
       setEstado({ id, interconsulta: actualizada, error: null });
+      notificarActualizacion();
       return true;
     } catch {
       setEstado((prev) => ({

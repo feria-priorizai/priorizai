@@ -24,6 +24,10 @@ export default function HistorialModificaciones({
     );
   }
 
+  const ordenadas = [...modificaciones].sort(
+    (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
+  );
+
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
       <div className="border-b border-[var(--border)] px-5 py-4">
@@ -31,14 +35,14 @@ export default function HistorialModificaciones({
           Historial de modificaciones
         </h3>
         <p className="text-sm text-[var(--text-secondary)]">
-          {modificaciones.length} modificacion
-          {modificaciones.length !== 1 ? "es" : ""} registrada
-          {modificaciones.length !== 1 ? "s" : ""}
+          {ordenadas.length} modificacion
+          {ordenadas.length !== 1 ? "es" : ""} registrada
+          {ordenadas.length !== 1 ? "s" : ""} - mas recientes primero
         </p>
       </div>
 
       <div className="flex flex-col divide-y divide-[var(--border-light)]">
-        {[...modificaciones].reverse().map((mod) => (
+        {ordenadas.map((mod, indice) => (
           <div key={mod.id} className="flex flex-col gap-3 px-5 py-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-[var(--text-primary)]">
@@ -53,6 +57,11 @@ export default function HistorialModificaciones({
               <BadgePrioridad prioridad={mod.prioridadAnterior} />
               <span className="text-[var(--text-muted)]">{"->"}</span>
               <BadgePrioridad prioridad={mod.prioridadNueva} />
+              {indice === 0 && (
+                <span className="rounded-full bg-[var(--background)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
+                  Vigente
+                </span>
+              )}
             </div>
 
             <p className="text-sm leading-relaxed text-[var(--text-secondary)]">

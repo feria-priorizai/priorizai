@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PriorizAI — Software de priorización médica</title>
+<meta name="description" content="PriorizAI ordena las interconsultas de la lista de espera por prioridad clínica, con NLP entrenado sobre interconsultas reales. Ejecutable de forma local, con datos anonimizados y reentrenamiento propio.">
+<meta name="theme-color" content="#FBFCFE">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="PriorizAI — Software de priorización médica">
+<meta property="og:description" content="Ordena la lista de espera por prioridad clínica. NLP entrenado con interconsultas priorizadas, ejecutable dentro del hospital.">
+<meta property="og:image" content="assets/img/app-dashboard.png">
+<meta property="og:locale" content="es_CL">
+
+<link rel="icon" href="assets/img/logo-priorizai-mark.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@1,6..72,300..500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="assets/vendor/bootstrap.min.css">
+<link rel="stylesheet" href="assets/css/priorizai.css">
+</head>
+
+<body data-bs-spy="scroll" data-bs-target="#pzNav" data-bs-root-margin="0px 0px -55%" data-bs-smooth-scroll="true" tabindex="0">
+
+<a class="pz-skip" href="#main">Saltar al contenido</a>
+
+<!-- ═══════════ NAV ═══════════ -->
+<nav class="navbar navbar-expand-lg fixed-top pz-nav" id="pzNavbar">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="#top" aria-label="PriorizAI — inicio">
+      <img src="assets/img/logo-priorizai.png" alt="PriorizAI">
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#pzNavMenu" aria-controls="pzNavMenu" aria-expanded="false" aria-label="Abrir menú">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="pzNavMenu">
+      <ul class="navbar-nav align-items-lg-center gap-lg-1" id="pzNav">
+        <li class="nav-item"><a class="nav-link" href="#problema">Problema</a></li>
+        <li class="nav-item"><a class="nav-link" href="#motor">Cómo funciona</a></li>
+        <li class="nav-item"><a class="nav-link" href="#producto">Producto</a></li>
+        <li class="nav-item"><a class="nav-link" href="#ventajas">Ventajas</a></li>
+        <li class="nav-item"><a class="nav-link" href="#preguntas">Preguntas</a></li>
+        <li class="nav-item ms-lg-3 mt-3 mt-lg-0">
+          <a class="pz-btn pz-btn--solid" href="#contacto">
+            Pedir una demo
+            <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 10 10 2M4 2h6v6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="square"/></svg>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+
+<!-- ═══════════ HERO ═══════════ -->
+<header class="pz-hero pz-blueprint" id="top">
+  <div class="container">
+    <div class="row align-items-center g-5">
+
+      <div class="col-lg-7">
+        <p class="pz-eyebrow pz-reveal">Software de priorización médica · Chile</p>
+
+        <h1 class="pz-hero__title pz-reveal" style="--d:60ms">
+          La lista de espera<br>
+          no está desordenada.<br>
+          <em>Está sin priorizar.</em>
+        </h1>
+
+        <p class="pz-lead pz-reveal" style="--d:140ms">
+          PriorizAI lee cada interconsulta con procesamiento de lenguaje natural
+          y propone una prioridad clínica —alta, media o baja— con su nivel de
+          confianza. El especialista decide; el software le devuelve el orden.
+        </p>
+
+        <div class="d-flex flex-wrap gap-3 mt-4 pz-reveal" style="--d:220ms">
+          <a class="pz-btn pz-btn--solid" href="#contacto">
+            Pedir una demo
+            <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 10 10 2M4 2h6v6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="square"/></svg>
+          </a>
+          <a class="pz-btn pz-btn--ghost" href="#producto">Ver el producto</a>
+        </div>
+
+        <div class="pz-hero__meta pz-reveal" style="--d:300ms">
+          <span><strong>NLP</strong> sobre interconsultas reales</span>
+          <span><strong>On-premise</strong> dentro del hospital</span>
+          <span><strong>Datos anonimizados</strong></span>
+        </div>
+      </div>
+
+      <div class="col-lg-5 pz-reveal" style="--d:360ms">
+        <div class="pz-triage pz-crop" role="img" aria-label="Vista simplificada del priorizador: cuatro interconsultas se reordenan y la de prioridad alta sube al primer lugar.">
+          <div class="pz-triage__bar">
+            <span><span class="pz-triage__dot"></span>Priorizador · en vivo</span>
+            <span>Lote 08:22</span>
+          </div>
+          <div class="pz-triage__list">
+            <div class="pz-ic pz-ic--baja pz-ic--shift">
+              <span class="pz-ic__id">IC-0261C149</span>
+              <span class="pz-ic__dx">Múltiples lesiones por presión<span class="pz-chip pz-chip--baja">Baja</span></span>
+              <span class="pz-ic__conf"><span class="pz-ic__pct">90.6%</span><span class="pz-ic__lab">Confianza</span></span>
+            </div>
+
+            <div class="pz-ic pz-ic--media pz-ic--shift">
+              <span class="pz-ic__id">IC-34B3B8EA</span>
+              <span class="pz-ic__dx">Trastorno de la conducta<span class="pz-chip pz-chip--media">Media</span></span>
+              <span class="pz-ic__conf"><span class="pz-ic__pct">59.9%</span><span class="pz-ic__lab">Confianza</span></span>
+            </div>
+
+            <div class="pz-ic pz-ic--baja pz-ic--shift">
+              <span class="pz-ic__id">IC-1C1823DB</span>
+              <span class="pz-ic__dx">Esclerodermia lineal<span class="pz-chip pz-chip--baja">Baja</span></span>
+              <span class="pz-ic__conf"><span class="pz-ic__pct">52.3%</span><span class="pz-ic__lab">Confianza</span></span>
+            </div>
+
+            <div class="pz-ic pz-ic--alta pz-ic--promote">
+              <span class="pz-ic__id">IC-1677301A</span>
+              <span class="pz-ic__dx">Pie de Charcot sintomático invalidante<span class="pz-chip pz-chip--alta">Alta</span></span>
+              <span class="pz-ic__conf"><span class="pz-ic__pct">80.9%</span><span class="pz-ic__lab">Confianza</span></span>
+            </div>
+          </div>
+          <p class="pz-note mt-3 mb-0">Datos ilustrativos. En operación, las interconsultas viajan anonimizadas.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Riel de cifras -->
+  <div class="pz-rail mt-5">
+    <div class="container">
+      <div class="row g-0 text-center text-md-start">
+        <div class="col-6 col-md-3">
+          <div class="pz-rail__item">
+            <span class="pz-rail__n" data-count="8">8</span>
+            <span class="pz-rail__l">Meses de espera · no GES</span>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="pz-rail__item">
+            <span class="pz-rail__n" data-count="1">1<small> millón</small></span>
+            <span class="pz-rail__l">Interconsultas digitales</span>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="pz-rail__item">
+            <span class="pz-rail__n" data-count="15">15<small> min</small></span>
+            <span class="pz-rail__l">Por interconsulta revisada</span>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="pz-rail__item">
+            <span class="pz-rail__n" data-count="86">86,7%</span>
+            <span class="pz-rail__l">De la población en FONASA</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+<!-- ═══════════ 01 · PROBLEMA ═══════════ -->
+<section class="pz-section pz-anchor" id="problema">
+  <div class="container">
+
+    <div class="row g-5 align-items-end mb-5">
+      <div class="col-lg-7">
+        <span class="pz-sect-no">01 / DIAGNÓSTICO</span>
+        <p class="pz-eyebrow">El cuello de botella</p>
+        <h2 class="pz-h2">Ocho meses de espera<br>para una hora que dura quince minutos.</h2>
+      </div>
+      <div class="col-lg-5">
+        <p class="pz-lead mb-0">
+          El problema no es la falta de voluntad clínica: es la aritmética.
+          Chile está por debajo del promedio OCDE en casi todos los recursos
+          que hacen posible atender, y sobre esa base descansa el 86,7 % de la
+          población.
+        </p>
+      </div>
+    </div>
+
+    <div class="row g-4 g-lg-5 align-items-stretch">
+
+      <div class="col-lg-4">
+        <div class="pz-slab h-100 d-flex flex-column justify-content-center pz-reveal">
+          <span class="pz-slab__n">8</span>
+          <span class="pz-slab__u">meses</span>
+          <p class="pz-slab__c mb-0">
+            Es lo que espera hoy una persona en lista de espera por una
+            enfermedad <strong>no GES</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div class="col-lg-8">
+        <h3 class="pz-h3 mb-2">Chile frente al promedio OCDE</h3>
+        <p class="pz-note mb-4">Barra verde = Chile · marca azul = promedio OCDE</p>
+
+        <div class="pz-cmp pz-reveal">
+          <div class="pz-cmp__head">
+            <span class="pz-cmp__t">Médicos cada 1.000 habitantes</span>
+            <span class="pz-cmp__v"><b>3,3</b> / 3,9</span>
+          </div>
+          <div class="pz-cmp__ocde"><span class="pz-cmp__mark" style="left:82%">OCDE 3,9</span></div>
+          <div class="progress" role="progressbar" aria-label="Médicos cada 1.000 habitantes en Chile: 3,3 frente a 3,9 de la OCDE" aria-valuenow="3.3" aria-valuemin="0" aria-valuemax="4.8">
+            <div class="progress-bar" data-w="69.4"></div>
+          </div>
+        </div>
+
+        <div class="pz-cmp pz-reveal" style="--d:90ms">
+          <div class="pz-cmp__head">
+            <span class="pz-cmp__t">Camas cada 1.000 habitantes</span>
+            <span class="pz-cmp__v"><b>1,9</b> / 4,2</span>
+          </div>
+          <div class="pz-cmp__ocde"><span class="pz-cmp__mark" style="left:82%">OCDE 4,2</span></div>
+          <div class="progress" role="progressbar" aria-label="Camas cada 1.000 habitantes en Chile: 1,9 frente a 4,2 de la OCDE" aria-valuenow="1.9" aria-valuemin="0" aria-valuemax="5.1">
+            <div class="progress-bar" data-w="37.1"></div>
+          </div>
+        </div>
+
+        <div class="pz-cmp pz-reveal" style="--d:180ms">
+          <div class="pz-cmp__head">
+            <span class="pz-cmp__t">Gasto en salud per cápita (USD)</span>
+            <span class="pz-cmp__v"><b>3.749</b> / 5.967</span>
+          </div>
+          <div class="pz-cmp__ocde"><span class="pz-cmp__mark" style="left:82%">OCDE 5.967</span></div>
+          <div class="progress" role="progressbar" aria-label="Gasto en salud per cápita en Chile: 3.749 dólares frente a 5.967 de la OCDE" aria-valuenow="3749" aria-valuemin="0" aria-valuemax="7278">
+            <div class="progress-bar" data-w="51.5"></div>
+          </div>
+        </div>
+
+        <div class="row g-4 mt-4">
+          <div class="col-sm-6">
+            <div class="pz-engine pz-crop pz-reveal">
+              <span class="pz-engine__k">ESPECIALISTAS</span>
+              <div class="pz-engine__t" style="font-size:1.9rem;font-family:var(--pz-display);font-variation-settings:'wdth' 88;font-weight:800;">37.000</div>
+              <p class="pz-engine__d">médicos especialistas certificados en el país.</p>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="pz-engine pz-crop pz-reveal" style="--d:90ms">
+              <span class="pz-engine__k">DISPONIBILIDAD</span>
+              <div class="pz-engine__t" style="font-size:1.9rem;font-family:var(--pz-display);font-variation-settings:'wdth' 88;font-weight:800;">&lt;50 %</div>
+              <p class="pz-engine__d">de ellos trabaja en el sistema público.</p>
+            </div>
+          </div>
+        </div>
+
+        <p class="pz-note mt-4 mb-0">
+          Fuentes: OCDE, <em>Panorama de la salud 2025: Chile</em> · CONACEM, comunicado de prensa del 07-03-2024 ·
+          Visor Ciudadano de Tiempos de Espera.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════ 02 · RECORRIDO ═══════════ -->
+<section class="pz-section pz-section--tight pz-blueprint" style="border-top:1px solid var(--pz-line-2);border-bottom:1px solid var(--pz-line-2);">
+  <div class="container">
+    <div class="row mb-5">
+      <div class="col-lg-8">
+        <span class="pz-sect-no">02 / FLUJO</span>
+        <p class="pz-eyebrow pz-eyebrow--purple">El recorrido de una interconsulta</p>
+        <h2 class="pz-h2">Del box de atención primaria<br>a un millón de documentos.</h2>
+      </div>
+    </div>
+
+    <div class="pz-flow">
+      <div class="pz-flow__track" aria-hidden="true"></div>
+      <div class="row g-4 g-lg-3">
+
+        <div class="col-6 col-lg">
+          <div class="pz-step pz-reveal">
+            <div class="pz-step__node">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/><path d="M12 7.5v3M10.5 9h3"/></svg>
+            </div>
+            <span class="pz-step__k">Paso 01</span>
+            <div class="pz-step__t">Atención primaria</div>
+            <p class="pz-step__d">El médico general detecta que el caso excede su alcance.</p>
+          </div>
+        </div>
+
+        <div class="col-6 col-lg">
+          <div class="pz-step pz-reveal" style="--d:80ms">
+            <div class="pz-step__node">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15"/><path d="M14 7l5 5-5 5"/></svg>
+            </div>
+            <span class="pz-step__k">Paso 02</span>
+            <div class="pz-step__t">Derivación</div>
+            <p class="pz-step__d">Se emite la interconsulta y viaja al hospital de referencia.</p>
+          </div>
+        </div>
+
+        <div class="col-6 col-lg">
+          <div class="pz-step pz-reveal" style="--d:160ms">
+            <div class="pz-step__node">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="14" rx="1"/><path d="M9 6V3h6v3"/><path d="M12 10v6M9 13h6"/></svg>
+            </div>
+            <span class="pz-step__k">Paso 03</span>
+            <div class="pz-step__t">Hospital</div>
+            <p class="pz-step__d">La interconsulta entra a la bandeja del especialista.</p>
+          </div>
+        </div>
+
+        <div class="col-6 col-lg">
+          <div class="pz-step pz-step--hot pz-reveal" style="--d:240ms">
+            <div class="pz-step__node">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/></svg>
+            </div>
+            <span class="pz-step__k">Paso 04 · cuello de botella</span>
+            <div class="pz-step__t">15 minutos por caso</div>
+            <p class="pz-step__d">Leer, evaluar y asignar prioridad, uno por uno, a mano.</p>
+          </div>
+        </div>
+
+        <div class="col-6 col-lg">
+          <div class="pz-step pz-reveal" style="--d:320ms">
+            <div class="pz-step__node">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="18.5" cy="18" r="2.5"/></svg>
+            </div>
+            <span class="pz-step__k">Paso 05</span>
+            <div class="pz-step__t">Lista de espera</div>
+            <p class="pz-step__d">Más de 1 millón de interconsultas ya se gestionan digitalmente.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <p class="pz-note mt-5 mb-0">
+      Fuente: HL7 Chile, «Más de 1 millón de interconsultas ya se gestionan digitalmente para reducir listas de espera en Chile».
+    </p>
+  </div>
+</section>
+
+
+<!-- ═══════════ MANIFIESTO ═══════════ -->
+<section class="pz-manifest">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-5">
+        <div class="pz-manifest__card pz-reveal">
+          <img src="assets/img/logo-priorizai.png" alt="PriorizAI">
+        </div>
+      </div>
+      <div class="col-lg-7">
+        <blockquote class="pz-manifest__q pz-reveal" style="--d:100ms">
+          Para hacer valer el recurso más valioso de quienes trabajan por la salud de Chile:
+          su tiempo.
+        </blockquote>
+        <span class="pz-manifest__cite pz-reveal" style="--d:200ms">— El propósito de PriorizAI</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════ 03 · MOTOR ═══════════ -->
+<section class="pz-section pz-anchor" id="motor">
+  <div class="container">
+    <div class="row g-5 align-items-end mb-5">
+      <div class="col-lg-7">
+        <span class="pz-sect-no">03 / MOTOR</span>
+        <p class="pz-eyebrow pz-eyebrow--green">Cómo funciona</p>
+        <h2 class="pz-h2">Interconsultas ya priorizadas,<br>más NLP, igual criterio replicable.</h2>
+      </div>
+      <div class="col-lg-5">
+        <p class="pz-lead mb-0">
+          El modelo no inventa una regla clínica: aprende de las decisiones que
+          los propios equipos ya tomaron. Ese es el material de entrenamiento y
+          también el estándar contra el que se mide.
+        </p>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="pz-engine pz-crop h-100 pz-reveal">
+          <span class="pz-engine__k">A / INSUMO</span>
+          <div class="pz-engine__t">Interconsultas priorizadas</div>
+          <p class="pz-engine__d">
+            Historia clínica, fundamentos diagnósticos, exámenes complementarios y
+            motivo de derivación, con la prioridad que el equipo ya asignó.
+          </p>
+          <div class="pz-engine__tags">
+            <span class="pz-tag">Texto libre</span>
+            <span class="pz-tag">Anonimizado</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="pz-engine pz-crop h-100 pz-reveal" style="--d:100ms">
+          <span class="pz-engine__k">B / PROCESO</span>
+          <div class="pz-engine__t">NLP + entrenamiento</div>
+          <p class="pz-engine__d">
+            Procesamiento de lenguaje natural sobre el texto clínico y un
+            clasificador entrenado y validado de forma cruzada sobre ese corpus.
+          </p>
+          <div class="pz-engine__tags">
+            <span class="pz-tag">NLP</span>
+            <span class="pz-tag">Clasificación</span>
+            <span class="pz-tag">Validación cruzada</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="pz-engine pz-crop h-100 pz-reveal" style="--d:200ms">
+          <span class="pz-engine__k">C / RESULTADO</span>
+          <div class="pz-engine__t">Priorizador automático</div>
+          <p class="pz-engine__d">
+            Cada interconsulta recibe una prioridad sugerida —alta, media o baja—
+            con la distribución de confianza detrás de la sugerencia.
+          </p>
+          <div class="pz-engine__tags">
+            <span class="pz-tag">Alta / Media / Baja</span>
+            <span class="pz-tag">% de confianza</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════ 04 · PRODUCTO (nocturno) ═══════════ -->
+<section class="pz-section pz-night pz-anchor" id="producto">
+  <div class="container">
+    <div class="row g-5 align-items-end mb-5">
+      <div class="col-lg-7">
+        <span class="pz-sect-no" style="color:rgba(226,236,248,.45)">04 / PRODUCTO</span>
+        <p class="pz-eyebrow pz-eyebrow--light">La herramienta</p>
+        <h2 class="pz-h2">Dos pantallas.<br>Ninguna sorpresa.</h2>
+      </div>
+      <div class="col-lg-5">
+        <p class="pz-lead mb-0">
+          Un tablero para ver el lote completo y una ficha para revisar el caso.
+          Todo lo que el modelo sugiere queda a la vista, y toda corrección
+          clínica queda registrada con su motivo.
+        </p>
+      </div>
+    </div>
+
+    <ul class="nav nav-pills mb-4" id="pzTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-dash" data-bs-toggle="pill" data-bs-target="#pane-dash" type="button" role="tab" aria-controls="pane-dash" aria-selected="true">01 · Dashboard</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-det" data-bs-toggle="pill" data-bs-target="#pane-det" type="button" role="tab" aria-controls="pane-det" aria-selected="false">02 · Detalle de interconsulta</button>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+
+      <div class="tab-pane fade show active" id="pane-dash" role="tabpanel" aria-labelledby="tab-dash" tabindex="0">
+        <div class="row g-5 align-items-start">
+          <div class="col-lg-7">
+            <figure class="pz-shot mb-0">
+              <figcaption class="pz-shot__bar"><i></i><i></i><i></i><span class="pz-shot__path">priorizai · dashboard de interconsultas</span></figcaption>
+              <div class="pz-shot__view">
+                <img src="assets/img/app-dashboard.png" alt="Dashboard de PriorizAI: tarjetas con total de interconsultas, pendientes, revisadas y de prioridad alta, sobre una tabla de interconsultas recientes ordenada por prioridad y fecha de ingreso.">
+              </div>
+            </figure>
+          </div>
+          <div class="col-lg-5">
+            <div class="pz-feat">
+              <span class="pz-feat__n">01</span>
+              <div>
+                <div class="pz-feat__t">El lote, en cuatro números</div>
+                <p class="pz-feat__d">Total, pendientes, revisadas y prioridad alta. Lo primero que necesita saber quien abre la bandeja en la mañana.</p>
+              </div>
+            </div>
+            <div class="pz-feat">
+              <span class="pz-feat__n">02</span>
+              <div>
+                <div class="pz-feat__t">Orden por prioridad y fecha</div>
+                <p class="pz-feat__d">La tabla llega ordenada: primero lo urgente, y dentro de lo urgente, primero lo que lleva más tiempo esperando.</p>
+              </div>
+            </div>
+            <div class="pz-feat">
+              <span class="pz-feat__n">03</span>
+              <div>
+                <div class="pz-feat__t">Confianza IA a la vista</div>
+                <p class="pz-feat__d">Cada fila muestra qué tan segura está la sugerencia. Las de confianza baja se revisan primero, no se ocultan.</p>
+              </div>
+            </div>
+            <div class="pz-feat">
+              <span class="pz-feat__n">04</span>
+              <div>
+                <div class="pz-feat__t">Carga por archivo</div>
+                <p class="pz-feat__d">Se alimenta con un archivo de interconsultas: no exige reemplazar el sistema de registro del hospital.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="pane-det" role="tabpanel" aria-labelledby="tab-det" tabindex="0">
+        <div class="row g-5 align-items-start">
+          <div class="col-lg-7">
+            <figure class="pz-shot mb-0">
+              <figcaption class="pz-shot__bar"><i></i><i></i><i></i><span class="pz-shot__path">priorizai · detalle de interconsulta</span></figcaption>
+              <div class="pz-shot__view">
+                <img src="assets/img/app-detalle.png" alt="Detalle de una interconsulta en PriorizAI: datos del paciente, resumen clínico disponible y, a la derecha, la priorización automática con distribución de confianza y el formulario para modificar la prioridad.">
+              </div>
+            </figure>
+          </div>
+          <div class="col-lg-5">
+            <div class="pz-feat">
+              <span class="pz-feat__n">01</span>
+              <div>
+                <div class="pz-feat__t">Resumen clínico armado</div>
+                <p class="pz-feat__d">Historia, fundamentos diagnósticos, exámenes y motivo, en un solo bloque legible. No reemplaza el expediente completo.</p>
+              </div>
+            </div>
+            <div class="pz-feat">
+              <span class="pz-feat__n">02</span>
+              <div>
+                <div class="pz-feat__t">Distribución de confianza</div>
+                <p class="pz-feat__d">El modelo muestra su reparto entre baja, media y alta. Si duda, se nota; no entrega una sola etiqueta sin contexto.</p>
+              </div>
+            </div>
+            <div class="pz-feat">
+              <span class="pz-feat__n">03</span>
+              <div>
+                <div class="pz-feat__t">La última palabra es clínica</div>
+                <p class="pz-feat__d">Modificar la prioridad exige escribir el criterio que justifica el cambio. Ese texto es, además, material de reentrenamiento.</p>
+              </div>
+            </div>
+            <div class="pz-feat">
+              <span class="pz-feat__n">04</span>
+              <div>
+                <div class="pz-feat__t">Exportable en JSON</div>
+                <p class="pz-feat__d">La interconsulta priorizada sale en formato abierto para volver al sistema que la originó.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════ 05 · VENTAJAS ═══════════ -->
+<section class="pz-section pz-anchor" id="ventajas">
+  <div class="container">
+    <div class="row g-5 align-items-end mb-5">
+      <div class="col-lg-7">
+        <span class="pz-sect-no">05 / VENTAJAS</span>
+        <p class="pz-eyebrow">Ventajas competitivas</p>
+        <h2 class="pz-h2">Pensado para entrar<br>a un hospital, no a una nube.</h2>
+      </div>
+      <div class="col-lg-5">
+        <p class="pz-lead mb-0">
+          Tres decisiones de diseño que se tomaron antes de escribir la primera
+          línea de código, porque cambiarlas después habría sido imposible.
+        </p>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="pz-adv pz-reveal">
+          <div class="pz-adv__claim">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v6c0 4.4-3 7.7-7 9-4-1.3-7-4.6-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+            <h3>Diseñado en torno a la seguridad de los datos</h3>
+          </div>
+          <div class="pz-adv__link" aria-hidden="true"></div>
+          <div class="pz-adv__conseq">Anonimizando datos y respetando las leyes vigentes del país.</div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="pz-adv pz-reveal" style="--d:100ms">
+          <div class="pz-adv__claim">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="1"/><path d="M8 21h8M12 17v4"/><path d="M8 11l2 2 4-4"/></svg>
+            <h3>Ejecutable de forma local</h3>
+          </div>
+          <div class="pz-adv__link" aria-hidden="true"></div>
+          <div class="pz-adv__conseq">Compatible con la infraestructura hospitalaria existente.</div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="pz-adv pz-reveal" style="--d:200ms">
+          <div class="pz-adv__claim">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/><path d="M12 8v4l2.5 1.5"/></svg>
+            <h3>Herramienta integrada de reentrenamiento</h3>
+          </div>
+          <div class="pz-adv__link" aria-hidden="true"></div>
+          <div class="pz-adv__conseq">Para aumentar la precisión con los datos propios de cada hospital.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════ 06 · PREGUNTAS ═══════════ -->
+<section class="pz-section pz-blueprint pz-anchor" id="preguntas" style="border-top:1px solid var(--pz-line-2);">
+  <div class="container">
+    <div class="row g-5">
+      <div class="col-lg-4">
+        <span class="pz-sect-no">06 / RESGUARDOS</span>
+        <p class="pz-eyebrow pz-eyebrow--purple">Lo que hay que preguntar</p>
+        <h2 class="pz-h2 mb-4">Las dudas razonables,<br>respondidas sin adorno.</h2>
+        <p class="pz-lead mb-0">
+          Un priorizador clínico solo sirve si el equipo que lo usa sabe
+          exactamente dónde termina su alcance.
+        </p>
+      </div>
+
+      <div class="col-lg-8">
+        <div class="accordion pz-acc" id="pzFaq">
+
+          <div class="accordion-item">
+            <h3 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1" aria-expanded="true" aria-controls="faq1">
+                ¿PriorizAI reemplaza el criterio del médico?
+              </button>
+            </h3>
+            <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#pzFaq">
+              <div class="accordion-body">
+                No. PriorizAI sugiere una prioridad y muestra su nivel de confianza;
+                la decisión sigue siendo del especialista. La pantalla de detalle
+                incluye un campo obligatorio de <em>motivo de la modificación</em>
+                justamente para que la corrección clínica quede registrada y prevalezca.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2" aria-expanded="false" aria-controls="faq2">
+                ¿Dónde viven los datos de los pacientes?
+              </button>
+            </h3>
+            <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#pzFaq">
+              <div class="accordion-body">
+                Dentro del hospital. PriorizAI está pensado para ejecutarse de forma
+                local sobre la infraestructura existente, y las interconsultas se
+                procesan anonimizadas, respetando la legislación vigente en Chile
+                sobre datos personales y de salud.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3" aria-expanded="false" aria-controls="faq3">
+                ¿Qué pasa si el modelo no alcanza una precisión aceptable?
+              </button>
+            </h3>
+            <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#pzFaq">
+              <div class="accordion-body">
+                Es el riesgo principal del proyecto y está reconocido como tal. La
+                respuesta es metodológica: probar distintos modelos, iterar el
+                <em>fine-tuning</em> y medir con validación cruzada antes de que
+                cualquier sugerencia llegue a una pantalla clínica. La confianza por
+                caso se muestra siempre, precisamente para que un resultado débil se
+                vea como débil.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4" aria-expanded="false" aria-controls="faq4">
+                ¿Y si no hay suficientes datos para entrenar?
+              </button>
+            </h3>
+            <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#pzFaq">
+              <div class="accordion-body">
+                El segundo riesgo identificado. Se aborda ampliando la base de
+                hospitales colaboradores y con la herramienta integrada de
+                reentrenamiento: cada corrección clínica que hace un especialista
+                dentro de PriorizAI se convierte en un ejemplo nuevo para el modelo
+                de ese hospital.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5" aria-expanded="false" aria-controls="faq5">
+                ¿Hay que cambiar el sistema de registro actual?
+              </button>
+            </h3>
+            <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#pzFaq">
+              <div class="accordion-body">
+                No. La carga se hace por archivo y la salida se exporta en JSON, de
+                modo que PriorizAI se ubica al costado del flujo actual y no encima
+                de él. Es la vía más rápida para pilotear sin tocar sistemas críticos.
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════ 07 · EQUIPO ═══════════ -->
+<section class="pz-section pz-section--tight">
+  <div class="container">
+    <div class="row g-5">
+      <div class="col-lg-4">
+        <span class="pz-sect-no">07 / EQUIPO</span>
+        <p class="pz-eyebrow">Quiénes lo construyen</p>
+        <h2 class="pz-h3 mb-3">Cinco personas detrás<br>del priorizador.</h2>
+        <p class="pz-lead mb-0">Un equipo de ingeniería trabajando sobre un problema
+        que se mide en meses de espera.</p>
+      </div>
+      <div class="col-lg-8">
+        <div class="pz-person"><span class="pz-person__i">01</span><span class="pz-person__n">Gonzalo Gutiérrez</span></div>
+        <div class="pz-person"><span class="pz-person__i">02</span><span class="pz-person__n">Alonso Díaz</span></div>
+        <div class="pz-person"><span class="pz-person__i">03</span><span class="pz-person__n">Flavio Oyarce</span></div>
+        <div class="pz-person"><span class="pz-person__i">04</span><span class="pz-person__n">Nicolás Cortés</span></div>
+        <div class="pz-person" style="border-bottom:1px solid var(--pz-line)"><span class="pz-person__i">05</span><span class="pz-person__n">Angelo Russu</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════ CONTACTO ═══════════ -->
+<section class="pz-section pz-contact pz-anchor" id="contacto">
+  <div class="container">
+    <div class="row g-5">
+
+      <div class="col-lg-7">
+        <span class="pz-sect-no">08 / CONTACTO</span>
+        <p class="pz-eyebrow">Piloto</p>
+        <h2 class="pz-h2 mb-3">Probémoslo con las<br>interconsultas de tu servicio.</h2>
+        <p class="pz-lead mb-4">
+          Buscamos hospitales y servicios de salud dispuestos a evaluar el
+          priorizador sobre datos propios y anonimizados. Cuéntanos el contexto y
+          coordinamos una demo.
+        </p>
+
+        <form class="pz-form row g-3 needs-validation" novalidate id="pzForm">
+          <div class="col-md-6">
+            <label for="f-nombre" class="form-label">Nombre y apellido</label>
+            <input type="text" class="form-control" id="f-nombre" name="nombre" required>
+            <div class="invalid-feedback">Necesitamos tu nombre.</div>
+          </div>
+          <div class="col-md-6">
+            <label for="f-email" class="form-label">Correo institucional</label>
+            <input type="email" class="form-control" id="f-email" name="email" required>
+            <div class="invalid-feedback">Revisa el formato del correo.</div>
+          </div>
+          <div class="col-md-6">
+            <label for="f-inst" class="form-label">Institución</label>
+            <input type="text" class="form-control" id="f-inst" name="institucion" placeholder="Hospital, servicio de salud, CESFAM…" required>
+            <div class="invalid-feedback">Indícanos dónde trabajas.</div>
+          </div>
+          <div class="col-md-6">
+            <label for="f-rol" class="form-label">Rol</label>
+            <select class="form-select" id="f-rol" name="rol" required>
+              <option value="" selected disabled>Selecciona…</option>
+              <option>Dirección médica</option>
+              <option>Jefatura de servicio clínico</option>
+              <option>Médico especialista</option>
+              <option>Gestión de listas de espera</option>
+              <option>Informática / TI hospitalaria</option>
+              <option>Otro</option>
+            </select>
+            <div class="invalid-feedback">Selecciona una opción.</div>
+          </div>
+          <div class="col-12">
+            <label for="f-msg" class="form-label">Contexto</label>
+            <textarea class="form-control" id="f-msg" name="mensaje" rows="4" placeholder="Volumen aproximado de interconsultas, especialidades, cómo se prioriza hoy…"></textarea>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="f-ok" required>
+              <label class="form-check-label" for="f-ok">
+                Autorizo el contacto por correo. No compartimos estos datos con terceros.
+              </label>
+              <div class="invalid-feedback">Necesitamos tu autorización para escribirte.</div>
+            </div>
+          </div>
+          <div class="col-12 d-flex flex-wrap align-items-center gap-3 mt-2">
+            <button class="pz-btn pz-btn--solid" type="submit">
+              Enviar solicitud
+              <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 10 10 2M4 2h6v6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="square"/></svg>
+            </button>
+            <span class="pz-note mb-0" id="pzFormMsg" role="status" aria-live="polite"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="pz-contact__aside">
+          <div class="pz-contact__item">
+            <span class="pz-contact__k">Correo</span>
+            <span class="pz-contact__v"><a href="mailto:contacto@priorizai.cl">contacto@priorizai.cl</a></span>
+          </div>
+          <div class="pz-contact__item">
+            <span class="pz-contact__k">Modalidad de despliegue</span>
+            <span class="pz-contact__v">On-premise, dentro de la red del hospital</span>
+          </div>
+          <div class="pz-contact__item">
+            <span class="pz-contact__k">Datos requeridos para un piloto</span>
+            <span class="pz-contact__v">Interconsultas anonimizadas con su prioridad ya asignada</span>
+          </div>
+          <div class="pz-contact__item mb-0">
+            <span class="pz-contact__k">Estado del proyecto</span>
+            <span class="pz-contact__v">Producto mínimo viable en desarrollo · buscando hospitales colaboradores</span>
+          </div>
+
+          <hr class="pz-hr my-4">
+          <p class="pz-note mb-0">
+            PriorizAI es una herramienta de apoyo a la decisión clínica. No emite
+            diagnósticos ni sustituye la evaluación del profesional tratante.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<footer class="pz-footer">
+  <div class="container">
+    <div class="row g-4 align-items-start">
+      <div class="col-md-5">
+        <img src="assets/img/logo-priorizai-white.png" alt="PriorizAI">
+        <p class="pz-note mt-3 mb-0" style="color:rgba(226,236,248,.5)">
+          Software de priorización médica.<br>Santiago de Chile.
+        </p>
+      </div>
+      <div class="col-6 col-md-3">
+        <span class="pz-contact__k" style="color:rgba(226,236,248,.4)">Navegación</span>
+        <ul class="list-unstyled mt-2 mb-0" style="font-size:.9rem;line-height:2">
+          <li><a href="#problema">El problema</a></li>
+          <li><a href="#motor">Cómo funciona</a></li>
+          <li><a href="#producto">El producto</a></li>
+          <li><a href="#ventajas">Ventajas</a></li>
+        </ul>
+      </div>
+      <div class="col-6 col-md-4">
+        <span class="pz-contact__k" style="color:rgba(226,236,248,.4)">Contacto</span>
+        <ul class="list-unstyled mt-2 mb-0" style="font-size:.9rem;line-height:2">
+          <li><a href="mailto:contacto@priorizai.cl">contacto@priorizai.cl</a></li>
+          <li><a href="#contacto">Solicitar una demo</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="pz-footer__disc mb-0">
+      PriorizAI es una herramienta de apoyo a la decisión clínica: sugiere una prioridad y su nivel de confianza,
+      y no reemplaza el criterio del profesional tratante ni constituye un diagnóstico.
+      Las cifras citadas provienen de OCDE «Panorama de la salud 2025: Chile», CONACEM (07-03-2024),
+      HL7 Chile y el Visor Ciudadano de Tiempos de Espera.
+      © <span id="pzYear">2026</span> PriorizAI.
+    </p>
+  </div>
+</footer>
+
+<script src="assets/vendor/bootstrap.bundle.min.js"></script>
+<script src="assets/js/priorizai.js"></script>
+</body>
+</html>

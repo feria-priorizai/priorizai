@@ -2,10 +2,12 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import type { Interconsulta } from "@/types";
+import type { Interconsulta, NivelPrioridad } from "@/types";
 import { useInterconsultaDetalle } from "@/hooks/useInterconsultas";
+import { usuarioActual } from "@/data/mock";
 import DetalleInterconsulta from "@/components/interconsultas/DetalleInterconsulta";
 import TarjetaPriorizacionIA from "@/components/interconsultas/TarjetaPriorizacionIA";
+import BotonPriorizarIA from "@/components/interconsultas/BotonPriorizarIA";
 import FormularioModificarPrioridad from "@/components/interconsultas/FormularioModificarPrioridad";
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
@@ -16,8 +18,14 @@ interface PageProps {
 
 export default function InterconsultaDetallePage({ params }: PageProps) {
   const { id } = use(params);
-  const { interconsulta, cargando, error, cambiarPrioridad, cambiarEstado } =
-    useInterconsultaDetalle(id);
+  const {
+    interconsulta,
+    cargando,
+    error,
+    cambiarPrioridad,
+    cambiarEstado,
+    priorizarConIA,
+  } = useInterconsultaDetalle(id);
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
 
   if (cargando) {
@@ -47,6 +55,7 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
   }
 
   const esValida = interconsulta.esValidaParaPriorizacion ?? true;
+  const estaPriorizada = interconsulta.priorizacionIA.priorizada ?? true;
   const fueModificada =
     esValida &&
     interconsulta.prioridadActual !==
@@ -56,6 +65,19 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
     setActualizandoEstado(true);
     await cambiarEstado("revisada");
     setActualizandoEstado(false);
+  };
+
+  // Modificar la prioridad es en si el acto de revisar la interconsulta,
+  // por lo que el estado pasa a "revisada" junto con el cambio.
+  const modificarPrioridad = async (
+    nuevaPrioridad: NivelPrioridad,
+    motivo: string,
+  ): Promise<boolean> => {
+    const exito = await cambiarPrioridad(nuevaPrioridad, motivo);
+    if (exito && interconsulta.estado === "pendiente") {
+      await cambiarEstado("revisada");
+    }
+    return exito;
   };
 
   return (
@@ -107,12 +129,20 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
             </button>
           </div>
 
-          {esValida && (
-            <FormularioModificarPrioridad
-              prioridadActual={interconsulta.prioridadActual}
-              onModificar={cambiarPrioridad}
-            />
-          )}
+          {esValida &&
+            (estaPriorizada ? (
+              <FormularioModificarPrioridad
+                prioridadActual={interconsulta.prioridadActual}
+                medicoResponsable={usuarioActual.nombre}
+                onModificar={modificarPrioridad}
+              />
+            ) : (
+              <BotonPriorizarIA
+                priorizada={estaPriorizada}
+                esValida={esValida}
+                onPriorizar={priorizarConIA}
+              />
+            ))}
 
           <HistorialModificaciones
             modificaciones={interconsulta.historialModificaciones}

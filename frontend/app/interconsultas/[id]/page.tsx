@@ -16,6 +16,21 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+type FormatoExportacion = "json" | "csv" | "xlsx";
+
+interface OpcionExportacion {
+  valor: FormatoExportacion;
+  etiqueta: string;
+  extension: string;
+  mimeType: string;
+}
+
+const FORMATOS_EXPORTACION: OpcionExportacion[] = [
+  { valor: "json", etiqueta: "JSON", extension: ".json", mimeType: "application/json" },
+  { valor: "csv", etiqueta: "CSV", extension: ".csv", mimeType: "text/csv" },
+  { valor: "xlsx", etiqueta: "Excel (XLSX)", extension: ".xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+];
+
 export default function InterconsultaDetallePage({ params }: PageProps) {
   const { id } = use(params);
   const {
@@ -27,6 +42,7 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
     priorizarConIA,
   } = useInterconsultaDetalle(id);
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
+  const [formatoSeleccionado, setFormatoSeleccionado] = useState<FormatoExportacion>("json");
 
   if (cargando) {
     return (
@@ -120,13 +136,33 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
           )}
 
           <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)]">
-            <button
-              type="button"
-              onClick={() => descargarInterconsultaJson(interconsulta)}
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]"
-            >
-              Exportar interconsulta en formato JSON
-            </button>
+            <div className="flex flex-col gap-3">
+              <label
+                htmlFor="formato-exportacion"
+                className="text-sm font-medium text-[var(--text-primary)]"
+              >
+                Exportar interconsulta
+              </label>
+              <select
+                id="formato-exportacion"
+                value={formatoSeleccionado}
+                onChange={(e) => setFormatoSeleccionado(e.target.value as FormatoExportacion)}
+                className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]"
+              >
+                {FORMATOS_EXPORTACION.map((f) => (
+                  <option key={f.valor} value={f.valor}>
+                    {f.etiqueta}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => exportarInterconsulta(interconsulta, formatoSeleccionado)}
+                className="w-full rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--primary-dark)]"
+              >
+                Descargar {FORMATOS_EXPORTACION.find((f) => f.valor === formatoSeleccionado)?.etiqueta}
+              </button>
+            </div>
           </div>
 
           {esValida &&
@@ -153,6 +189,17 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
   );
 }
 
+function exportarInterconsulta(interconsulta: Interconsulta, formato: FormatoExportacion) {
+  switch (formato) {
+    case "json":
+      return descargarInterconsultaJson(interconsulta);
+    case "csv":
+      return descargarInterconsultaCsv(interconsulta);
+    case "xlsx":
+      return descargarInterconsultaXlsx(interconsulta);
+  }
+}
+
 function descargarInterconsultaJson(interconsulta: Interconsulta) {
   const payload = {
     exportadoEn: new Date().toISOString(),
@@ -166,6 +213,119 @@ function descargarInterconsultaJson(interconsulta: Interconsulta) {
 
   link.href = url;
   link.download = `interconsulta-${interconsulta.id}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function descargarInterconsultaCsv(interconsulta: Interconsulta) {
+  const ia = interconsulta.priorizacionIA;
+  const filas = [
+    [
+      "ID",
+      "Paciente Nombre",
+      "Paciente RUT",
+      "Paciente Edad",
+      "Especialidad",
+      "Centro Origen",
+      "Diagnóstico",
+      "Motivo Interconsulta",
+      "Estado",
+      "Prioridad Actual",
+      "Prioridad IA Sugerida",
+      "Confianza IA",
+      "Justificación IA",
+      "Fecha Ingreso",
+      "Fecha Actualización",
+      "Exportado En",
+      "Formato",
+    ],
+    [
+      interconsulta.id,
+      interconsulta.pacienteNombre,
+      interconsulta.pacienteRut,
+      String(interconsulta.pacienteEdad),
+      interconsulta.especialidad,
+      interconsulta.centroOrigen,
+      interconsulta.diagnostico,
+      interconsulta.motivoInterconsulta,
+      interconsulta.estado,
+      interconsulta.prioridadActual,
+      ia.nivelSugerido,
+      String(ia.confianza),
+      ia.justificacion,
+      interconsulta.fechaIngreso,
+      interconsulta.fechaActualizacion,
+      new Date().toISOString(),
+      "priorizai.interconsulta.v1",
+    ],
+  ];
+
+  const contenido = filas.map((fila) => fila.map(celda => `"${String(celda).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `interconsulta-${interconsulta.id}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function descargarInterconsultaXlsx(interconsulta: Interconsulta) {
+  // MVP: generar CSV y renombrar a .xlsx (Excel lo abre correctamente)
+  const ia = interconsulta.priorizacionIA;
+  const filas = [
+    [
+      "ID",
+      "Paciente Nombre",
+      "Paciente RUT",
+      "Paciente Edad",
+      "Especialidad",
+      "Centro Origen",
+      "Diagnóstico",
+      "Motivo Interconsulta",
+      "Estado",
+      "Prioridad Actual",
+      "Prioridad IA Sugerida",
+      "Confianza IA",
+      "Justificación IA",
+      "Fecha Ingreso",
+      "Fecha Actualización",
+      "Exportado En",
+      "Formato",
+    ],
+    [
+      interconsulta.id,
+      interconsulta.pacienteNombre,
+      interconsulta.pacienteRut,
+      String(interconsulta.pacienteEdad),
+      interconsulta.especialidad,
+      interconsulta.centroOrigen,
+      interconsulta.diagnostico,
+      interconsulta.motivoInterconsulta,
+      interconsulta.estado,
+      interconsulta.prioridadActual,
+      ia.nivelSugerido,
+      String(ia.confianza),
+      ia.justificacion,
+      interconsulta.fechaIngreso,
+      interconsulta.fechaActualizacion,
+      new Date().toISOString(),
+      "priorizai.interconsulta.v1",
+    ],
+  ];
+
+  const contenido = filas.map((fila) => fila.map(celda => `"${String(celda).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([contenido], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `interconsulta-${interconsulta.id}.xlsx`;
   document.body.appendChild(link);
   link.click();
   link.remove();

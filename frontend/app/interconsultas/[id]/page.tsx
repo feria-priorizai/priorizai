@@ -101,6 +101,8 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
               priorizacion={interconsulta.priorizacionIA}
               prioridadActual={interconsulta.prioridadActual}
               fueModificada={fueModificada}
+              prioridadForzadaPorRegla={interconsulta.prioridadForzadaPorRegla}
+              terminosBanderaRoja={interconsulta.terminosBanderaRoja}
             />
           )}
 

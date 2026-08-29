@@ -14,7 +14,8 @@ from app.api.interconsultas import router as interconsultas_router
 from app.core.config import settings
 from app.core.database import SessionLocal, engine
 from app.models import Base, Interconsulta
-from app.services.priorizador import get_priorizador
+from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
+from app.services.priorizador import aplicar_resultado, get_priorizador
 
 UPLOAD_FILE = File(...)
 
@@ -23,12 +24,18 @@ COLUMNAS_ESPERADAS = [
     "EDAD",
     "SEXO",
     "ESPEC_DESTINO",
-    "PRIORIDAD",
     "HISTORIA_CLINICA",
     "FUNDAMENTOS_DIAGNOSTICO",
     "EXAMENES_COMPLEMENTARIOS",
     "MOTIVO_INTERCONSULTA",
 ]
+
+# PRIORIDAD no es obligatoria: en produccion la interconsulta llega SIN priorizar
+# (ese es el producto). Solo la traen los archivos historicos, donde es la
+# etiqueta que asigno un especialista. Se guarda cuando viene, para poder
+# contrastar despues el modelo contra la prioridad real, pero no se exige ni se
+# muestra como si fuera la prioridad de la interconsulta.
+COLUMNA_PRIORIDAD_OPCIONAL = "PRIORIDAD"
 
 app = FastAPI()
 
@@ -206,11 +213,13 @@ def _guardar_interconsultas(
             INSERT INTO interconsultas
             (id, espec_origen, edad, sexo, espec_destino, prioridad_original_csv,
              historia_clinica, fundamentos_diagnostico, examenes_complementarios,
-             motivo_interconsulta, estado, created_at, updated_at)
+             motivo_interconsulta, fecha_emision, estado, bandera_roja,
+             prioridad_forzada_por_regla, created_at, updated_at)
             VALUES
             (:id, :espec_origen, :edad, :sexo, :espec_destino, :prioridad_original_csv,
              :historia_clinica, :fundamentos_diagnostico, :examenes_complementarios,
-             :motivo_interconsulta, :estado, :created_at, :updated_at)
+             :motivo_interconsulta, :fecha_emision, :estado, :bandera_roja,
+             :prioridad_forzada_por_regla, :created_at, :updated_at)
             """)
 
         ids_insertados: list[str] = []
@@ -223,14 +232,19 @@ def _guardar_interconsultas(
                 "edad": fila_json.get("EDAD"),
                 "sexo": fila_json.get("SEXO", ""),
                 "espec_destino": fila_json.get("ESPEC_DESTINO", ""),
-                "prioridad_original_csv": fila_json.get("PRIORIDAD", ""),
+                "prioridad_original_csv": _texto_o_none(
+                    fila_json.get(COLUMNA_PRIORIDAD_OPCIONAL)
+                ),
                 "historia_clinica": fila_json.get("HISTORIA_CLINICA", ""),
                 "fundamentos_diagnostico": fila_json.get("FUNDAMENTOS_DIAGNOSTICO", ""),
                 "examenes_complementarios": fila_json.get(
                     "EXAMENES_COMPLEMENTARIOS", ""
                 ),
                 "motivo_interconsulta": fila_json.get("MOTIVO_INTERCONSULTA", ""),
+                "fecha_emision": _parsear_fecha_emision(fila_json.get("FECHA_EMISION")),
                 "estado": "pendiente",
+                "bandera_roja": False,
+                "prioridad_forzada_por_regla": False,
                 "created_at": ahora,
                 "updated_at": ahora,
             }
@@ -263,19 +277,32 @@ def _guardar_interconsultas(
         session.close()
 
 
+COLUMNAS_NUEVAS = {
+    "estado": "VARCHAR(20) DEFAULT 'pendiente' NOT NULL",
+    "motivo_sin_prioridad": "TEXT",
+    "fecha_emision": "TIMESTAMP",
+    "bandera_roja": "BOOLEAN DEFAULT false NOT NULL",
+    "terminos_bandera_roja": "TEXT",
+    "prioridad_forzada_por_regla": "BOOLEAN DEFAULT false NOT NULL",
+}
+
+
 def _asegurar_columnas_interconsultas() -> None:
     inspector = inspect(engine)
     columnas = {columna["name"] for columna in inspector.get_columns("interconsultas")}
-    if "estado" in columnas:
+    faltantes = {
+        nombre: definicion
+        for nombre, definicion in COLUMNAS_NUEVAS.items()
+        if nombre not in columnas
+    }
+    if not faltantes:
         return
 
     with engine.begin() as connection:
-        connection.execute(
-            text(
-                "ALTER TABLE interconsultas "
-                "ADD COLUMN estado VARCHAR(20) DEFAULT 'pendiente' NOT NULL"
+        for nombre, definicion in faltantes.items():
+            connection.execute(
+                text(f"ALTER TABLE interconsultas ADD COLUMN {nombre} {definicion}")
             )
-        )
 
 
 def _priorizar_interconsultas_insertadas(session: Session, ids: list[str]) -> int:
@@ -289,17 +316,22 @@ def _priorizar_interconsultas_insertadas(session: Session, ids: list[str]) -> in
         for interconsulta in interconsultas
         if _tiene_informacion_clinica(interconsulta)
     ]
-    resultados = get_priorizador().predecir(validas)
-    por_id = {interconsulta.id: interconsulta for interconsulta in validas}
 
+    for interconsulta in validas:
+        aplicar_banderas_a_interconsulta(interconsulta, ya_modificada_por_medico=False)
+
+    try:
+        resultados = get_priorizador().predecir(validas)
+    except Exception as exc:
+        for interconsulta in validas:
+            interconsulta.motivo_sin_prioridad = (
+                f"No se pudo ejecutar el modelo predictivo: {exc}"
+            )
+        return 0
+
+    por_id = {interconsulta.id: interconsulta for interconsulta in validas}
     for resultado in resultados:
-        interconsulta = por_id[resultado.id]
-        interconsulta.prioridad_sugerida_modelo = resultado.prioridad
-        interconsulta.confianza_modelo = resultado.confianza
-        interconsulta.prob_baja = resultado.probabilidades.baja
-        interconsulta.prob_media = resultado.probabilidades.media
-        interconsulta.prob_alta = resultado.probabilidades.alta
-        interconsulta.prioridad_actual = resultado.prioridad
+        aplicar_resultado(por_id[resultado.id], resultado)
 
     return len(resultados)
 
@@ -320,6 +352,33 @@ def _estado_priorizacion(total: int, priorizadas: int) -> str:
     if priorizadas == 0:
         return "skipped"
     return "partial"
+
+
+def _texto_o_none(valor: object) -> str | None:
+    """Distingue 'no vino la columna' de 'vino vacia': ambos casos se guardan como
+    NULL, para que coalesce y las comparaciones no tengan que lidiar con ""."""
+    texto = str(valor or "").strip()
+    return texto or None
+
+
+FORMATOS_FECHA_EMISION = ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y")
+
+
+def _parsear_fecha_emision(valor: object) -> datetime | None:
+    """FECHA_EMISION es opcional (HU3-c1): no viene en COLUMNAS_ESPERADAS y aun no
+    se conoce el formato real del archivo del sistema hospitalario (D18). Si no
+    esta presente o no calza con un formato conocido, se guarda como None en vez
+    de romper la carga completa."""
+    texto = str(valor or "").strip()
+    if not texto:
+        return None
+
+    for formato in FORMATOS_FECHA_EMISION:
+        try:
+            return datetime.strptime(texto, formato).replace(tzinfo=UTC)
+        except ValueError:
+            continue
+    return None
 
 
 def _normalizar_encabezado(valor: object) -> str:

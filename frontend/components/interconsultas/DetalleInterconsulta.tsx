@@ -3,6 +3,7 @@
 import type { Interconsulta } from "@/types";
 import BadgeEstado from "@/components/ui/BadgeEstado";
 import BadgePrioridad from "@/components/ui/BadgePrioridad";
+import BadgeBanderaRoja from "@/components/ui/BadgeBanderaRoja";
 import { formatearFechaHoraChileLarga } from "@/utils/fechas";
 
 interface DetalleInterconsultaProps {
@@ -24,8 +25,16 @@ export default function DetalleInterconsulta({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {ic.esValidaParaPriorizacion !== false && (
-            <BadgePrioridad prioridad={ic.prioridadActual} tamano="lg" />
+          {ic.esValidaParaPriorizacion !== false &&
+            (ic.sinPrioridad ? (
+              <span className="text-sm text-[var(--text-muted)]">
+                Sin prioridad
+              </span>
+            ) : (
+              <BadgePrioridad prioridad={ic.prioridadActual} tamano="lg" />
+            ))}
+          {ic.banderaRoja && (
+            <BadgeBanderaRoja terminos={ic.terminosBanderaRoja} tamano="lg" />
           )}
           <BadgeEstado estado={ic.estado} />
         </div>

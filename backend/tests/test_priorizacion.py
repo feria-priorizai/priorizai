@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from datetime import datetime
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -267,6 +268,215 @@ def test_priorizar_pendientes_omite_interconsultas_con_espacios() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"total": 0, "resultados": []}
+
+
+def test_listado_ordena_por_prioridad_y_fecha_de_emision() -> None:
+    # HU3-c1: prioridad descendente y, dentro de cada prioridad, fecha de
+    # emision ascendente. HU3-c3: ante empate, orden estable por id.
+    db = TestingSessionLocal()
+    casos = [
+        ("ic-b", "baja", datetime(2026, 1, 1)),
+        ("ic-a2", "alta", datetime(2026, 3, 1)),
+        ("ic-m", "media", datetime(2026, 2, 1)),
+        ("ic-a1", "alta", datetime(2026, 1, 15)),
+    ]
+    for identificador, prioridad, fecha in casos:
+        db.add(
+            Interconsulta(
+                id=identificador,
+                espec_origen="Medicina General",
+                edad=50,
+                sexo="F",
+                espec_destino="Cardiologia",
+                prioridad_original_csv=prioridad,
+                historia_clinica="Antecedentes",
+                fundamentos_diagnostico="Fundamentos",
+                examenes_complementarios="",
+                motivo_interconsulta="Control",
+                prioridad_actual=prioridad,
+                fecha_emision=fecha,
+            )
+        )
+    db.commit()
+    db.close()
+
+    response = client.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    ids = [item["id"] for item in response.json()]
+    # alta (mas antigua primero) -> media -> baja
+    assert ids == ["ic-a1", "ic-a2", "ic-m", "ic-b"]
+
+
+def test_listado_ignora_la_etiqueta_historica_al_ordenar() -> None:
+    # prioridad_original_csv es la etiqueta del corpus historico, no una prioridad
+    # de esta aplicacion. No debe influir en el orden ni sustituir a la prioridad
+    # que produce el sistema: si el modelo no priorizo y el medico no decidio, la
+    # interconsulta no tiene prioridad, venga o no con etiqueta.
+    db = TestingSessionLocal()
+    db.add(
+        Interconsulta(
+            id="ic-etiqueta-alta",
+            espec_origen="Medicina General",
+            edad=70,
+            sexo="M",
+            espec_destino="Cardiologia",
+            prioridad_original_csv="ALTA",
+            historia_clinica="Derivada con etiqueta alta en el historico",
+            fundamentos_diagnostico="Cuadro cronico",
+            examenes_complementarios="",
+            motivo_interconsulta="Evaluacion",
+            prioridad_actual=None,
+            prioridad_sugerida_modelo=None,
+        )
+    )
+    db.add(
+        Interconsulta(
+            id="ic-modelo-media",
+            espec_origen="Medicina General",
+            edad=35,
+            sexo="F",
+            espec_destino="Dermatologia",
+            prioridad_original_csv=None,
+            historia_clinica="Lesion cutanea",
+            fundamentos_diagnostico="Control",
+            examenes_complementarios="",
+            motivo_interconsulta="Control",
+            prioridad_actual=None,
+            prioridad_sugerida_modelo="media",
+        )
+    )
+    db.commit()
+    db.close()
+
+    response = client.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    ids = [item["id"] for item in response.json()]
+    # La que tiene sugerencia del modelo va primero; la que solo trae etiqueta
+    # historica cuenta como sin prioridad y queda al final.
+    assert ids == ["ic-modelo-media", "ic-etiqueta-alta"]
+
+
+def test_listado_ubica_al_final_las_interconsultas_sin_prioridad() -> None:
+    db = TestingSessionLocal()
+    db.add(
+        Interconsulta(
+            id="ic-con-prioridad",
+            espec_origen="Medicina General",
+            edad=50,
+            sexo="F",
+            espec_destino="Cardiologia",
+            prioridad_original_csv="Baja",
+            historia_clinica="Antecedentes",
+            fundamentos_diagnostico="Fundamentos",
+            examenes_complementarios="",
+            motivo_interconsulta="Control",
+            prioridad_actual="baja",
+        )
+    )
+    db.add(
+        Interconsulta(
+            id="ic-sin-prioridad",
+            espec_origen="Medicina General",
+            edad=50,
+            sexo="F",
+            espec_destino="Cardiologia",
+            prioridad_original_csv="",
+            historia_clinica="Antecedentes",
+            fundamentos_diagnostico="Fundamentos",
+            examenes_complementarios="",
+            motivo_interconsulta="Control",
+            prioridad_actual=None,
+        )
+    )
+    db.commit()
+    db.close()
+
+    response = client.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    ids = [item["id"] for item in response.json()]
+    assert ids == ["ic-con-prioridad", "ic-sin-prioridad"]
+
+
+def test_priorizar_no_pisa_prioridad_forzada_por_bandera_roja() -> None:
+    # Regresion: PriorizadorFake sugiere "alta", pero con una bandera roja la
+    # prioridad forzada debe mantenerse aunque el modelo sugiera otra cosa
+    # (HU5-c3 / D5). La sugerencia del modelo igual queda registrada.
+    db = TestingSessionLocal()
+    db.add(
+        Interconsulta(
+            id="ic-bandera",
+            espec_origen="Medicina General",
+            edad=54,
+            sexo="M",
+            espec_destino="Cardiologia",
+            prioridad_original_csv="Media",
+            historia_clinica="Paciente con dolor toracico de inicio subito",
+            fundamentos_diagnostico="Cuadro agudo",
+            examenes_complementarios="",
+            motivo_interconsulta="Evaluacion urgente",
+            prioridad_actual="alta",
+            bandera_roja=True,
+            terminos_bandera_roja="dolor_toracico",
+            prioridad_forzada_por_regla=True,
+        )
+    )
+    db.commit()
+    db.close()
+
+    response = client.post(
+        "/api/interconsultas/priorizar", json={"ids": ["ic-bandera"]}
+    )
+
+    assert response.status_code == 200
+
+    db = TestingSessionLocal()
+    actualizada = db.get(Interconsulta, "ic-bandera")
+    assert actualizada is not None
+    assert actualizada.prioridad_actual == "alta"
+    assert actualizada.prioridad_forzada_por_regla is True
+    assert actualizada.bandera_roja is True
+    assert actualizada.prioridad_sugerida_modelo == "alta"
+    db.close()
+
+
+def test_priorizar_limpia_motivo_sin_prioridad_previo() -> None:
+    # Si una carga anterior fallo por falta de modelo, el motivo queda guardado.
+    # Al priorizar con exito debe limpiarse para no dejar un mensaje obsoleto.
+    db = TestingSessionLocal()
+    db.add(
+        Interconsulta(
+            id="ic-motivo-obsoleto",
+            espec_origen="Medicina General",
+            edad=44,
+            sexo="F",
+            espec_destino="Cardiologia",
+            prioridad_original_csv="Media",
+            historia_clinica="Control de rutina",
+            fundamentos_diagnostico="Sin hallazgos",
+            examenes_complementarios="",
+            motivo_interconsulta="Control",
+            motivo_sin_prioridad="No se pudo ejecutar el modelo predictivo: simulado",
+        )
+    )
+    db.commit()
+    db.close()
+
+    response = client.post(
+        "/api/interconsultas/priorizar",
+        json={"ids": ["ic-motivo-obsoleto"]},
+    )
+
+    assert response.status_code == 200
+
+    db = TestingSessionLocal()
+    actualizada = db.get(Interconsulta, "ic-motivo-obsoleto")
+    assert actualizada is not None
+    assert actualizada.motivo_sin_prioridad is None
+    assert actualizada.prioridad_actual == "alta"
+    db.close()
 
 
 def test_modificar_prioridad_persiste_historial() -> None:

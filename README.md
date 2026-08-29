@@ -29,6 +29,14 @@ levantados.
 | Swagger | http://localhost:8000/docs |
 | Health check | http://localhost:8000/health |
 
+Por defecto el backend corre en CPU. En una máquina con GPU NVIDIA y el runtime
+`nvidia-container-toolkit` instalado, se puede habilitar la GPU agregando el archivo de
+override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build -d
+```
+
 Detener la aplicación:
 
 ```bash

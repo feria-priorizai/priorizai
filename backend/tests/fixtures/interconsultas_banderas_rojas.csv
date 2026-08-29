@@ -1,0 +1,8 @@
+ESPEC_ORIGEN,EDAD,SEXO,ESPEC_DESTINO,PRIORIDAD,HISTORIA_CLINICA,FUNDAMENTOS_DIAGNOSTICO,EXAMENES_COMPLEMENTARIOS,MOTIVO_INTERCONSULTA
+MEDICINA GENERAL,54,MASCULINO,CARDIOLOGIA,MEDIA,Paciente con dolor toracico de inicio subito,,ECG con cambios,Evaluacion cardiologica urgente
+MEDICINA GENERAL,40,FEMENINO,CARDIOLOGIA,BAJA,Paciente sin dolor toracico ni disnea,Control de rutina,,Control de especialidad
+MEDICINA GENERAL,66,MASCULINO,MEDICINA INTERNA,BAJA,Antecedente de sepsis resuelta en 2019,Actualmente estable sin fiebre,,Control de especialidad
+MEDICINA GENERAL,29,FEMENINO,GASTROENTEROLOGIA,BAJA,Se deriva para descartar hemorragia digestiva ante anemia de estudio,Anemia normocitica en estudio,Hemograma con Hb 10,Evaluacion por especialista
+MEDICINA GENERAL,58,MASCULINO,MEDICINA INTERNA,MEDIA,No se puede descartar sepsis en este cuadro clinico,Fiebre y compromiso del estado general,,Evaluacion urgente
+MEDICINA GENERAL,61,FEMENINO,NEUROLOGIA,MEDIA,Sin dolor toracico pero con convulsiones activas,Cuadro neurologico agudo,,Evaluacion neurologica urgente
+MEDICINA GENERAL,35,FEMENINO,MEDICINA GENERAL,BAJA,Paciente control sano sin hallazgos relevantes,Examen fisico normal,,Control de especialidad

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { Interconsulta } from "@/types";
 import BadgePrioridad from "@/components/ui/BadgePrioridad";
+import BadgeBanderaRoja from "@/components/ui/BadgeBanderaRoja";
 import BadgeEstado from "@/components/ui/BadgeEstado";
 import { formatearFechaHoraChile } from "@/utils/fechas";
 
@@ -13,16 +14,11 @@ interface TablaInterconsultasRecientesProps {
 export default function TablaInterconsultasRecientes({
   interconsultas,
 }: TablaInterconsultasRecientesProps) {
-  const ordenadas = [...interconsultas].sort((a, b) => {
-    const difPrioridad =
-      obtenerOrdenPrioridad(a) - obtenerOrdenPrioridad(b);
-
-    if (difPrioridad !== 0) {
-      return difPrioridad;
-    }
-
-    return new Date(b.fechaIngreso).getTime() - new Date(a.fechaIngreso).getTime();
-  });
+  // HU3-c1 y c3: el orden lo resuelve el backend (prioridad descendente ->
+  // fecha de emision ascendente -> id). No se reordena en el cliente: hacerlo
+  // duplicaba el criterio y lo contradecia, ordenando por fecha de ingreso
+  // descendente y anulando el orden correcto que ya venia de la API.
+  const ordenadas = interconsultas;
 
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
@@ -83,13 +79,22 @@ export default function TablaInterconsultasRecientes({
                   {ic.diagnostico}
                 </td>
                 <td className="px-5 py-3">
-                  {ic.esValidaParaPriorizacion === false ? (
-                    <span className="text-sm text-[var(--text-muted)]">
-                      No aplica
-                    </span>
-                  ) : (
-                    <BadgePrioridad prioridad={ic.prioridadActual} />
-                  )}
+                  <div className="flex flex-col items-start gap-1">
+                    {ic.esValidaParaPriorizacion === false ? (
+                      <span className="text-sm text-[var(--text-muted)]">
+                        No aplica
+                      </span>
+                    ) : ic.sinPrioridad ? (
+                      <span className="text-sm text-[var(--text-muted)]">
+                        Sin prioridad
+                      </span>
+                    ) : (
+                      <BadgePrioridad prioridad={ic.prioridadActual} />
+                    )}
+                    {ic.banderaRoja && (
+                      <BadgeBanderaRoja terminos={ic.terminosBanderaRoja} />
+                    )}
+                  </div>
                 </td>
                 <td className="px-5 py-3">
                   <BadgeEstado estado={ic.estado} />
@@ -99,12 +104,19 @@ export default function TablaInterconsultasRecientes({
                     <span className="inline-flex rounded-full border border-[var(--prioridad-media-border)] bg-[var(--prioridad-media-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--prioridad-media)]">
                       Interconsulta invalida
                     </span>
+                  ) : ic.prioridadForzadaPorRegla ? (
+                    <span className="text-sm font-semibold text-[var(--prioridad-alta)]">
+                      Regla clinica
+                    </span>
                   ) : ic.priorizacionIA.priorizada ?? true ? (
                     <span className="text-sm font-semibold">
                       {ic.priorizacionIA.confianza}%
                     </span>
                   ) : (
-                    <span className="text-sm text-[var(--text-muted)]">
+                    <span
+                      className="text-sm text-[var(--text-muted)]"
+                      title={ic.motivoSinPrioridad ?? undefined}
+                    >
                       Sin priorizar
                     </span>
                   )}
@@ -125,13 +137,4 @@ export default function TablaInterconsultasRecientes({
       )}
     </div>
   );
-}
-
-function obtenerOrdenPrioridad(interconsulta: Interconsulta): number {
-  if (interconsulta.esValidaParaPriorizacion === false) {
-    return 99;
-  }
-
-  const ordenPrioridad = { alta: 0, media: 1, baja: 2 };
-  return ordenPrioridad[interconsulta.prioridadActual];
 }

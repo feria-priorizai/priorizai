@@ -1,0 +1,53 @@
+# Catálogo de términos de alarma (RF7 / HU5-c3, c4).
+#
+# Semilla configurable, NO es el listado definitivo: el documento fuente del backlog
+# declara explícitamente que debe definirse con especialistas de cada disciplina
+# (pendiente abierto del proyecto). Editable sin tocar el motor de detección
+# (backend/app/services/banderas_rojas.py) — ver docs/RF7-banderas-rojas.md, D4.
+#
+# "id" es la clave estable: es lo que se persiste en la base de datos y lo que la
+# interfaz muestra como motivo de la bandera roja. No renombrar un id existente sin
+# migrar los datos ya guardados.
+version: 1
+terminos:
+  - id: dolor_toracico
+    canonico: "dolor torácico"
+    sinonimos:
+      - "dolor precordial"
+      - "dolor retroesternal"
+      - "angina"
+  - id: hemorragia_digestiva
+    canonico: "hemorragia digestiva"
+    sinonimos:
+      - "hematemesis"
+      - "melena"
+  - id: sepsis
+    canonico: "sepsis"
+    sinonimos:
+      - "shock séptico"
+      - "sepsis grave"
+  - id: dificultad_respiratoria_severa
+    canonico: "dificultad respiratoria severa"
+    sinonimos:
+      - "insuficiencia respiratoria aguda"
+      - "disnea severa"
+  - id: alteracion_de_conciencia
+    canonico: "alteración de conciencia"
+    sinonimos:
+      - "compromiso de conciencia"
+      - "glasgow bajo"
+  - id: signos_de_shock
+    canonico: "signos de shock"
+    sinonimos:
+      - "shock hipovolémico"
+      - "hipotensión severa"
+  - id: convulsiones
+    canonico: "convulsiones"
+    sinonimos:
+      - "crisis convulsiva"
+      - "status epiléptico"
+  - id: ideacion_suicida
+    canonico: "ideación suicida"
+    sinonimos:
+      - "riesgo suicida"
+      - "intento de suicidio"

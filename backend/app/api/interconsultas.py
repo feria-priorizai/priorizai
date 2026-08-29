@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, nullslast, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
@@ -9,17 +9,50 @@ from app.schemas.interconsulta import (
     InterconsultaResponse,
     ModificarEstadoRequest,
     ModificarPrioridadRequest,
+    ReevaluarBanderasResponse,
 )
 from app.schemas.priorizacion import (
     PriorizarInterconsultasRequest,
     PriorizarInterconsultasResponse,
     ResultadoPriorizacion,
 )
-from app.services.priorizador import PriorizadorRigoBerta, get_priorizador
+from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
+from app.services.priorizador import (
+    PriorizadorRigoBerta,
+    aplicar_resultado,
+    get_priorizador,
+)
 
 router = APIRouter(prefix="/api/interconsultas", tags=["interconsultas"])
 DbSession = Depends(get_db)
 PriorizadorDependency = Depends(get_priorizador)
+
+# La prioridad que ve el medico es la que decidio el (prioridad_actual) o, si aun
+# no decidio, la que sugiere el modelo. El orden usa esa misma cadena: ordenar por
+# un valor y mostrar otro hace que una interconsulta que en pantalla dice "Alta"
+# aparezca debajo de una que dice "Baja".
+#
+# prioridad_original_csv queda deliberadamente fuera: es la etiqueta que trae el
+# corpus historico (la prioridad que asigno un especialista), no una prioridad de
+# esta aplicacion. En produccion las interconsultas llegan sin priorizar, asi que
+# usarla ordenaria por la respuesta en vez de por lo que el sistema propone.
+_PRIORIDAD_EFECTIVA = func.lower(
+    func.coalesce(
+        func.nullif(func.trim(Interconsulta.prioridad_actual), ""),
+        func.nullif(func.trim(Interconsulta.prioridad_sugerida_modelo), ""),
+    )
+)
+
+# HU3-c1: prioridad descendente (alta > media > baja) y, dentro de cada prioridad,
+# fecha de emision ascendente. La prioridad se guarda como texto, asi que se
+# necesita un CASE explicito para que "alta" no ordene alfabeticamente antes que
+# "baja". Las interconsultas sin prioridad alguna quedan al final.
+_ORDEN_PRIORIDAD = case(
+    (_PRIORIDAD_EFECTIVA == "alta", 0),
+    (_PRIORIDAD_EFECTIVA == "media", 1),
+    (_PRIORIDAD_EFECTIVA == "baja", 2),
+    else_=3,
+)
 
 
 @router.get("", response_model=list[InterconsultaResponse])
@@ -32,8 +65,9 @@ def listar_interconsultas(
         select(Interconsulta)
         .options(selectinload(Interconsulta.modificaciones))
         .order_by(
-            nullslast(Interconsulta.confianza_modelo.desc()),
-            Interconsulta.created_at.desc(),
+            _ORDEN_PRIORIDAD,
+            func.coalesce(Interconsulta.fecha_emision, Interconsulta.created_at).asc(),
+            Interconsulta.id.asc(),
         )
         .offset(offset)
         .limit(limit)
@@ -92,6 +126,10 @@ def modificar_prioridad_interconsulta(
 
     prioridad_anterior = interconsulta.prioridad_actual
     interconsulta.prioridad_actual = nueva_prioridad
+    # D5/D7: una vez que el medico decide, la prioridad ya no vino de la regla de
+    # banderas rojas. La bandera (bandera_roja/terminos_bandera_roja) se mantiene:
+    # sigue siendo informacion valida sobre el texto, solo deja de forzar.
+    interconsulta.prioridad_forzada_por_regla = False
     db.add(
         ModificacionPrioridad(
             interconsulta_id=interconsulta.id,
@@ -138,6 +176,44 @@ def modificar_estado_interconsulta(
     )
     assert actualizada is not None
     return actualizada
+
+
+@router.post("/reevaluar-banderas", response_model=ReevaluarBanderasResponse)
+def reevaluar_banderas_rojas(
+    db: Session = DbSession,
+) -> ReevaluarBanderasResponse:
+    """Re-evalua las banderas rojas de todas las interconsultas (RF7 / D6): util
+    tras editar el catalogo de terminos de alarma, ya que las interconsultas
+    cargadas antes del cambio no se reevaluan solas."""
+    interconsultas = list(db.scalars(select(Interconsulta)).all())
+
+    ids_con_modificacion = _ids_con_modificacion_previa(
+        db, [interconsulta.id for interconsulta in interconsultas]
+    )
+
+    total_con_bandera = 0
+    for interconsulta in interconsultas:
+        resultado = aplicar_banderas_a_interconsulta(
+            interconsulta,
+            ya_modificada_por_medico=interconsulta.id in ids_con_modificacion,
+        )
+        if resultado.bandera_roja:
+            total_con_bandera += 1
+
+    db.commit()
+    return ReevaluarBanderasResponse(
+        total_evaluadas=len(interconsultas),
+        total_con_bandera_roja=total_con_bandera,
+    )
+
+
+def _ids_con_modificacion_previa(db: Session, ids: list[str]) -> set[str]:
+    if not ids:
+        return set()
+    stmt = select(ModificacionPrioridad.interconsulta_id).where(
+        ModificacionPrioridad.interconsulta_id.in_(ids)
+    )
+    return set(db.scalars(stmt).all())
 
 
 @router.post("/priorizar", response_model=PriorizarInterconsultasResponse)
@@ -272,11 +348,5 @@ def _guardar_resultados(
 ) -> None:
     por_id = {interconsulta.id: interconsulta for interconsulta in interconsultas}
     for resultado in resultados:
-        interconsulta = por_id[resultado.id]
-        interconsulta.prioridad_sugerida_modelo = resultado.prioridad
-        interconsulta.confianza_modelo = resultado.confianza
-        interconsulta.prob_baja = resultado.probabilidades.baja
-        interconsulta.prob_media = resultado.probabilidades.media
-        interconsulta.prob_alta = resultado.probabilidades.alta
-        interconsulta.prioridad_actual = resultado.prioridad
+        aplicar_resultado(por_id[resultado.id], resultado)
     db.commit()

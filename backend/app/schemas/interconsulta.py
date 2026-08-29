@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
+
+from app.services.banderas_rojas import nombres_de_terminos
 
 
 class ModificarPrioridadRequest(BaseModel):
@@ -24,6 +26,11 @@ class ModificacionPrioridadResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ReevaluarBanderasResponse(BaseModel):
+    total_evaluadas: int
+    total_con_bandera_roja: int
+
+
 class InterconsultaResponse(BaseModel):
     id: str
     espec_origen: str
@@ -42,8 +49,21 @@ class InterconsultaResponse(BaseModel):
     prob_alta: float | None
     prioridad_actual: str | None
     estado: str
+    motivo_sin_prioridad: str | None
+    fecha_emision: datetime | None
+    bandera_roja: bool
+    terminos_bandera_roja: str | None
+    prioridad_forzada_por_regla: bool
     created_at: datetime
     updated_at: datetime
     modificaciones: list[ModificacionPrioridadResponse] = []
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def terminos_bandera_roja_nombres(self) -> list[str]:
+        """Los terminos de la bandera roja con su nombre clinico, para mostrarlos
+        (HU5-c3). Se deriva del catalogo en vez de persistirse, para que editar un
+        nombre en el YAML no obligue a migrar las filas ya guardadas."""
+        return nombres_de_terminos(self.terminos_bandera_roja)
 
     model_config = {"from_attributes": True}

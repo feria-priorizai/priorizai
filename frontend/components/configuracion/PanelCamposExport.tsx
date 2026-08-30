@@ -2,7 +2,6 @@
 
 import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
 import { TODOS_LOS_CAMPOS } from "@/types/campos";
-import { Accordion } from "@/components/ui/Accordion";
 import { CampoCheckbox } from "./CampoCheckbox";
 import { IconoGrupo, IconoCandado } from "./iconos";
 
@@ -17,7 +16,7 @@ export function PanelCamposExport() {
   const { camposExport, toggleCampo, puedeEditar } = useConfiguracionExport();
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {!puedeEditar && (
         <div className="flex items-center gap-2 rounded-lg bg-[var(--prioridad-media-bg)] p-3 text-sm text-[var(--prioridad-media)]">
           <IconoCandado />
@@ -25,50 +24,33 @@ export function PanelCamposExport() {
         </div>
       )}
 
-      {GRUPOS.map(({ clave, titulo }) => {
-        const campos = TODOS_LOS_CAMPOS.filter(c => c.grupo === clave);
-        if (campos.length === 0) return null;
+      <div className="flex flex-col gap-4">
+        {GRUPOS.map(({ clave, titulo }) => {
+          const campos = TODOS_LOS_CAMPOS.filter(c => c.grupo === clave);
+          if (campos.length === 0) return null;
 
-        const seleccionados = campos.filter(c => camposExport.includes(c.clave)).length;
-        const todosSeleccionados = campos.every(c => camposExport.includes(c.clave));
-
-        return (
-          <Accordion key={clave} titulo={titulo} icono={<IconoGrupo tipo={clave} />} className="border-[var(--border)]">
-            <div className="space-y-2">
-              {campos.map(campo => (
-                <CampoCheckbox
-                  key={campo.clave}
-                  campo={campo}
-                  checked={camposExport.includes(campo.clave)}
-                  onChange={() => toggleCampo(campo.clave)}
-                  disabled={!puedeEditar}
-                  modo="export"
-                />
-              ))}
+          return (
+            <div key={clave}>
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                <IconoGrupo tipo={clave} className="h-3.5 w-3.5" />
+                <span>{titulo}</span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {campos.map(campo => (
+                  <CampoCheckbox
+                    key={campo.clave}
+                    campo={campo}
+                    checked={camposExport.includes(campo.clave)}
+                    onChange={() => toggleCampo(campo.clave)}
+                    disabled={!puedeEditar}
+                    modo="export"
+                  />
+                ))}
+              </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--text-muted)]">
-              <span>{seleccionados} de {campos.length} campos en export</span>
-              {puedeEditar && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const deberiaSeleccionar = !todosSeleccionados;
-                    campos.forEach(c => {
-                      const estaSeleccionado = camposExport.includes(c.clave);
-                      if (deberiaSeleccionar !== estaSeleccionado) {
-                        toggleCampo(c.clave);
-                      }
-                    });
-                  }}
-                  className="text-[var(--primary)] hover:underline"
-                >
-                  {todosSeleccionados ? "Deseleccionar todos" : "Seleccionar todos"}
-                </button>
-              )}
-            </div>
-          </Accordion>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -26,9 +26,32 @@ export function ConfiguracionProvider({ children }: { children: ReactNode }) {
     try {
       const guardado = localStorage.getItem(STORAGE_KEY);
       if (guardado) {
-        const parsed = JSON.parse(guardado);
-        // Merge con defaults para manejar nuevos campos
-        return { ...DEFAULT_CONFIG, ...parsed, perfiles: { ...DEFAULT_CONFIG.perfiles, ...parsed.perfiles } };
+        const parsed = JSON.parse(guardado) as Partial<ConfiguracionCampos>;
+
+        // Detectar si la config guardada es obsoleta (contiene claves que no
+        // están en TODOS_LOS_CAMPOS, p. ej. PACIENTE_NOMBRE del perfil viejo).
+        const exportGuardado = Array.isArray(parsed.camposExport) ? parsed.camposExport : [];
+        const importGuardado = Array.isArray(parsed.camposObligatoriosImport) ? parsed.camposObligatoriosImport : [];
+
+        // Claves que la UI puede mostrar: vienen de TODOS_LOS_CAMPOS
+        const clavesConocidas = new Set([
+          ...DEFAULT_CONFIG.camposExport,
+          ...DEFAULT_CONFIG.camposObligatoriosImport,
+        ]);
+
+        const exportTieneObsoletos = exportGuardado.some(c => !clavesConocidas.has(c));
+        const importTieneObsoletos = importGuardado.some(c => !clavesConocidas.has(c));
+
+        // Si la config guardada es obsoleta, ignorar localStorage y usar defaults
+        if (exportTieneObsoletos || importTieneObsoletos) {
+          return DEFAULT_CONFIG;
+        }
+
+        return {
+          ...DEFAULT_CONFIG,
+          ...parsed,
+          perfiles: { ...DEFAULT_CONFIG.perfiles, ...(parsed.perfiles ?? {}) },
+        };
       }
     } catch {
       // Ignorar errores de parsing
@@ -36,7 +59,17 @@ export function ConfiguracionProvider({ children }: { children: ReactNode }) {
     return DEFAULT_CONFIG;
   });
 
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [usuario, setUsuario] = useState<Usuario | null>(() => {
+    // Inicializar como médico por defecto para que la página de configuración
+    // sea accesible sin necesidad de entrar primero a una interconsulta.
+    // La página de detalle sobreescribe este valor con el rol real del usuario.
+    if (typeof window === "undefined") return null;
+    return {
+      id: "default",
+      nombre: "Médico",
+      rol: "medico",
+    };
+  });
 
   // Persistir en localStorage
   useEffect(() => {

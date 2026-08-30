@@ -50,9 +50,17 @@ export function useConfiguracionImport() {
     actualizarConfigImport(nuevos);
   };
 
+  // Reemplaza el set completo de obligatorios en una sola actualización
+  // (necesario para "Seleccionar/Deseleccionar todos" — varios toggles
+  // sucesivos se perderían porque cada uno lee la versión anterior del array).
+  const setObligatorios = (claves: string[]) => {
+    actualizarConfigImport(claves);
+  };
+
   return {
     camposObligatorios: config.camposObligatoriosImport,
     toggleCampo,
+    setObligatorios,
     puedeEditar,
     ...resto,
   };
@@ -71,10 +79,16 @@ export function useConfiguracionExport() {
     actualizarConfigExport(nuevos);
   };
 
+  // Reemplaza el set completo de exportables en una sola actualización
+  const setExportables = (claves: string[]) => {
+    actualizarConfigExport(claves);
+  };
+
   return {
     config, // configEfectiva con camposExport garantizado
     camposExport: config.camposExport,
     toggleCampo,
+    setExportables,
     puedeEditar,
     setUsuario,
     usuario,

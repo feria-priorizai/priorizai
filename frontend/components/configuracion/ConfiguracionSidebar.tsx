@@ -1,7 +1,6 @@
 "use client";
 
 import { useConfiguracion } from "@/context/ConfiguracionContext";
-import { Accordion } from "@/components/ui/Accordion";
 import { PanelCamposImport } from "./PanelCamposImport";
 import { PanelCamposExport } from "./PanelCamposExport";
 import { IconoImport, IconoExport } from "./iconos";
@@ -43,25 +42,28 @@ export function ConfiguracionSidebar() {
         )}
       </div>
 
-      {/* Panel Import */}
-      <Accordion
-        titulo="Campos obligatorios para import"
-        icono={<IconoImport />}
-        className="border-[var(--border)]"
-        abiertoPorDefecto={true}
-      >
-        <PanelCamposImport />
-      </Accordion>
+      {/* Paneles Import y Export lado a lado */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <IconoImport className="h-4 w-4 text-[var(--text-muted)]" />
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">
+              Campos obligatorios para import
+            </h2>
+          </div>
+          <PanelCamposImport />
+        </section>
 
-      {/* Panel Export */}
-      <Accordion
-        titulo="Campos en export (JSON/CSV/XLSX)"
-        icono={<IconoExport />}
-        className="border-[var(--border)]"
-        abiertoPorDefecto={true}
-      >
-        <PanelCamposExport />
-      </Accordion>
+        <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <IconoExport className="h-4 w-4 text-[var(--text-muted)]" />
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">
+              Campos en export (JSON/CSV/XLSX)
+            </h2>
+          </div>
+          <PanelCamposExport />
+        </section>
+      </div>
 
       {/* Acciones */}
       {puedeEditar && (

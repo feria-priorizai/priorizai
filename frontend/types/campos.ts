@@ -7,6 +7,12 @@ export type TipoCampo = "string" | "number" | "date" | "enum";
 export type GrupoCampo = "paciente" | "clinico" | "priorizacion" | "metadatos";
 export type PerfilConfiguracion = "medico" | "admin";
 
+export interface Usuario {
+  id: string;
+  nombre: string;
+  rol: PerfilConfiguracion;
+}
+
 export interface DefinicionCampo {
   clave: string;
   etiqueta: string;
@@ -20,22 +26,21 @@ export interface DefinicionCampo {
 
 export const TODOS_LOS_CAMPOS: DefinicionCampo[] = [
   // Paciente
-  { clave: "ESPEC_ORIGEN", etiqueta: "Especialidad Origen", tipo: "string", obligatorioPorDefecto: true, exportablePorDefecto: true, grupo: "paciente" },
   { clave: "EDAD", etiqueta: "Edad", tipo: "number", obligatorioPorDefecto: true, exportablePorDefecto: true, grupo: "paciente" },
   { clave: "SEXO", etiqueta: "Sexo", tipo: "enum", obligatorioPorDefecto: true, exportablePorDefecto: true, grupo: "paciente" },
   // Clínico
+  { clave: "ESPEC_ORIGEN", etiqueta: "Especialidad Origen", tipo: "string", obligatorioPorDefecto: true, exportablePorDefecto: true, grupo: "clinico" },
   { clave: "ESPEC_DESTINO", etiqueta: "Especialidad Destino", tipo: "string", obligatorioPorDefecto: true, exportablePorDefecto: true, grupo: "clinico" },
   { clave: "HISTORIA_CLINICA", etiqueta: "Historia Clínica", tipo: "string", obligatorioPorDefecto: true, exportablePorDefecto: false, grupo: "clinico" },
-  { clave: "FUNDAMENTOS_DIAGNOSTICO", etiqueta: "Fundamentos Diagnóstico", tipo: "string", obligatorioPorDefecto: false, exportablePorDefecto: false, grupo: "clinico" },
+  { clave: "FUNDAMENTOS_DIAGNOSTICO", etiqueta: "Fundamentos Diagnóstico", tipo: "string", obligatorioPorDefecto: true, exportablePorDefecto: false, grupo: "clinico" },
   { clave: "EXAMENES_COMPLEMENTARIOS", etiqueta: "Exámenes Complementarios", tipo: "string", obligatorioPorDefecto: false, exportablePorDefecto: false, grupo: "clinico" },
   { clave: "MOTIVO_INTERCONSULTA", etiqueta: "Motivo Interconsulta", tipo: "string", obligatorioPorDefecto: true, exportablePorDefecto: true, grupo: "clinico" },
   // Priorización (del modelo IA / CSV original)
-  { clave: "PRIORIDAD", etiqueta: "Prioridad Original (CSV)", tipo: "enum", obligatorioPorDefecto: false, exportablePorDefecto: true, grupo: "priorizacion" },
+  { clave: "PRIORIDAD_ACTUAL", etiqueta: "Prioridad Actual", tipo: "enum", obligatorioPorDefecto: false, exportablePorDefecto: true, grupo: "priorizacion" },
+  { clave: "JUSTIFICACION_IA", etiqueta: "Justificación IA", tipo: "string", obligatorioPorDefecto: false, exportablePorDefecto: true, grupo: "priorizacion" },
   // Metadatos del sistema
   { clave: "ID", etiqueta: "ID", tipo: "string", obligatorioPorDefecto: false, exportablePorDefecto: true, grupo: "metadatos" },
   { clave: "ESTADO", etiqueta: "Estado", tipo: "enum", obligatorioPorDefecto: false, exportablePorDefecto: true, grupo: "metadatos" },
-  { clave: "PRIORIDAD_ACTUAL", etiqueta: "Prioridad Actual", tipo: "enum", obligatorioPorDefecto: false, exportablePorDefecto: true, grupo: "priorizacion" },
-  { clave: "JUSTIFICACION_IA", etiqueta: "Justificación IA", tipo: "string", obligatorioPorDefecto: false, exportablePorDefecto: true, grupo: "priorizacion" },
   { clave: "FECHA_INGRESO", etiqueta: "Fecha Ingreso", tipo: "date", obligatorioPorDefecto: false, exportablePorDefecto: true, grupo: "metadatos" },
   { clave: "FECHA_ACTUALIZACION", etiqueta: "Fecha Actualización", tipo: "date", obligatorioPorDefecto: false, exportablePorDefecto: true, grupo: "metadatos" },
 ];
@@ -51,10 +56,11 @@ export interface ConfiguracionCampos {
 export const PERFILES_DEFAULT: Record<PerfilConfiguracion, Partial<Pick<ConfiguracionCampos, "camposObligatoriosImport" | "camposExport">>> = {
   medico: {
     camposExport: [
-      "ID", "PACIENTE_NOMBRE", "PACIENTE_RUT", "PACIENTE_EDAD",
-      "ESPECIALIDAD", "CENTRO_ORIGEN", "DIAGNOSTICO", "MOTIVO_INTERCONSULTA",
-      "ESTADO", "PRIORIDAD_ACTUAL", "JUSTIFICACION_IA",
-      "FECHA_INGRESO", "FECHA_ACTUALIZACION"
+      "ESPEC_ORIGEN", "EDAD", "SEXO",
+      "ESPEC_DESTINO", "HISTORIA_CLINICA", "FUNDAMENTOS_DIAGNOSTICO",
+      "EXAMENES_COMPLEMENTARIOS", "MOTIVO_INTERCONSULTA",
+      "PRIORIDAD_ACTUAL", "JUSTIFICACION_IA",
+      "ID", "ESTADO", "FECHA_INGRESO", "FECHA_ACTUALIZACION"
     ],
   },
   admin: {
@@ -80,20 +86,11 @@ export function getCampoPorClave(clave: string): DefinicionCampo | undefined {
 }
 
 export function mergeConfigPerfil(config: ConfiguracionCampos, perfil: PerfilConfiguracion): ConfiguracionCampos {
-  // Solo aplicar el override del perfil si la config actual todavía coincide
-  // con el default global (es decir, el usuario no ha personalizado nada aún).
-  // Esto permite que los cambios del usuario persistan entre renders.
-  const override = PERFILES_DEFAULT[perfil];
-  const defaultGlobal = DEFAULT_CONFIG.camposExport;
-  const esDefaultGlobal =
-    config.camposExport.length === defaultGlobal.length &&
-    defaultGlobal.every(c => config.camposExport.includes(c));
-
+  // Respetar siempre la configuración del usuario (incluye cambios guardados
+  // en localStorage y toggles recientes). Solo devolvemos su config con el
+  // perfil actualizado; no se sobreescriben los campos.
   return {
     ...config,
     perfil,
-    camposExport: esDefaultGlobal && override?.camposExport
-      ? override.camposExport
-      : config.camposExport,
   };
 }

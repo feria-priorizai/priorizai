@@ -6,13 +6,44 @@ import BadgePrioridad from "@/components/ui/BadgePrioridad";
 import BadgeBanderaRoja from "@/components/ui/BadgeBanderaRoja";
 import BadgeEstado from "@/components/ui/BadgeEstado";
 import { formatearFechaHoraChile } from "@/utils/fechas";
+import { IconoDescargar, IconoX } from "@/components/configuracion/iconos";
 
 interface TablaInterconsultasRecientesProps {
   interconsultas: Interconsulta[];
+  /** Modo descarga múltiple activado */
+  modoDescargaMultiple?: boolean;
+  /** IDs de interconsultas seleccionadas */
+  seleccionadas?: Set<string>;
+  /** Callback cuando cambia la selección */
+  onCambiarSeleccion?: (ids: Set<string>) => void;
+  /** Callback para alternar selección de todas las visibles */
+  onToggleSeleccionarTodas?: () => void;
+  /** Callback para descargar la selección */
+  onDescargarSeleccion?: () => void;
+  /** Callback para cancelar modo descarga múltiple */
+  onCancelarDescargaMultiple?: () => void;
+  /** Callback para activar modo descarga múltiple */
+  onActivarDescargaMultiple?: () => void;
+  /** Formato de descarga seleccionado */
+  formatoDescarga?: "json" | "csv" | "xlsx";
+  /** Callback cuando cambia el formato de descarga */
+  onCambiarFormatoDescarga?: (formato: "json" | "csv" | "xlsx") => void;
+  /** Mostrar botón de descarga múltiple (por defecto true, false en dashboard) */
+  mostrarBotonDescargaMultiple?: boolean;
 }
 
 export default function TablaInterconsultasRecientes({
   interconsultas,
+  modoDescargaMultiple = false,
+  seleccionadas = new Set(),
+  onCambiarSeleccion,
+  onToggleSeleccionarTodas,
+  onDescargarSeleccion,
+  onCancelarDescargaMultiple,
+  onActivarDescargaMultiple,
+  formatoDescarga = "csv",
+  onCambiarFormatoDescarga,
+  mostrarBotonDescargaMultiple = true,
 }: TablaInterconsultasRecientesProps) {
   // HU3-c1 y c3: el orden lo resuelve el backend (prioridad descendente ->
   // fecha de emision ascendente -> id). No se reordena en el cliente: hacerlo
@@ -20,21 +51,91 @@ export default function TablaInterconsultasRecientes({
   // descendente y anulando el orden correcto que ya venia de la API.
   const ordenadas = interconsultas;
 
+  const todasSeleccionadas = ordenadas.length > 0 && ordenadas.every((ic) => seleccionadas.has(ic.id));
+
+  const manejarToggleSeleccion = (id: string) => {
+    if (!onCambiarSeleccion) return;
+    const nuevas = new Set(seleccionadas);
+    if (nuevas.has(id)) {
+      nuevas.delete(id);
+    } else {
+      nuevas.add(id);
+    }
+    onCambiarSeleccion(nuevas);
+  };
+
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
-      <div className="border-b border-[var(--border)] px-5 py-4">
-        <h3 className="text-base font-semibold text-[var(--text-primary)]">
-          Interconsultas recientes
-        </h3>
-        <p className="text-sm text-[var(--text-secondary)]">
-          Ordenadas por prioridad y fecha de ingreso
-        </p>
+      <div className="border-b border-[var(--border)] px-5 py-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <h3 className="text-base font-semibold text-[var(--text-primary)]">
+            Interconsultas recientes
+          </h3>
+          <p className="text-sm text-[var(--text-secondary)]">
+            Ordenadas por prioridad y fecha de ingreso
+          </p>
+        </div>
+
+        {/* Botones de modo descarga múltiple */}
+        <div className="flex items-center gap-2">
+          {modoDescargaMultiple ? (
+            <>
+              <select
+                value={formatoDescarga}
+                onChange={(e) => onCambiarFormatoDescarga?.(e.target.value as "json" | "csv" | "xlsx")}
+                className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
+              >
+                <option value="json">JSON</option>
+                <option value="csv">CSV</option>
+                <option value="xlsx">XLSX</option>
+              </select>
+              <button
+                type="button"
+                onClick={onDescargarSeleccion}
+                disabled={seleccionadas.size === 0}
+                className="flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[var(--primary-dark)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <IconoDescargar className="h-3.5 w-3.5" />
+                <span>Descargar selección ({seleccionadas.size})</span>
+              </button>
+              <button
+                type="button"
+                onClick={onCancelarDescargaMultiple}
+                className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]"
+              >
+                <IconoX className="h-3.5 w-3.5" />
+                <span>Cancelar</span>
+              </button>
+            </>
+          ) : mostrarBotonDescargaMultiple && onActivarDescargaMultiple ? (
+            <button
+              type="button"
+              onClick={() => onActivarDescargaMultiple?.()}
+              className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]"
+            >
+              <IconoDescargar className="h-3.5 w-3.5" />
+              <span>Descargar múltiples</span>
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left">
+              {modoDescargaMultiple && (
+                <th className="w-12 px-5 py-3 font-medium text-[var(--text-secondary)] text-center">
+                  <input
+                    type="checkbox"
+                    checked={todasSeleccionadas}
+                    onChange={onToggleSeleccionarTodas}
+                    disabled={ordenadas.length === 0}
+                    className="h-4 w-4 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer"
+                    aria-label={todasSeleccionadas ? "Deseleccionar todas" : "Seleccionar todas"}
+                  />
+                </th>
+              )}
               <th className="px-5 py-3 font-medium text-[var(--text-secondary)]">
                 Paciente
               </th>
@@ -64,6 +165,16 @@ export default function TablaInterconsultasRecientes({
                 key={ic.id}
                 className="border-b border-[var(--border-light)] transition-colors hover:bg-[var(--surface-hover)]"
               >
+                {modoDescargaMultiple && (
+                  <td className="w-12 px-3 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={seleccionadas.has(ic.id)}
+                      onChange={() => manejarToggleSeleccion(ic.id)}
+                      className="h-4 w-4 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer"
+                    />
+                  </td>
+                )}
                 <td className="px-5 py-3">
                   <Link
                     href={`/interconsultas/${ic.id}`}

@@ -37,6 +37,19 @@ COLUMNAS_ESPERADAS = [
 # muestra como si fuera la prioridad de la interconsulta.
 COLUMNA_PRIORIDAD_OPCIONAL = "PRIORIDAD"
 
+# Campos que DEBEN tener valor en CADA fila del archivo. Debe coincidir con
+# los campos marcados como obligatorios por defecto en la pestaña de
+# configuración (obligatorioPorDefecto: true).
+COLUMNAS_OBLIGATORIAS_POR_FILA = [
+    "ESPEC_ORIGEN",
+    "EDAD",
+    "SEXO",
+    "ESPEC_DESTINO",
+    "HISTORIA_CLINICA",
+    "FUNDAMENTOS_DIAGNOSTICO",
+    "MOTIVO_INTERCONSULTA",
+]
+
 app = FastAPI()
 
 Base.metadata.create_all(bind=engine)
@@ -81,8 +94,15 @@ async def upload_csv(file: UploadFile = UPLOAD_FILE) -> dict[str, object]:
         filas = _leer_csv(contenido)
         tipo_archivo = "csv"
 
-    filas_json = _validar_filas(filas)
-    return _guardar_interconsultas(filas_json, tipo_archivo)
+    resultado_validacion = _validar_filas(filas)
+    guardado = _guardar_interconsultas(
+        resultado_validacion["filas_validas"], tipo_archivo
+    )
+    return {
+        **guardado,
+        "rejected": resultado_validacion["rejected"],
+        "rejected_count": len(resultado_validacion["rejected"]),
+    }
 
 
 def _leer_csv(contenido: bytes) -> list[dict[str, str]]:
@@ -159,7 +179,11 @@ def _leer_xlsx(contenido: bytes) -> list[dict[str, str]]:
     return filas
 
 
-def _validar_filas(filas: list[dict[str, str]]) -> list[dict[str, object]]:
+def _validar_filas(filas: list[dict[str, str]]) -> dict[str, list]:
+    """
+    Valida filas y separa válidas de inválidas.
+    Retorna: { "filas_validas": [...], "rejected": [{"fila": int, "campos_faltantes": [], "datos_raw": {...}}] }
+    """
     if not filas:
         raise HTTPException(
             status_code=400,
@@ -167,41 +191,56 @@ def _validar_filas(filas: list[dict[str, str]]) -> list[dict[str, object]]:
         )
 
     encabezados = [_normalizar_encabezado(h) for h in filas[0]]
-    faltantes = [h for h in COLUMNAS_ESPERADAS if h not in encabezados]
-    if faltantes:
+    faltantes_enc = [h for h in COLUMNAS_ESPERADAS if h not in encabezados]
+    if faltantes_enc:
         raise HTTPException(
             status_code=400,
-            detail=f"Faltan encabezados obligatorios: {', '.join(faltantes)}",
+            detail=f"Faltan encabezados obligatorios: {', '.join(faltantes_enc)}",
         )
 
-    filas_validadas: list[dict[str, object]] = []
+    filas_validas: list[dict[str, object]] = []
+    rejected: list[dict[str, object]] = []
+
     for idx, fila in enumerate(filas, start=2):
         datos: dict[str, object] = {
             _normalizar_encabezado(clave): _normalizar_valor(valor)
             for clave, valor in fila.items()
             if clave is not None
         }
+        # Validar campos obligatorios por fila
+        faltantes = [
+            campo
+            for campo in COLUMNAS_OBLIGATORIAS_POR_FILA
+            if not str(datos.get(campo, "")).strip()
+        ]
+        if faltantes:
+            rejected.append(
+                {
+                    "fila": idx,
+                    "campos_faltantes": faltantes,
+                    "datos_raw": datos,
+                }
+            )
+            continue
+
+        # Validar EDAD numérica
         raw_edad = str(datos.get("EDAD", ""))
         raw_edad_clean = raw_edad.replace(".", "").replace(",", "").replace(" ", "")
-
-        if raw_edad_clean == "":
-            raise HTTPException(
-                status_code=400,
-                detail=f"El campo EDAD esta vacio en la fila {idx}",
-            )
-
         try:
             datos["EDAD"] = int(raw_edad_clean)
         except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"El campo EDAD debe ser un numero entero en la fila {idx}. "
-                    f"Valor recibido: '{raw_edad}'"
-                ),
-            ) from None
-        filas_validadas.append(datos)
-    return filas_validadas
+            rejected.append(
+                {
+                    "fila": idx,
+                    "campos_faltantes": ["EDAD (formato inválido)"],
+                    "datos_raw": datos,
+                }
+            )
+            continue
+
+        filas_validas.append(datos)
+
+    return {"filas_validas": filas_validas, "rejected": rejected}
 
 
 def _guardar_interconsultas(

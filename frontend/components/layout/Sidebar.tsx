@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "r
 import { usuarioActual } from "@/data/mock";
 import {
   EVENTO_INTERCONSULTAS_ACTUALIZADAS,
+  EVENTO_ERRORES_CARGA,
   subirCsvInterconsultas,
 } from "@/services/interconsultas";
 
@@ -66,15 +67,38 @@ export default function Sidebar() {
       const resultado = await subirCsvInterconsultas(archivo);
       const total = resultado.stored ?? resultado.inserted;
       const priorizadas = resultado.prioritized ?? 0;
+      const rejectedCount = resultado.rejected_count ?? 0;
+
+      // Si hay filas rechazadas, despachar evento para mostrar el modal
+      if (rejectedCount > 0) {
+        window.dispatchEvent(
+          new CustomEvent(EVENTO_ERRORES_CARGA, {
+            detail: {
+              rejected: resultado.rejected,
+              rejected_count: rejectedCount,
+            },
+          })
+        );
+      }
+
       window.dispatchEvent(new Event(EVENTO_INTERCONSULTAS_ACTUALIZADAS));
+
+      let detalle = `${archivo.name}: ${total} interconsulta`;
+      detalle += total !== 1 ? "s" : "";
+      detalle += ` guardada${total !== 1 ? "s" : ""}`;
+      if (priorizadas > 0) {
+        detalle += `. ${priorizadas} priorizada${priorizadas !== 1 ? "s" : ""} con IA`;
+      }
+      if (rejectedCount > 0) {
+        detalle += `. ${rejectedCount} fila`;
+        detalle += rejectedCount !== 1 ? "s" : "";
+        detalle += " incompleta(s) no guardada(s)";
+      }
+
       setNotificacion({
         tipo: "success",
         titulo: "Carga completada",
-        detalle: `${archivo.name}: ${total} interconsulta${
-          total !== 1 ? "s" : ""
-        } guardada${
-          total !== 1 ? "s" : ""
-        }. ${priorizadas} priorizada${priorizadas !== 1 ? "s" : ""} con IA.`,
+        detalle,
       });
     } catch (error) {
       setNotificacion({

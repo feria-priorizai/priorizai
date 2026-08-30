@@ -12,6 +12,7 @@
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { ConfiguracionProvider } from "@/context/ConfiguracionContext";
+import { ModalErroresCarga } from "@/components/configuracion/ModalErroresCarga";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -32,6 +33,8 @@ export default function AppShell({ children }: AppShellProps) {
           </main>
         </div>
       </div>
+      {/* Modal de errores de carga (montado en el area principal, no en el sidebar) */}
+      <ModalErroresCarga />
     </ConfiguracionProvider>
   );
 }

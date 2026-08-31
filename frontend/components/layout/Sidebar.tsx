@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { usuarioActual } from "@/data/sesion";
 import {
+  EVENTO_ERRORES_CARGA,
   EVENTO_INTERCONSULTAS_ACTUALIZADAS,
   reevaluarBanderasRojas,
   subirCsvInterconsultas,
@@ -14,7 +15,7 @@ import {
 interface ItemNavegacion {
   nombre: string;
   ruta: string;
-  icono: "dashboard" | "interconsultas";
+  icono: "dashboard" | "interconsultas" | "configuracion";
 }
 
 interface Notificacion {
@@ -26,6 +27,7 @@ interface Notificacion {
 const itemsNavegacion: ItemNavegacion[] = [
   { nombre: "Dashboard", ruta: "/dashboard", icono: "dashboard" },
   { nombre: "Interconsultas", ruta: "/interconsultas", icono: "interconsultas" },
+  { nombre: "Configuración", ruta: "/configuracion", icono: "configuracion" },
 ];
 
 export default function Sidebar() {
@@ -63,16 +65,34 @@ export default function Sidebar() {
       const resultado = await subirCsvInterconsultas(archivo);
       const total = resultado.stored ?? resultado.inserted;
       const priorizadas = resultado.prioritized ?? 0;
+      const rechazadas = resultado.rejected_count ?? 0;
+
+      // HU13-RF1: las filas incompletas no detienen la carga; el detalle de que
+      // le falto a cada una se muestra en el modal del area principal.
+      if (rechazadas > 0) {
+        window.dispatchEvent(
+          new CustomEvent(EVENTO_ERRORES_CARGA, {
+            detail: {
+              rejected: resultado.rejected,
+              rejected_count: rechazadas,
+            },
+          }),
+        );
+      }
+
       window.dispatchEvent(new Event(EVENTO_INTERCONSULTAS_ACTUALIZADAS));
-      setNotificacion({
-        tipo: "success",
-        titulo: "Carga completada",
-        detalle: `${archivo.name}: ${total} interconsulta${
-          total !== 1 ? "s" : ""
-        } guardada${
-          total !== 1 ? "s" : ""
-        }. ${priorizadas} priorizada${priorizadas !== 1 ? "s" : ""} con IA.`,
-      });
+
+      let detalle = `${archivo.name}: ${total} guardada${total !== 1 ? "s" : ""}`;
+      if (priorizadas > 0) {
+        detalle += `, ${priorizadas} priorizada${priorizadas !== 1 ? "s" : ""} con IA`;
+      }
+      if (rechazadas > 0) {
+        detalle += `, ${rechazadas} incompleta${rechazadas !== 1 ? "s" : ""} no guardada${
+          rechazadas !== 1 ? "s" : ""
+        }`;
+      }
+
+      setNotificacion({ tipo: "success", titulo: "Carga completada", detalle });
     } catch (error) {
       setNotificacion({
         tipo: "error",
@@ -327,6 +347,15 @@ function IconoNavegacion({ tipo }: { tipo: ItemNavegacion["icono"] }) {
         <rect x="14" y="3" width="7" height="7" />
         <rect x="3" y="14" width="7" height="7" />
         <rect x="14" y="14" width="7" height="7" />
+      </IconoBase>
+    );
+  }
+
+  if (tipo === "configuracion") {
+    return (
+      <IconoBase>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.2 2.2M16.9 16.9l2.2 2.2M19.1 4.9l-2.2 2.2M7.1 16.9l-2.2 2.2" />
       </IconoBase>
     );
   }

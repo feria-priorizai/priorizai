@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import type { Interconsulta, NivelPrioridad } from "@/types";
+import type { NivelPrioridad } from "@/types";
 import { useInterconsultaDetalle } from "@/hooks/useInterconsultas";
 import { usuarioActual } from "@/data/sesion";
 import DetalleInterconsulta from "@/components/interconsultas/DetalleInterconsulta";
@@ -12,10 +12,20 @@ import FormularioModificarPrioridad from "@/components/interconsultas/Formulario
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
 import EstadoVista from "@/components/ui/EstadoVista";
+import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
+import { exportarInterconsulta } from "@/utils/exportUtils";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
+
+type FormatoExportacion = "json" | "csv" | "xlsx";
+
+const FORMATOS_EXPORTACION: { valor: FormatoExportacion; etiqueta: string }[] = [
+  { valor: "json", etiqueta: "JSON" },
+  { valor: "csv", etiqueta: "CSV" },
+  { valor: "xlsx", etiqueta: "Excel (XLSX)" },
+];
 
 export default function InterconsultaDetallePage({ params }: PageProps) {
   const { id } = use(params);
@@ -27,7 +37,17 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
     cambiarEstado,
     priorizarConIA,
   } = useInterconsultaDetalle(id);
+  const { config, setUsuario } = useConfiguracionExport();
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
+  const [formato, setFormato] = useState<FormatoExportacion>("json");
+
+  useEffect(() => {
+    setUsuario({
+      id: usuarioActual.id,
+      nombre: usuarioActual.nombre,
+      rol: "medico",
+    });
+  }, [setUsuario]);
 
   if (cargando) {
     return <EstadoVista tipo="cargando" texto="Cargando interconsulta…" />;
@@ -54,6 +74,7 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
   // poder corregirla. La senal correcta es tener prioridad, no tener sugerencia.
   const tienePrioridad = !interconsulta.sinPrioridad;
   const estaPriorizadaPorIA = interconsulta.priorizacionIA.priorizada ?? true;
+  const estaRevisada = interconsulta.estado === "revisada";
   const fueModificada =
     esValida &&
     interconsulta.prioridadActual !== interconsulta.priorizacionIA.nivelSugerido;
@@ -106,9 +127,9 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
               />
             )}
 
-            <div className="pz-panel">
-              <div className="pz-panel__body flex flex-col gap-2.5">
-                {interconsulta.estado === "pendiente" && (
+            {!estaRevisada && (
+              <div className="pz-panel">
+                <div className="pz-panel__body">
                   <button
                     type="button"
                     onClick={marcarComoRevisada}
@@ -117,14 +138,59 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
                   >
                     {actualizandoEstado ? "Actualizando…" : "Marcar como revisada"}
                   </button>
-                )}
+                </div>
+              </div>
+            )}
+
+            {/* HU13: solo se exporta una interconsulta ya revisada. */}
+            <div className="pz-panel pz-form">
+              <div className="pz-panel__head">
+                <span className="pz-eyebrow pz-eyebrow--muted">Salida</span>
+                <h3 className="pz-panel__title">Exportar interconsulta</h3>
+              </div>
+              <div className="pz-panel__body flex flex-col gap-3">
+                <div>
+                  <label htmlFor="formato-exportacion" className="form-label">
+                    Formato
+                  </label>
+                  <select
+                    id="formato-exportacion"
+                    className="form-select"
+                    value={formato}
+                    disabled={!estaRevisada}
+                    onChange={(e) =>
+                      setFormato(e.target.value as FormatoExportacion)
+                    }
+                  >
+                    {FORMATOS_EXPORTACION.map((f) => (
+                      <option key={f.valor} value={f.valor}>
+                        {f.etiqueta}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => descargarInterconsultaJson(interconsulta)}
+                  onClick={() =>
+                    exportarInterconsulta(interconsulta, formato, config)
+                  }
+                  disabled={!estaRevisada}
+                  title={
+                    estaRevisada
+                      ? undefined
+                      : "La interconsulta debe estar revisada para poder exportar"
+                  }
                   className="pz-btn pz-btn--ghost pz-btn--block"
                 >
-                  Exportar JSON
+                  Descargar
                 </button>
+
+                {!estaRevisada && (
+                  <p className="pz-label">
+                    Marque la interconsulta como revisada para exportar
+                  </p>
+                )}
               </div>
             </div>
 
@@ -151,23 +217,4 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
       </div>
     </div>
   );
-}
-
-function descargarInterconsultaJson(interconsulta: Interconsulta) {
-  const payload = {
-    exportadoEn: new Date().toISOString(),
-    formato: "priorizai.interconsulta.v1",
-    interconsulta,
-  };
-  const contenido = JSON.stringify(payload, null, 2);
-  const blob = new Blob([contenido], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = `interconsulta-${interconsulta.id}.json`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
 }

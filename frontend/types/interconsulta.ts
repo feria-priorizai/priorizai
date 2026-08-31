@@ -54,4 +54,15 @@ export interface Interconsulta {
   fechaIngreso: string;
   fechaEmision: string | null;
   fechaActualizacion: string;
+
+  // Campos crudos del backend (utilizados por el export configurable).
+  // Mantener ambos formatos evita perder informacion al exportar.
+  especOrigen?: string;
+  especDestino?: string;
+  sexo?: string;
+  edad?: number;
+  historiaClinica?: string;
+  fundamentosDiagnostico?: string;
+  examenesComplementarios?: string | null;
+  prioridadOriginalCsv?: string | null;
 }

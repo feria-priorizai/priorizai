@@ -5,11 +5,15 @@ import type { FiltrosInterconsulta } from "@/hooks/useInterconsultas";
 interface FiltrosInterconsultasProps {
   filtros: FiltrosInterconsulta;
   onCambiarFiltros: (nuevosFiltros: Partial<FiltrosInterconsulta>) => void;
+  /** HU13: al preparar una descarga multiple los filtros se congelan en
+   * "revisadas", porque solo esas se pueden exportar. */
+  deshabilitado?: boolean;
 }
 
 export default function FiltrosInterconsultas({
   filtros,
   onCambiarFiltros,
+  deshabilitado = false,
 }: FiltrosInterconsultasProps) {
   return (
     <div className="pz-panel pz-form">
@@ -25,6 +29,7 @@ export default function FiltrosInterconsultas({
               className="form-control"
               placeholder="Folio, diagnóstico, especialidad o motivo…"
               value={filtros.busqueda}
+              disabled={deshabilitado}
               onChange={(e) => onCambiarFiltros({ busqueda: e.target.value })}
             />
           </div>
@@ -37,6 +42,7 @@ export default function FiltrosInterconsultas({
               id="filtro-prioridad"
               className="form-select"
               value={filtros.prioridad}
+              disabled={deshabilitado}
               onChange={(e) =>
                 onCambiarFiltros({
                   prioridad: e.target.value as FiltrosInterconsulta["prioridad"],
@@ -58,6 +64,7 @@ export default function FiltrosInterconsultas({
               id="filtro-estado"
               className="form-select"
               value={filtros.estado}
+              disabled={deshabilitado}
               onChange={(e) =>
                 onCambiarFiltros({
                   estado: e.target.value as FiltrosInterconsulta["estado"],
@@ -70,6 +77,12 @@ export default function FiltrosInterconsultas({
             </select>
           </div>
         </div>
+
+        {deshabilitado && (
+          <p className="pz-eyebrow pz-eyebrow--muted mt-3">
+            Filtros bloqueados · solo interconsultas revisadas
+          </p>
+        )}
       </div>
     </div>
   );

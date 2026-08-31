@@ -24,9 +24,11 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <ResumenEstadisticas interconsultas={interconsultas} />
+      {/* La descarga multiple vive en el listado, no en el panel. */}
       <TablaInterconsultasRecientes
         interconsultas={interconsultas}
         titulo="Interconsultas recientes"
+        mostrarBotonDescargaMultiple={false}
       />
     </div>
   );

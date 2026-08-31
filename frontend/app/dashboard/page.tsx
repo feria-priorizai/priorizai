@@ -7,7 +7,7 @@
 
 import { useInterconsultas } from "@/hooks/useInterconsultas";
 import ResumenEstadisticas from "@/components/dashboard/ResumenEstadisticas";
-import TablaInterconsultasRecientes from "@/components/dashboard/TablaInterconsultasRecientes";
+import ColaInterconsultas from "@/components/interconsultas/ColaInterconsultas";
 import EstadoVista from "@/components/ui/EstadoVista";
 
 export default function DashboardPage() {
@@ -25,9 +25,10 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6">
       <ResumenEstadisticas interconsultas={interconsultas} />
       {/* La descarga multiple vive en el listado, no en el panel. */}
-      <TablaInterconsultasRecientes
+      <ColaInterconsultas
         interconsultas={interconsultas}
         titulo="Interconsultas recientes"
+        subtitulo="Agrupadas por prioridad"
         mostrarBotonDescargaMultiple={false}
       />
     </div>

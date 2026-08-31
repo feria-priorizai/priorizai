@@ -595,6 +595,89 @@ h1, h2, h3, h4, h5 {
   padding: 0 .75rem .6rem;
 }
 
+/* ---------- Cola de espera agrupada ---------- */
+
+/* Encabezado de grupo: barra del color del triage, etiqueta mono, recuento y
+   una regla que llega hasta el borde. */
+.pz-grupo {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: 1.15rem 1.15rem .6rem;
+}
+.pz-grupo__barra {
+  width: 1.6rem;
+  height: 3px;
+  flex: none;
+  background: var(--pz-line-2);
+}
+.pz-grupo--alta  .pz-grupo__barra { background: var(--pz-alta); }
+.pz-grupo--media .pz-grupo__barra { background: var(--pz-media); }
+.pz-grupo--baja  .pz-grupo__barra { background: var(--pz-green); }
+.pz-grupo__t {
+  font-family: var(--pz-mono);
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--pz-ink);
+  flex: none;
+}
+.pz-grupo--sin .pz-grupo__t { color: var(--pz-ink-3); }
+.pz-grupo__n {
+  font-family: var(--pz-mono);
+  font-size: .68rem;
+  color: var(--pz-ink-3);
+  flex: none;
+}
+.pz-grupo__regla {
+  flex: 1;
+  height: 1px;
+  background: var(--pz-line);
+}
+
+/* Fila de la cola: dos lineas, lo clinico manda y el resto es metadato. */
+.pz-fila-cola {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: .7rem 1.15rem;
+  border-top: 1px solid var(--pz-line);
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+.pz-fila-cola:hover { background: var(--pz-paper-2); }
+.pz-fila-cola:hover .pz-fila-cola__dx { text-decoration: underline; }
+.pz-fila-cola__id { width: 6.5rem; flex: none; }
+.pz-fila-cola__cuerpo { flex: 1; min-width: 0; }
+.pz-fila-cola__dx {
+  font-size: .92rem;
+  font-weight: 600;
+  color: var(--pz-ink);
+  letter-spacing: -.01em;
+  line-height: 1.35;
+  display: block;
+}
+.pz-fila-cola__meta {
+  font-family: var(--pz-mono);
+  font-size: .68rem;
+  color: var(--pz-ink-3);
+  letter-spacing: .03em;
+  margin-top: .25rem;
+  display: block;
+}
+.pz-fila-cola__lado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .35rem;
+  flex: none;
+}
+@media (max-width: 767.98px) {
+  .pz-fila-cola { flex-wrap: wrap; }
+  .pz-fila-cola__lado { align-items: flex-start; flex-direction: row; }
+}
+
 /* ---------- Columna de decision ---------- */
 
 /* Se queda fija mientras el sustento clinico scrollea al lado. */

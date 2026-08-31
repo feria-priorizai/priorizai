@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useInterconsultas } from "@/hooks/useInterconsultas";
 import FiltrosInterconsultas from "@/components/interconsultas/FiltrosInterconsultas";
-import TablaInterconsultasRecientes from "@/components/dashboard/TablaInterconsultasRecientes";
+import ColaInterconsultas from "@/components/interconsultas/ColaInterconsultas";
 import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
 import { exportarInterconsultas } from "@/utils/exportUtils";
 import EstadoVista from "@/components/ui/EstadoVista";
@@ -94,7 +94,7 @@ export default function InterconsultasPage() {
         deshabilitado={modoDescargaMultiple}
       />
 
-      <TablaInterconsultasRecientes
+      <ColaInterconsultas
         interconsultas={interconsultas}
         titulo="Lista de espera"
         modoDescargaMultiple={modoDescargaMultiple}

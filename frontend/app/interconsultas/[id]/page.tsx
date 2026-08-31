@@ -4,13 +4,14 @@ import { use, useState } from "react";
 import Link from "next/link";
 import type { Interconsulta, NivelPrioridad } from "@/types";
 import { useInterconsultaDetalle } from "@/hooks/useInterconsultas";
-import { usuarioActual } from "@/data/mock";
+import { usuarioActual } from "@/data/sesion";
 import DetalleInterconsulta from "@/components/interconsultas/DetalleInterconsulta";
 import TarjetaPriorizacionIA from "@/components/interconsultas/TarjetaPriorizacionIA";
 import BotonPriorizarIA from "@/components/interconsultas/BotonPriorizarIA";
 import FormularioModificarPrioridad from "@/components/interconsultas/FormularioModificarPrioridad";
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
+import EstadoVista from "@/components/ui/EstadoVista";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -29,25 +30,17 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
 
   if (cargando) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-[var(--text-secondary)]">
-          Cargando interconsulta...
-        </p>
-      </div>
-    );
+    return <EstadoVista tipo="cargando" texto="Cargando interconsulta…" />;
   }
 
   if (error || !interconsulta) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
-        <p className="text-[var(--prioridad-alta)]">
-          {error ?? "Interconsulta no encontrada"}
-        </p>
-        <Link
-          href="/interconsultas"
-          className="text-sm text-[var(--primary)] hover:underline"
-        >
+        <EstadoVista
+          tipo="error"
+          texto={error ?? "Interconsulta no encontrada"}
+        />
+        <Link href="/interconsultas" className="pz-btn pz-btn--ghost">
           Volver al listado
         </Link>
       </div>
@@ -55,11 +48,15 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
   }
 
   const esValida = interconsulta.esValidaParaPriorizacion ?? true;
-  const estaPriorizada = interconsulta.priorizacionIA.priorizada ?? true;
+  // HU2-c1 exige que la interconsulta este "priorizada por el sistema", no que
+  // haya corrido el modelo: una prioridad forzada por la regla de banderas rojas
+  // tambien es del sistema, y es justo el caso donde el medico mas necesita
+  // poder corregirla. La senal correcta es tener prioridad, no tener sugerencia.
+  const tienePrioridad = !interconsulta.sinPrioridad;
+  const estaPriorizadaPorIA = interconsulta.priorizacionIA.priorizada ?? true;
   const fueModificada =
     esValida &&
-    interconsulta.prioridadActual !==
-      interconsulta.priorizacionIA.nivelSugerido;
+    interconsulta.prioridadActual !== interconsulta.priorizacionIA.nivelSugerido;
 
   const marcarComoRevisada = async () => {
     setActualizandoEstado(true);
@@ -81,72 +78,75 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <Link
         href="/interconsultas"
-        className="inline-flex items-center gap-1 text-sm text-[var(--primary)] hover:underline"
+        className="pz-eyebrow pz-eyebrow--muted hover:text-[var(--pz-blue-deep)]"
       >
-        {"<-"} Volver al listado
+        Volver al listado
       </Link>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-6 lg:col-span-2">
-          <DetalleInterconsulta interconsulta={interconsulta} />
-          <ResumenClinico pacienteId={interconsulta.pacienteId} />
+      <div className="row g-4">
+        <div className="col-12 col-xl-8">
+          <div className="flex flex-col gap-5">
+            <DetalleInterconsulta interconsulta={interconsulta} />
+            <ResumenClinico pacienteId={interconsulta.pacienteId} />
+          </div>
         </div>
 
-        <div className="flex flex-col gap-6">
-          {esValida && (
-            <TarjetaPriorizacionIA
-              priorizacion={interconsulta.priorizacionIA}
-              prioridadActual={interconsulta.prioridadActual}
-              fueModificada={fueModificada}
-              prioridadForzadaPorRegla={interconsulta.prioridadForzadaPorRegla}
-              terminosBanderaRoja={interconsulta.terminosBanderaRoja}
-            />
-          )}
-
-          {interconsulta.estado === "pendiente" && (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)]">
-              <button
-                type="button"
-                onClick={marcarComoRevisada}
-                disabled={actualizandoEstado}
-                className="w-full rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--primary-dark)] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {actualizandoEstado ? "Actualizando..." : "Marcar como revisada"}
-              </button>
-            </div>
-          )}
-
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)]">
-            <button
-              type="button"
-              onClick={() => descargarInterconsultaJson(interconsulta)}
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]"
-            >
-              Exportar interconsulta en formato JSON
-            </button>
-          </div>
-
-          {esValida &&
-            (estaPriorizada ? (
-              <FormularioModificarPrioridad
+        <div className="col-12 col-xl-4">
+          <div className="flex flex-col gap-5">
+            {esValida && (
+              <TarjetaPriorizacionIA
+                priorizacion={interconsulta.priorizacionIA}
                 prioridadActual={interconsulta.prioridadActual}
-                medicoResponsable={usuarioActual.nombre}
-                onModificar={modificarPrioridad}
+                fueModificada={fueModificada}
+                prioridadForzadaPorRegla={interconsulta.prioridadForzadaPorRegla}
+                terminosBanderaRoja={interconsulta.terminosBanderaRoja}
               />
-            ) : (
-              <BotonPriorizarIA
-                priorizada={estaPriorizada}
-                esValida={esValida}
-                onPriorizar={priorizarConIA}
-              />
-            ))}
+            )}
 
-          <HistorialModificaciones
-            modificaciones={interconsulta.historialModificaciones}
-          />
+            <div className="pz-panel">
+              <div className="pz-panel__body flex flex-col gap-2.5">
+                {interconsulta.estado === "pendiente" && (
+                  <button
+                    type="button"
+                    onClick={marcarComoRevisada}
+                    disabled={actualizandoEstado}
+                    className="pz-btn pz-btn--solid pz-btn--block"
+                  >
+                    {actualizandoEstado ? "Actualizando…" : "Marcar como revisada"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => descargarInterconsultaJson(interconsulta)}
+                  className="pz-btn pz-btn--ghost pz-btn--block"
+                >
+                  Exportar JSON
+                </button>
+              </div>
+            </div>
+
+            {esValida &&
+              (tienePrioridad ? (
+                <FormularioModificarPrioridad
+                  prioridadActual={interconsulta.prioridadActual}
+                  medicoResponsable={usuarioActual.nombre}
+                  onModificar={modificarPrioridad}
+                />
+              ) : (
+                <BotonPriorizarIA
+                  priorizada={estaPriorizadaPorIA}
+                  esValida={esValida}
+                  onPriorizar={priorizarConIA}
+                />
+              ))}
+
+            <HistorialModificaciones
+              modificaciones={interconsulta.historialModificaciones}
+            />
+          </div>
         </div>
       </div>
     </div>

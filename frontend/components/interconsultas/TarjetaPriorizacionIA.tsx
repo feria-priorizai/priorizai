@@ -15,6 +15,8 @@ interface TarjetaPriorizacionIAProps {
   terminosBanderaRoja?: string[];
 }
 
+const nivelesProbabilidad = ["alta", "media", "baja"] as const;
+
 export default function TarjetaPriorizacionIA({
   priorizacion,
   prioridadActual,
@@ -25,23 +27,17 @@ export default function TarjetaPriorizacionIA({
   const estaPriorizada = priorizacion.priorizada ?? true;
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
-      <div className="border-b border-[var(--border)] px-5 py-4">
-        <h3 className="text-base font-semibold text-[var(--text-primary)]">
-          Priorizacion automatica (IA)
-        </h3>
-        <p className="text-sm text-[var(--text-secondary)]">
-          Resultado del modelo de clasificacion
-        </p>
+    <div className="pz-panel pz-crop">
+      <div className="pz-panel__head">
+        <span className="pz-eyebrow pz-eyebrow--purple">Modelo predictivo</span>
+        <h3 className="pz-panel__title">Priorización automática</h3>
       </div>
 
-      <div className="flex flex-col gap-5 p-5">
+      <div className="pz-panel__body flex flex-col gap-5">
         {estaPriorizada ? (
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-[var(--text-muted)]">
-                Sugerida por IA
-              </span>
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-col gap-1.5">
+              <span className="pz-label">Sugerida por IA</span>
               <BadgePrioridad
                 prioridad={priorizacion.nivelSugerido}
                 tamano="lg"
@@ -50,61 +46,76 @@ export default function TarjetaPriorizacionIA({
 
             {fueModificada && (
               <>
-                <span className="text-[var(--text-muted)]">-&gt;</span>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-[var(--text-muted)]">
-                    Prioridad actual
-                  </span>
+                <span
+                  className="pz-mono pb-1 text-[var(--pz-ink-3)]"
+                  aria-hidden="true"
+                >
+                  →
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  <span className="pz-label">Prioridad vigente</span>
                   <BadgePrioridad prioridad={prioridadActual} tamano="lg" />
                 </div>
               </>
             )}
           </div>
         ) : (
-          <div className="rounded-lg bg-[var(--background)] p-4 text-sm text-[var(--text-secondary)]">
-            Esta interconsulta todavia no ha sido priorizada por IA.
-          </div>
+          <p
+            className="p-3 text-[.88rem] text-[var(--pz-ink-2)]"
+            style={{ background: "var(--pz-paper-2)" }}
+          >
+            Esta interconsulta todavía no ha sido priorizada por IA.
+          </p>
         )}
 
-        {estaPriorizada &&
-          (prioridadForzadaPorRegla ? (
-            <div className="rounded-lg border border-[var(--prioridad-alta-border)] bg-[var(--prioridad-alta-bg)] p-4">
-              <div className="mb-2">
-                <BadgeBanderaRoja terminos={terminosBanderaRoja} />
-              </div>
-              <p className="text-sm text-[var(--text-primary)]">
-                La prioridad fue forzada a &quot;Alta&quot; por el catalogo de
-                terminos de alarma, no por el modelo predictivo. El porcentaje
-                de confianza no aplica en este caso.
+        {/* La regla clinica manda aunque el modelo nunca haya corrido: si se
+            anida bajo estaPriorizada, la explicacion de por que la prioridad es
+            "Alta" desaparece justo en las interconsultas con bandera roja. */}
+        {prioridadForzadaPorRegla ? (
+            <div
+              className="p-3.5"
+              style={{
+                background: "var(--pz-alta-bg)",
+                borderLeft: "2px solid var(--pz-alta)",
+              }}
+            >
+              <BadgeBanderaRoja terminos={terminosBanderaRoja} />
+              <p className="mt-2.5 text-[.88rem] leading-relaxed text-[var(--pz-ink)]">
+                La prioridad fue forzada a &quot;Alta&quot; por el catálogo de
+                términos de alarma, no por el modelo predictivo. El porcentaje
+                de certeza no aplica en este caso.
               </p>
             </div>
-          ) : (
+          ) : estaPriorizada ? (
             <IndicadorConfianza porcentaje={priorizacion.confianza} />
-          ))}
+          ) : null}
 
         {estaPriorizada && priorizacion.probabilidades && (
-          <div className="grid grid-cols-3 gap-2">
-            {(["baja", "media", "alta"] as const).map((nivel) => (
-              <div
-                key={nivel}
-                className="rounded-lg bg-[var(--background)] px-3 py-2"
-              >
-                <p className="text-xs capitalize text-[var(--text-muted)]">
-                  {nivel}
-                </p>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">
-                  {priorizacion.probabilidades?.[nivel] ?? 0}%
-                </p>
-              </div>
-            ))}
+          <div className="flex flex-col gap-2.5">
+            <span className="pz-label">Distribución de probabilidad</span>
+            {nivelesProbabilidad.map((nivel) => {
+              const valor = priorizacion.probabilidades?.[nivel] ?? 0;
+              return (
+                <div key={nivel} className="flex items-center gap-3">
+                  <span className="pz-label w-12 flex-none">{nivel}</span>
+                  <div className="pz-meter flex-1">
+                    <div
+                      className={`pz-meter__fill pz-meter__fill--${nivel}`}
+                      style={{ width: `${valor}%` }}
+                    />
+                  </div>
+                  <span className="pz-mono w-10 flex-none text-right text-[.76rem] font-semibold text-[var(--pz-ink)]">
+                    {valor}%
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
 
-        <div className="rounded-lg bg-[var(--background)] p-4">
-          <p className="mb-1 text-xs font-medium text-[var(--text-secondary)]">
-            Lectura del modelo
-          </p>
-          <p className="text-sm leading-relaxed text-[var(--text-primary)]">
+        <div style={{ borderTop: "1px solid var(--pz-line)" }} className="pt-3.5">
+          <span className="pz-label">Lectura del modelo</span>
+          <p className="mt-1.5 text-[.88rem] leading-relaxed text-[var(--pz-ink-2)]">
             {priorizacion.justificacion}
           </p>
         </div>

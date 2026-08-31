@@ -21,45 +21,54 @@ export default function BotonPriorizarIA({
     setMensaje(null);
     const exito = await onPriorizar();
     setMensaje(
-      exito
-        ? "Priorizacion completada."
-        : "No se pudo ejecutar la priorizacion.",
+      exito ? "Priorización completada." : "No se pudo ejecutar la priorización.",
     );
     setEjecutando(false);
   };
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)]">
-      <button
-        type="button"
-        onClick={manejarClick}
-        disabled={ejecutando || !esValida || priorizada}
-        className="w-full rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--primary-dark)] disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {ejecutando
-          ? "Priorizando..."
-          : !esValida
-            ? "Interconsulta invalida"
-          : priorizada
-            ? "Priorizacion IA completada"
-            : "Priorizar con IA"}
-      </button>
-
-      {priorizada && esValida && (
-        <p className="mt-3 text-sm text-[var(--text-secondary)]">
-          Esta interconsulta ya tiene una prioridad sugerida por el modelo.
+    <div className="pz-panel">
+      <div className="pz-panel__head">
+        <span className="pz-eyebrow pz-eyebrow--purple">Modelo predictivo</span>
+        <h3 className="pz-panel__title">Sin priorizar</h3>
+        <p className="pz-panel__sub">
+          La prioridad solo puede modificarse una vez que el sistema la haya
+          priorizado.
         </p>
-      )}
+      </div>
 
-      {!esValida && (
-        <p className="mt-3 text-sm text-[var(--text-secondary)]">
-          No hay antecedentes clinicos suficientes para ejecutar el modelo.
-        </p>
-      )}
+      <div className="pz-panel__body">
+        <button
+          type="button"
+          onClick={manejarClick}
+          disabled={ejecutando || !esValida || priorizada}
+          className="pz-btn pz-btn--solid pz-btn--block"
+        >
+          {ejecutando
+            ? "Priorizando…"
+            : !esValida
+              ? "Interconsulta inválida"
+              : priorizada
+                ? "Priorización completada"
+                : "Priorizar con IA"}
+        </button>
 
-      {mensaje && (
-        <p className="mt-3 text-sm text-[var(--text-secondary)]">{mensaje}</p>
-      )}
+        {!esValida && (
+          <p className="mt-3 text-[.85rem] text-[var(--pz-ink-2)]">
+            No hay antecedentes clínicos suficientes para ejecutar el modelo.
+          </p>
+        )}
+
+        {mensaje && (
+          <p
+            role="status"
+            aria-live="polite"
+            className="mt-3 text-[.85rem] text-[var(--pz-ink-2)]"
+          >
+            {mensaje}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -18,33 +18,51 @@ export default function ResumenEstadisticas({
     (ic) =>
       ic.esValidaParaPriorizacion !== false && ic.prioridadActual === "alta",
   ).length;
+  const banderasRojas = interconsultas.filter((ic) => ic.banderaRoja).length;
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <TarjetaEstadistica
-        titulo="Total interconsultas"
-        valor={total}
-        icono={<IconoClipboard />}
-      />
-      <TarjetaEstadistica
-        titulo="Pendientes"
-        valor={pendientes}
-        icono={<IconoReloj />}
-        colorAccento="var(--estado-pendiente)"
-      />
-      <TarjetaEstadistica
-        titulo="Revisadas"
-        valor={revisadas}
-        icono={<IconoCheck />}
-        colorAccento="var(--estado-revisada)"
-      />
-      <TarjetaEstadistica
-        titulo="Prioridad alta"
-        valor={prioridadAlta}
-        icono={<IconoAlerta />}
-        colorAccento="var(--prioridad-alta)"
-      />
-    </div>
+    <section className="pz-rail">
+      <div className="row g-0">
+        <div className="col-6 col-lg">
+          <TarjetaEstadistica
+            titulo="Total"
+            valor={total}
+            icono={<IconoClipboard />}
+          />
+        </div>
+        <div className="col-6 col-lg">
+          <TarjetaEstadistica
+            titulo="Pendientes"
+            valor={pendientes}
+            icono={<IconoReloj />}
+          />
+        </div>
+        <div className="col-6 col-lg">
+          <TarjetaEstadistica
+            titulo="Revisadas"
+            valor={revisadas}
+            icono={<IconoCheck />}
+            colorAccento="var(--pz-green-ink)"
+          />
+        </div>
+        <div className="col-6 col-lg">
+          <TarjetaEstadistica
+            titulo="Prioridad alta"
+            valor={prioridadAlta}
+            icono={<IconoAlerta />}
+            colorAccento="var(--pz-alta)"
+          />
+        </div>
+        <div className="col-6 col-lg">
+          <TarjetaEstadistica
+            titulo="Banderas rojas"
+            valor={banderasRojas}
+            icono={<IconoBandera />}
+            colorAccento="var(--pz-alta)"
+          />
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -53,12 +71,12 @@ function IconoBase({ children }: { children: ReactNode }) {
     <svg
       aria-hidden="true"
       viewBox="0 0 24 24"
-      className="h-6 w-6"
+      className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeWidth="1.6"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
     >
       {children}
     </svg>
@@ -68,7 +86,7 @@ function IconoBase({ children }: { children: ReactNode }) {
 function IconoClipboard() {
   return (
     <IconoBase>
-      <rect x="8" y="2" width="8" height="4" rx="1" />
+      <rect x="8" y="2" width="8" height="4" />
       <path d="M9 4H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2" />
       <path d="M9 12h6" />
       <path d="M9 16h4" />
@@ -100,6 +118,15 @@ function IconoAlerta() {
       <path d="M10.3 4.4 2.8 17.5A2 2 0 0 0 4.5 20h15a2 2 0 0 0 1.7-2.5L13.7 4.4a2 2 0 0 0-3.4 0Z" />
       <path d="M12 9v4" />
       <path d="M12 17h.01" />
+    </IconoBase>
+  );
+}
+
+function IconoBandera() {
+  return (
+    <IconoBase>
+      <path d="M5 21V4" />
+      <path d="M5 4h13l-2.5 4L18 12H5" />
     </IconoBase>
   );
 }

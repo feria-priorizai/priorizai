@@ -1,11 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
-import { usuarioActual } from "@/data/mock";
+import { usuarioActual } from "@/data/sesion";
 import {
   EVENTO_INTERCONSULTAS_ACTUALIZADAS,
+  reevaluarBanderasRojas,
   subirCsvInterconsultas,
 } from "@/services/interconsultas";
 
@@ -15,7 +17,7 @@ interface ItemNavegacion {
   icono: "dashboard" | "interconsultas";
 }
 
-interface NotificacionCarga {
+interface Notificacion {
   tipo: "success" | "error";
   titulo: string;
   detalle: string;
@@ -28,17 +30,13 @@ const itemsNavegacion: ItemNavegacion[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [notificacion, setNotificacion] = useState<NotificacionCarga | null>(
-    null,
-  );
+  const [colapsado, setColapsado] = useState(false);
+  const [notificacion, setNotificacion] = useState<Notificacion | null>(null);
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
+  const [reevaluando, setReevaluando] = useState(false);
   const inputArchivoRef = useRef<HTMLInputElement | null>(null);
 
   const esRutaActiva = (ruta: string) => pathname.startsWith(ruta);
-
-  const manejarAbrirSelector = () => {
-    inputArchivoRef.current?.click();
-  };
 
   const manejarSeleccionArchivo = async (e: ChangeEvent<HTMLInputElement>) => {
     const archivo = e.target.files?.[0] ?? null;
@@ -89,124 +87,233 @@ export default function Sidebar() {
     }
   };
 
+  const manejarReevaluarBanderas = async () => {
+    setReevaluando(true);
+    setNotificacion(null);
+
+    try {
+      const resultado = await reevaluarBanderasRojas();
+      window.dispatchEvent(new Event(EVENTO_INTERCONSULTAS_ACTUALIZADAS));
+      setNotificacion({
+        tipo: "success",
+        titulo: "Banderas reevaluadas",
+        detalle: `${resultado.total_evaluadas} evaluada${
+          resultado.total_evaluadas !== 1 ? "s" : ""
+        }, ${resultado.total_con_bandera_roja} con bandera roja.`,
+      });
+    } catch (error) {
+      setNotificacion({
+        tipo: "error",
+        titulo: "No se pudo reevaluar",
+        detalle:
+          error instanceof Error
+            ? error.message
+            : "Intenta nuevamente en unos momentos.",
+      });
+    } finally {
+      setReevaluando(false);
+    }
+  };
+
   useEffect(() => {
     if (!notificacion) {
       return;
     }
 
-    const timeoutId = window.setTimeout(() => {
-      setNotificacion(null);
-    }, 6000);
-
+    const timeoutId = window.setTimeout(() => setNotificacion(null), 6000);
     return () => window.clearTimeout(timeoutId);
   }, [notificacion]);
 
+  const iniciales = usuarioActual.nombre
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("");
+
   return (
-    <aside className="flex h-full w-64 flex-col bg-[var(--sidebar-bg)] text-[var(--sidebar-text)]">
-      <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--primary)] text-sm font-bold text-white">
-          PA
-        </div>
-        <div>
-          <h1 className="text-base font-bold text-white">PriorizAI</h1>
-          <p className="text-xs text-[var(--sidebar-text)]">
-            Sistema de priorizacion
-          </p>
-        </div>
+    <aside
+      className={`pz-sidebar custom-scrollbar flex h-full flex-none flex-col overflow-y-auto ${
+        colapsado ? "pz-sidebar--colapsado" : ""
+      }`}
+    >
+      {/* Cabecera: marca y control de colapso */}
+      <div
+        className={`flex items-center gap-2 px-4 py-4 ${
+          colapsado ? "justify-center" : "justify-between"
+        }`}
+        style={{ borderBottom: "1px solid var(--pz-night-line)" }}
+      >
+        {!colapsado && (
+          <Link href="/dashboard" aria-label="PriorizAI, ir al dashboard">
+            <Image
+              src="/img/logo-priorizai-white.png"
+              alt="PriorizAI"
+              width={150}
+              height={30}
+              priority
+              className="h-[24px] w-auto"
+            />
+          </Link>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setColapsado((v) => !v)}
+          className="pz-toggle"
+          aria-expanded={!colapsado}
+          title={colapsado ? "Expandir menú" : "Contraer menú"}
+          aria-label={colapsado ? "Expandir menú" : "Contraer menú"}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="h-3.5 w-3.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="square"
+            style={{ transform: colapsado ? "rotate(180deg)" : undefined }}
+          >
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+        </button>
       </div>
 
-      <nav className="flex-1 px-3 py-4">
-        <ul className="flex flex-col gap-1">
-          {itemsNavegacion.map((item) => {
-            const activo = esRutaActiva(item.ruta);
-            return (
-              <li key={item.ruta}>
-                <Link
-                  href={item.ruta}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                    activo
-                      ? "bg-[var(--sidebar-active)] text-[var(--sidebar-text-active)]"
-                      : "text-[var(--sidebar-text)] hover:bg-[var(--sidebar-active)] hover:text-[var(--sidebar-text-active)]"
-                  }`}
-                >
-                  <span className="flex h-6 w-6 items-center justify-center rounded bg-white/10">
-                    <IconoNavegacion tipo={item.icono} />
-                  </span>
-                  {item.nombre}
-                </Link>
-              </li>
-            );
-          })}
+      {/* Navegación */}
+      <nav className="px-3 pt-4">
+        {!colapsado && <span className="pz-nav-group">Navegación</span>}
+        <ul className="flex flex-col gap-1.5">
+          {itemsNavegacion.map((item) => (
+            <li key={item.ruta}>
+              <Link
+                href={item.ruta}
+                title={colapsado ? item.nombre : undefined}
+                className={`pz-navlink ${colapsado ? "pz-navlink--icono" : ""} ${
+                  esRutaActiva(item.ruta) ? "is-active" : ""
+                }`}
+              >
+                <IconoNavegacion tipo={item.icono} />
+                {!colapsado && item.nombre}
+              </Link>
+            </li>
+          ))}
         </ul>
       </nav>
 
-      {notificacion && (
-        <div className="px-4 pb-3">
+      {/* Acciones sobre el conjunto de interconsultas */}
+      <div className="px-3 pt-6">
+        {!colapsado && <span className="pz-nav-group">Acciones</span>}
+        <input
+          ref={inputArchivoRef}
+          type="file"
+          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          className="hidden"
+          onChange={manejarSeleccionArchivo}
+        />
+        <div className="flex flex-col gap-1.5">
+          <button
+            type="button"
+            onClick={() => inputArchivoRef.current?.click()}
+            disabled={subiendoArchivo}
+            title={colapsado ? "Cargar archivo" : undefined}
+            className={`pz-btn pz-btn--nav pz-btn--block ${
+              colapsado ? "pz-btn--icono" : ""
+            }`}
+          >
+            <IconoSubir />
+            {!colapsado && (subiendoArchivo ? "Cargando…" : "Cargar archivo")}
+          </button>
+
+          <button
+            type="button"
+            onClick={manejarReevaluarBanderas}
+            disabled={reevaluando}
+            title={colapsado ? "Reevaluar banderas" : undefined}
+            className={`pz-btn pz-btn--nav pz-btn--block ${
+              colapsado ? "pz-btn--icono" : ""
+            }`}
+          >
+            <IconoBandera />
+            {!colapsado && (reevaluando ? "Reevaluando…" : "Reevaluar banderas")}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1" />
+
+      {notificacion && !colapsado && (
+        <div className="px-3 pb-3">
           <div
             role="status"
             aria-live="polite"
-            className={`rounded-lg border px-3 py-3 text-sm shadow-sm ${
-              notificacion.tipo === "success"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                : "border-red-200 bg-red-50 text-red-900"
-            }`}
+            className="px-3 py-2.5"
+            style={{
+              borderRadius: "2px",
+              borderLeft: `2px solid ${
+                notificacion.tipo === "success"
+                  ? "var(--pz-green)"
+                  : "var(--pz-alta)"
+              }`,
+              background:
+                notificacion.tipo === "success"
+                  ? "rgba(9,188,138,.1)"
+                  : "rgba(194,43,43,.12)",
+            }}
           >
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="font-semibold">{notificacion.titulo}</p>
-                <p className="mt-1 break-words text-xs leading-relaxed">
+                <p
+                  className="pz-mono text-[.62rem] font-semibold tracking-[.12em] uppercase"
+                  style={{
+                    color:
+                      notificacion.tipo === "success" ? "#5FE3BC" : "#FF9E9E",
+                  }}
+                >
+                  {notificacion.titulo}
+                </p>
+                <p className="mt-1.5 text-[.76rem] leading-relaxed break-words text-[rgba(226,236,248,.7)]">
                   {notificacion.detalle}
                 </p>
               </div>
               <button
                 type="button"
-                aria-label="Cerrar notificacion"
+                aria-label="Cerrar notificación"
                 onClick={() => setNotificacion(null)}
-                className="rounded px-1.5 py-0.5 text-xs font-semibold hover:bg-black/10"
+                className="pz-mono flex-none px-1 text-[.7rem] text-[rgba(226,236,248,.55)] hover:text-white"
               >
-                X
+                ✕
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="border-t border-white/10 px-4 py-4">
-        <div className="mb-4">
-          <input
-            ref={inputArchivoRef}
-            type="file"
-            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            className="hidden"
-            onChange={manejarSeleccionArchivo}
-          />
-          <button
-            type="button"
-            onClick={manejarAbrirSelector}
-            disabled={subiendoArchivo}
-            className="flex w-full items-center justify-center rounded-lg bg-white px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--sidebar-active)] hover:text-[var(--sidebar-text-active)] disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {subiendoArchivo ? "Cargando archivo..." : "Cargar archivo"}
-          </button>
+      {/* Sesión */}
+      <div
+        className={`flex items-center gap-3 px-4 py-4 ${
+          colapsado ? "justify-center" : ""
+        }`}
+        style={{ borderTop: "1px solid var(--pz-night-line)" }}
+      >
+        <div
+          className="pz-mono flex h-8 w-8 flex-none items-center justify-center text-[.64rem] font-semibold"
+          style={{
+            background: "var(--pz-green)",
+            color: "#05231B",
+            borderRadius: "2px",
+          }}
+          title={colapsado ? usuarioActual.nombre : undefined}
+        >
+          {iniciales}
         </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--primary)] text-xs font-bold text-white">
-            {usuarioActual.nombre
-              .split(" ")
-              .map((n) => n[0])
-              .slice(0, 2)
-              .join("")}
-          </div>
+        {!colapsado && (
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-white">
+            <p className="truncate text-[.82rem] font-medium text-white">
               {usuarioActual.nombre}
             </p>
-            <p className="truncate text-xs text-[var(--sidebar-text)]">
-              {usuarioActual.especialidad}
-            </p>
+            <p className="pz-label truncate">{usuarioActual.especialidad}</p>
           </div>
-        </div>
+        )}
       </div>
     </aside>
   );
@@ -216,20 +323,39 @@ function IconoNavegacion({ tipo }: { tipo: ItemNavegacion["icono"] }) {
   if (tipo === "dashboard") {
     return (
       <IconoBase>
-        <rect x="3" y="3" width="7" height="7" rx="1.5" />
-        <rect x="14" y="3" width="7" height="7" rx="1.5" />
-        <rect x="3" y="14" width="7" height="7" rx="1.5" />
-        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+        <rect x="14" y="14" width="7" height="7" />
       </IconoBase>
     );
   }
 
   return (
     <IconoBase>
-      <rect x="8" y="2" width="8" height="4" rx="1" />
+      <rect x="8" y="2" width="8" height="4" />
       <path d="M9 4H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2" />
       <path d="M9 12h6" />
       <path d="M9 16h4" />
+    </IconoBase>
+  );
+}
+
+function IconoSubir() {
+  return (
+    <IconoBase>
+      <path d="M12 16V4" />
+      <path d="m7 9 5-5 5 5" />
+      <path d="M4 17v3h16v-3" />
+    </IconoBase>
+  );
+}
+
+function IconoBandera() {
+  return (
+    <IconoBase>
+      <path d="M5 21V4" />
+      <path d="M5 4h13l-2.5 4L18 12H5" />
     </IconoBase>
   );
 }
@@ -239,12 +365,12 @@ function IconoBase({ children }: { children: ReactNode }) {
     <svg
       aria-hidden="true"
       viewBox="0 0 24 24"
-      className="h-4 w-4"
+      className="h-4 w-4 flex-none"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeWidth="1.6"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
     >
       {children}
     </svg>

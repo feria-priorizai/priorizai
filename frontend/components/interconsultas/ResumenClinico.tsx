@@ -40,66 +40,61 @@ export default function ResumenClinico({ pacienteId }: ResumenClinicoProps) {
 
   if (cargando) {
     return (
-      <ContenedorResumen>
-        <div className="p-5">
-          <p className="text-sm text-[var(--text-secondary)]">
-            Cargando antecedentes clinicos...
-          </p>
+      <Contenedor>
+        <div className="px-5 py-8 text-center">
+          <span className="pz-label">Cargando antecedentes clínicos…</span>
         </div>
-      </ContenedorResumen>
+      </Contenedor>
     );
   }
 
   if (!resumen) {
     return (
-      <ContenedorResumen titulo="Resumen clinico">
-        <EstadoVacio texto="No se encontro informacion clinica para esta interconsulta." />
-      </ContenedorResumen>
+      <Contenedor>
+        <div className="px-5 py-8 text-center">
+          <span className="pz-label">
+            No se encontró información clínica para esta interconsulta
+          </span>
+        </div>
+      </Contenedor>
     );
   }
 
   if (!resumen.informacionSuficiente || !resumen.camposInterconsulta) {
     return (
-      <ContenedorResumen titulo="Resumen clinico">
-        <div className="flex flex-col items-center gap-2 px-5 py-8">
-          <p className="text-sm font-medium text-[var(--prioridad-media)]">
-            Informacion clinica insuficiente
-          </p>
-          <p className="max-w-md text-center text-sm text-[var(--text-muted)]">
-            No existe informacion suficiente en la interconsulta para elaborar
-            un resumen clinico. Revise el expediente manualmente.
+      <Contenedor>
+        <div className="px-5 py-8 text-center">
+          <span className="pz-eyebrow" style={{ color: "var(--pz-media)" }}>
+            Información insuficiente
+          </span>
+          <p className="mx-auto mt-2.5 max-w-md text-[.88rem] text-[var(--pz-ink-2)]">
+            La interconsulta no trae antecedentes suficientes para elaborar un
+            resumen. Revise el expediente manualmente.
           </p>
         </div>
-      </ContenedorResumen>
+      </Contenedor>
     );
   }
 
   const campos = resumen.camposInterconsulta;
 
   return (
-    <ContenedorResumen titulo="Resumen clinico disponible">
-      <div className="border-b border-[var(--border-light)] px-5 py-3">
-        <p className="text-sm text-[var(--text-secondary)]">
-          Resumen construido con los antecedentes disponibles en la
-          interconsulta. No reemplaza el expediente clinico completo.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-0 divide-y divide-[var(--border-light)]">
+    <Contenedor>
+      <div className="flex flex-col">
         <SeccionClinica
-          titulo="Historia clinica"
+          titulo="Historia clínica"
           contenido={campos.historiaClinica}
-          textoVacio="Sin historia clinica registrada."
+          textoVacio="Sin historia clínica registrada."
         />
         <SeccionClinica
-          titulo="Fundamentos diagnosticos"
+          titulo="Fundamentos diagnósticos"
           contenido={campos.fundamentosDiagnostico}
-          textoVacio="Sin fundamentos diagnosticos registrados."
+          textoVacio="Sin fundamentos diagnósticos registrados."
         />
         <SeccionClinica
-          titulo="Examenes complementarios"
+          titulo="Exámenes complementarios"
           contenido={campos.examenesComplementarios}
-          textoVacio="Sin examenes complementarios registrados."
+          textoVacio="Sin exámenes complementarios registrados."
         />
         <SeccionClinica
           titulo="Motivo de interconsulta"
@@ -107,35 +102,22 @@ export default function ResumenClinico({ pacienteId }: ResumenClinicoProps) {
           textoVacio="Sin motivo de interconsulta registrado."
         />
       </div>
-    </ContenedorResumen>
+    </Contenedor>
   );
 }
 
-function ContenedorResumen({
-  titulo,
-  children,
-}: {
-  titulo?: string;
-  children: ReactNode;
-}) {
+function Contenedor({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
-      {titulo && (
-        <div className="border-b border-[var(--border)] px-5 py-4">
-          <h3 className="text-base font-semibold text-[var(--text-primary)]">
-            {titulo}
-          </h3>
-        </div>
-      )}
+    <div className="pz-panel">
+      <div className="pz-panel__head">
+        <span className="pz-eyebrow pz-eyebrow--green">Antecedentes</span>
+        <h3 className="pz-panel__title">Resumen clínico</h3>
+        <p className="pz-panel__sub">
+          Construido con los campos de la interconsulta. No reemplaza el
+          expediente clínico completo.
+        </p>
+      </div>
       {children}
-    </div>
-  );
-}
-
-function EstadoVacio({ texto }: { texto: string }) {
-  return (
-    <div className="px-5 py-8 text-center text-sm text-[var(--text-muted)]">
-      {texto}
     </div>
   );
 }
@@ -148,16 +130,25 @@ function SeccionClinica({
   const texto = contenido?.trim();
 
   return (
-    <section className="px-5 py-4">
-      <h4 className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
-        {titulo}
-      </h4>
+    <section
+      className="px-[1.15rem] py-4"
+      style={{ borderTop: "1px solid var(--pz-line)" }}
+    >
+      <span className="pz-label">{titulo}</span>
       {texto ? (
-        <p className="whitespace-pre-wrap rounded-lg bg-[var(--background)] p-3 text-sm leading-relaxed text-[var(--text-primary)]">
+        <p
+          className="mt-2 p-3 text-[.88rem] leading-relaxed whitespace-pre-wrap text-[var(--pz-ink)]"
+          style={{
+            background: "var(--pz-paper-2)",
+            borderLeft: "2px solid var(--pz-line-2)",
+          }}
+        >
           {texto}
         </p>
       ) : (
-        <p className="text-sm text-[var(--text-muted)]">{textoVacio}</p>
+        <p className="mt-1.5 text-[.85rem] text-[var(--pz-ink-3)]">
+          {textoVacio}
+        </p>
       )}
     </section>
   );

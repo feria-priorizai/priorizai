@@ -4,13 +4,6 @@ interface BadgeEstadoProps {
   estado: EstadoInterconsulta;
 }
 
-const estilosEstado: Record<EstadoInterconsulta, string> = {
-  pendiente:
-    "bg-[var(--estado-pendiente-bg)] text-[var(--estado-pendiente)]",
-  revisada:
-    "bg-[var(--estado-revisada-bg)] text-[var(--estado-revisada)]",
-};
-
 const etiquetasEstado: Record<EstadoInterconsulta, string> = {
   pendiente: "Pendiente",
   revisada: "Revisada",
@@ -19,7 +12,7 @@ const etiquetasEstado: Record<EstadoInterconsulta, string> = {
 export default function BadgeEstado({ estado }: BadgeEstadoProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${estilosEstado[estado]}`}
+      className={`pz-chip ${estado === "revisada" ? "pz-chip--baja" : "pz-chip--neutral"}`}
     >
       {etiquetasEstado[estado]}
     </span>

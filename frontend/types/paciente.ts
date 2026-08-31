@@ -1,31 +1,10 @@
-export interface DiagnosticoPrevio {
-  codigo: string;
-  nombre: string;
-  fecha: string;
-  activo: boolean;
-}
-
-export interface Tratamiento {
-  nombre: string;
-  dosis: string;
-  frecuencia: string;
-  fechaInicio: string;
-  fechaTermino: string | null;
-  activo: boolean;
-}
-
-export interface Alergia {
-  sustancia: string;
-  severidad: "leve" | "moderada" | "severa";
-  reaccion: string;
-}
-
-export interface AtencionReciente {
-  tipo: string;
-  especialidad: string;
-  fecha: string;
-  resumen: string;
-}
+/**
+ * Tipos del resumen clínico que se muestra junto a una interconsulta.
+ *
+ * El backend no almacena datos de paciente: el resumen se arma con los cuatro
+ * campos clínicos que trae la propia interconsulta. Por eso este tipo describe
+ * solo eso, y no un expediente completo.
+ */
 
 export interface CamposInterconsultaClinica {
   historiaClinica: string;
@@ -36,16 +15,7 @@ export interface CamposInterconsultaClinica {
 
 export interface ResumenClinicoPaciente {
   pacienteId: string;
-  nombre: string;
-  rut: string;
-  edad: number;
-  sexo: "M" | "F";
-  prevision: string;
-  diagnosticosPrevios: DiagnosticoPrevio[];
-  tratamientos: Tratamiento[];
-  alergias: Alergia[];
-  atencionesRecientes: AtencionReciente[];
-  factoresRiesgo: string[];
+  /** false cuando la interconsulta no trae ningún antecedente utilizable. */
   informacionSuficiente: boolean;
   camposInterconsulta?: CamposInterconsultaClinica;
 }

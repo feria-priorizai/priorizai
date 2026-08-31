@@ -3,6 +3,7 @@
 import { useInterconsultas } from "@/hooks/useInterconsultas";
 import FiltrosInterconsultas from "@/components/interconsultas/FiltrosInterconsultas";
 import TablaInterconsultasRecientes from "@/components/dashboard/TablaInterconsultasRecientes";
+import EstadoVista from "@/components/ui/EstadoVista";
 
 export default function InterconsultasPage() {
   const {
@@ -15,19 +16,11 @@ export default function InterconsultasPage() {
   } = useInterconsultas();
 
   if (cargando) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-[var(--text-secondary)]">Cargando interconsultas...</p>
-      </div>
-    );
+    return <EstadoVista tipo="cargando" texto="Cargando interconsultas…" />;
   }
 
   if (error) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-[var(--prioridad-alta)]">{error}</p>
-      </div>
-    );
+    return <EstadoVista tipo="error" texto={error} />;
   }
 
   return (
@@ -37,9 +30,12 @@ export default function InterconsultasPage() {
         onCambiarFiltros={actualizarFiltros}
       />
 
-      <TablaInterconsultasRecientes interconsultas={interconsultas} />
+      <TablaInterconsultasRecientes
+        interconsultas={interconsultas}
+        titulo="Lista de espera"
+      />
 
-      <p className="text-sm text-[var(--text-muted)]">
+      <p className="pz-label">
         Mostrando {interconsultas.length} de {totalInterconsultas} interconsulta
         {totalInterconsultas !== 1 ? "s" : ""}
       </p>

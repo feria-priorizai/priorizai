@@ -12,45 +12,65 @@ export default function FiltrosInterconsultas({
   onCambiarFiltros,
 }: FiltrosInterconsultasProps) {
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
-      <div className="min-w-[200px] flex-1">
-        <input
-          type="text"
-          placeholder="Buscar por nombre, RUT o diagnostico..."
-          value={filtros.busqueda}
-          onChange={(e) => onCambiarFiltros({ busqueda: e.target.value })}
-          className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]"
-        />
+    <div className="pz-panel pz-form">
+      <div className="pz-panel__body">
+        <div className="row g-3 align-items-end">
+          <div className="col-12 col-lg-6">
+            <label htmlFor="filtro-busqueda" className="form-label">
+              Buscar
+            </label>
+            <input
+              id="filtro-busqueda"
+              type="search"
+              className="form-control"
+              placeholder="Folio, diagnóstico, especialidad o motivo…"
+              value={filtros.busqueda}
+              onChange={(e) => onCambiarFiltros({ busqueda: e.target.value })}
+            />
+          </div>
+
+          <div className="col-6 col-lg-3">
+            <label htmlFor="filtro-prioridad" className="form-label">
+              Prioridad
+            </label>
+            <select
+              id="filtro-prioridad"
+              className="form-select"
+              value={filtros.prioridad}
+              onChange={(e) =>
+                onCambiarFiltros({
+                  prioridad: e.target.value as FiltrosInterconsulta["prioridad"],
+                })
+              }
+            >
+              <option value="todas">Todas</option>
+              <option value="alta">Alta</option>
+              <option value="media">Media</option>
+              <option value="baja">Baja</option>
+            </select>
+          </div>
+
+          <div className="col-6 col-lg-3">
+            <label htmlFor="filtro-estado" className="form-label">
+              Estado
+            </label>
+            <select
+              id="filtro-estado"
+              className="form-select"
+              value={filtros.estado}
+              onChange={(e) =>
+                onCambiarFiltros({
+                  estado: e.target.value as FiltrosInterconsulta["estado"],
+                })
+              }
+            >
+              <option value="todos">Todos</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="revisada">Revisada</option>
+            </select>
+          </div>
+        </div>
       </div>
-
-      <select
-        value={filtros.prioridad}
-        onChange={(e) =>
-          onCambiarFiltros({
-            prioridad: e.target.value as FiltrosInterconsulta["prioridad"],
-          })
-        }
-        className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
-      >
-        <option value="todas">Todas las prioridades</option>
-        <option value="alta">Prioridad alta</option>
-        <option value="media">Prioridad media</option>
-        <option value="baja">Prioridad baja</option>
-      </select>
-
-      <select
-        value={filtros.estado}
-        onChange={(e) =>
-          onCambiarFiltros({
-            estado: e.target.value as FiltrosInterconsulta["estado"],
-          })
-        }
-        className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)]"
-      >
-        <option value="todos">Todos los estados</option>
-        <option value="pendiente">Pendiente</option>
-        <option value="revisada">Revisada</option>
-      </select>
     </div>
   );
 }

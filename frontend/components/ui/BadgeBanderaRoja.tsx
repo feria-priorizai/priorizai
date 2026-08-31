@@ -1,12 +1,11 @@
 /**
- * Badge de bandera roja (RF7 / HU5-c3): senala que el catalogo de terminos de
- * alarma detecto un signo de alarma afirmado en el texto de la interconsulta,
- * y muestra los terminos que la activaron.
+ * Bandera roja (RF7 / HU5-c3): el catálogo de términos de alarma detectó un
+ * signo afirmado en el texto de la interconsulta. Muestra los términos que la
+ * activaron.
  */
 
 interface BadgeBanderaRojaProps {
-  /** Nombres clinicos de los terminos, ya resueltos por el backend contra el
-   * catalogo (no los ids). */
+  /** Nombres clínicos de los términos, ya resueltos por el backend. */
   terminos: string[];
   tamano?: "sm" | "lg";
 }
@@ -15,8 +14,6 @@ export default function BadgeBanderaRoja({
   terminos,
   tamano = "sm",
 }: BadgeBanderaRojaProps) {
-  const estiloTamano =
-    tamano === "lg" ? "px-2.5 py-0.5 text-sm" : "px-2 py-0.5 text-xs";
   const etiquetaTerminos = terminos.join(", ");
 
   return (
@@ -26,13 +23,14 @@ export default function BadgeBanderaRoja({
           ? `Bandera roja: ${etiquetaTerminos}`
           : "Bandera roja detectada"
       }
-      className={`inline-flex w-fit items-center gap-1 rounded-full border border-[var(--prioridad-alta-border)] bg-[var(--prioridad-alta-bg)] font-semibold leading-tight text-[var(--prioridad-alta)] ${estiloTamano}`}
+      className="inline-flex w-fit flex-wrap items-center gap-1.5"
     >
-      <span aria-hidden="true">&#9873;</span>
-      Bandera roja
+      <span className={`pz-chip pz-chip--flag ${tamano === "lg" ? "pz-chip--lg" : ""}`}>
+        ⚑ Bandera roja
+      </span>
       {etiquetaTerminos && (
-        <span className="font-normal text-[var(--prioridad-alta)]">
-          - {etiquetaTerminos}
+        <span className="pz-mono text-[.68rem] leading-tight text-[var(--pz-alta)]">
+          {etiquetaTerminos}
         </span>
       )}
     </span>

@@ -26,9 +26,9 @@ export interface ModificacionPrioridad {
 
 export interface Interconsulta {
   id: string;
+  /** El backend no guarda datos de paciente: la interconsulta es la unidad.
+   * pacienteId es el id de la propia interconsulta. */
   pacienteId: string;
-  pacienteNombre: string;
-  pacienteRut: string;
   pacienteEdad: number;
   especialidad: string;
   centroOrigen: string;

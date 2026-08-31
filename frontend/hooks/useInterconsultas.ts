@@ -10,7 +10,7 @@ import {
   obtenerInterconsultas,
   priorizarInterconsulta,
 } from "@/services/interconsultas";
-import { usuarioActual } from "@/data/mock";
+import { usuarioActual } from "@/data/sesion";
 
 export interface FiltrosInterconsulta {
   prioridad: NivelPrioridad | "todas";
@@ -137,9 +137,10 @@ export function useInterconsultas(): UseInterconsultasReturn {
 
     const termino = filtros.busqueda.toLowerCase();
     return (
-      ic.pacienteNombre.toLowerCase().includes(termino) ||
-      ic.pacienteRut.includes(termino) ||
-      ic.diagnostico.toLowerCase().includes(termino)
+      ic.id.toLowerCase().includes(termino) ||
+      ic.diagnostico.toLowerCase().includes(termino) ||
+      ic.especialidad.toLowerCase().includes(termino) ||
+      ic.motivoInterconsulta.toLowerCase().includes(termino)
     );
   });
 

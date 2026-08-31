@@ -475,10 +475,13 @@ h1, h2, h3, h4, h5 {
   text-transform: uppercase;
   color: var(--pz-ink-3);
   border-bottom: 1px solid var(--pz-line-2);
-  padding: .7rem .9rem;
-  white-space: nowrap;
+  padding: .8rem .9rem;
+  vertical-align: bottom;
   background: transparent;
 }
+/* Solo la primera columna va en una linea; las que llevan boton necesitan
+   envolver su etiqueta. */
+.pz-table > thead th:first-child { white-space: nowrap; }
 .pz-table > tbody td {
   border-bottom: 1px solid var(--pz-line);
   padding: .8rem .9rem;

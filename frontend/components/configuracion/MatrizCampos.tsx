@@ -90,28 +90,22 @@ export default function MatrizCampos() {
             Marque qué campos exige el archivo de entrada y cuáles viajan en las
             descargas JSON, CSV y XLSX.
           </p>
+          <p className="pz-label mt-2">
+            {camposObligatorios.length} exigidos al importar ·{" "}
+            {camposExport.length} incluidos al exportar
+          </p>
         </div>
 
         <div className="custom-scrollbar" style={{ overflowX: "auto" }}>
           <table className="table pz-table align-middle">
             <thead>
+              {/* Una sola fila de <th>: meter <td> en el thead era HTML invalido
+                  (el parser los reubicaba) y ademas se quedaban sin estilos,
+                  porque .pz-table apunta a "thead th". */}
               <tr>
                 <th scope="col">Campo</th>
-                <th scope="col" className="text-center" style={{ width: "11rem" }}>
-                  Obligatorio al importar
-                </th>
-                <th scope="col" className="text-center" style={{ width: "11rem" }}>
-                  Incluido al exportar
-                </th>
-              </tr>
-              <tr>
-                <td>
-                  <span className="pz-label">
-                    {camposObligatorios.length} exigidos ·{" "}
-                    {camposExport.length} exportados
-                  </span>
-                </td>
-                <td className="text-center">
+                <th scope="col" className="text-center" style={{ width: "12rem" }}>
+                  <span className="block">Obligatorio al importar</span>
                   <button
                     type="button"
                     disabled={!puedeEditar}
@@ -120,12 +114,13 @@ export default function MatrizCampos() {
                         todosImport ? [] : IMPORTABLES.map((c) => c.clave),
                       )
                     }
-                    className="pz-btn pz-btn--ghost pz-btn--mini"
+                    className="pz-btn pz-btn--ghost pz-btn--mini mt-2"
                   >
                     {todosImport ? "Ninguno" : "Todos"}
                   </button>
-                </td>
-                <td className="text-center">
+                </th>
+                <th scope="col" className="text-center" style={{ width: "12rem" }}>
+                  <span className="block">Incluido al exportar</span>
                   <button
                     type="button"
                     disabled={!puedeEditar}
@@ -134,11 +129,11 @@ export default function MatrizCampos() {
                         todosExport ? [] : TODOS_LOS_CAMPOS.map((c) => c.clave),
                       )
                     }
-                    className="pz-btn pz-btn--ghost pz-btn--mini"
+                    className="pz-btn pz-btn--ghost pz-btn--mini mt-2"
                   >
                     {todosExport ? "Ninguno" : "Todos"}
                   </button>
-                </td>
+                </th>
               </tr>
             </thead>
 

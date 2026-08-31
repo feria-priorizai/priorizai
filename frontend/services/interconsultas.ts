@@ -13,6 +13,7 @@ const API_BASE =
 
 export const EVENTO_INTERCONSULTAS_ACTUALIZADAS =
   "priorizai:interconsultas-actualizadas";
+export const EVENTO_ERRORES_CARGA = "priorizai:errores-carga";
 
 type PrioridadApi = string | null | undefined;
 
@@ -253,10 +254,13 @@ export async function subirCsvInterconsultas(
   archivo: File
 ): Promise<{
   inserted: number;
-  stored?: number;
-  file_type?: string;
-  prioritized?: number;
-  prioritization_status?: string;
+  stored: number;
+  file_type: string;
+  prioritized: number;
+  prioritization_status: string;
+  ids: string[];
+  rejected: Array<{fila: number; campos_faltantes: string[]; datos_raw: Record<string, unknown>}>;
+  rejected_count: number;
 }> {
   const formData = new FormData();
   formData.append("file", archivo);
@@ -353,6 +357,16 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
     })),
     fechaIngreso: api.created_at,
     fechaActualizacion: api.updated_at,
+
+    // Campos crudos del backend (para export configurable)
+    especOrigen: api.espec_origen,
+    especDestino: api.espec_destino,
+    sexo: api.sexo,
+    edad: api.edad,
+    historiaClinica: api.historia_clinica,
+    fundamentosDiagnostico: api.fundamentos_diagnostico,
+    examenesComplementarios: api.examenes_complementarios,
+    prioridadOriginalCsv: api.prioridad_original_csv,
   };
 }
 

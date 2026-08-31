@@ -260,6 +260,8 @@ def test_upload_file_empty_edad_returns_error(monkeypatch) -> None:
     session = usar_session_dummy(monkeypatch)
     csv_content = (
         HEADER
+        + "MEDICINA GENERAL,46,FEMENINO,RESPIRATORIO ADULTO,ALTA,"
+        + "CANCER PULMONAR,Paciente estable.,,CONTROL DE ESPECIALIDAD\n"
         + "MEDICINA GENERAL,,FEMENINO,RESPIRATORIO ADULTO,ALTA,"
         + "CANCER PULMONAR,Paciente estable.,,CONTROL DE ESPECIALIDAD\n"
     )
@@ -269,6 +271,12 @@ def test_upload_file_empty_edad_returns_error(monkeypatch) -> None:
         files={"file": ("test.csv", csv_content, "text/csv")},
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == "El campo EDAD esta vacio en la fila 2"
-    assert session.executed == []
+    # Las filas validas se guardan; las incompletas se rechazan (no se guardan).
+    assert response.status_code == 200
+    body = response.json()
+    assert body["inserted"] == 1
+    assert body["stored"] == 1
+    assert body["rejected_count"] == 1
+    assert body["rejected"][0]["fila"] == 3
+    assert body["rejected"][0]["campos_faltantes"] == ["EDAD"]
+    assert len(session.executed) == 1  # Solo se inserto la fila valida

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import type { Interconsulta, NivelPrioridad } from "@/types";
 import { useInterconsultaDetalle } from "@/hooks/useInterconsultas";
@@ -11,10 +11,27 @@ import BotonPriorizarIA from "@/components/interconsultas/BotonPriorizarIA";
 import FormularioModificarPrioridad from "@/components/interconsultas/FormularioModificarPrioridad";
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
+import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
+import { exportarInterconsulta } from "@/utils/exportUtils";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
+
+type FormatoExportacion = "json" | "csv" | "xlsx";
+
+interface OpcionExportacion {
+  valor: FormatoExportacion;
+  etiqueta: string;
+  extension: string;
+  mimeType: string;
+}
+
+const FORMATOS_EXPORTACION: OpcionExportacion[] = [
+  { valor: "json", etiqueta: "JSON", extension: ".json", mimeType: "application/json" },
+  { valor: "csv", etiqueta: "CSV", extension: ".csv", mimeType: "text/csv" },
+  { valor: "xlsx", etiqueta: "Excel (XLSX)", extension: ".xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+];
 
 export default function InterconsultaDetallePage({ params }: PageProps) {
   const { id } = use(params);
@@ -26,7 +43,18 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
     cambiarEstado,
     priorizarConIA,
   } = useInterconsultaDetalle(id);
+  const { config, usuario, setUsuario } = useConfiguracionExport();
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
+  const [formatoSeleccionado, setFormatoSeleccionado] = useState<FormatoExportacion>("json");
+
+  // Inicializar usuario en el context de configuración
+  useEffect(() => {
+    setUsuario({
+      id: "1",
+      nombre: usuarioActual.nombre,
+      rol: "medico", // Default a médico, admin se configuraría desde auth real
+    });
+  }, [setUsuario]);
 
   if (cargando) {
     return (
@@ -80,6 +108,11 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
     return exito;
   };
 
+  const manejarExport = () => {
+    if (!interconsulta) return;
+    exportarInterconsulta(interconsulta, formatoSeleccionado, config);
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <Link
@@ -120,13 +153,41 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
           )}
 
           <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)]">
-            <button
-              type="button"
-              onClick={() => descargarInterconsultaJson(interconsulta)}
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]"
-            >
-              Exportar interconsulta en formato JSON
-            </button>
+            <div className="flex flex-col gap-3">
+              <label
+                htmlFor="formato-exportacion"
+                className="text-sm font-medium text-[var(--text-primary)]"
+              >
+                Exportar interconsulta
+              </label>
+              <select
+                id="formato-exportacion"
+                value={formatoSeleccionado}
+                onChange={(e) => setFormatoSeleccionado(e.target.value as FormatoExportacion)}
+                disabled={interconsulta.estado !== "revisada"}
+                className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {FORMATOS_EXPORTACION.map((f) => (
+                  <option key={f.valor} value={f.valor}>
+                    {f.etiqueta}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={manejarExport}
+                disabled={interconsulta.estado !== "revisada"}
+                title={interconsulta.estado !== "revisada" ? "La interconsulta debe estar revisada para poder exportar" : undefined}
+                className="w-full rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--primary-dark)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Descargar {FORMATOS_EXPORTACION.find((f) => f.valor === formatoSeleccionado)?.etiqueta}
+              </button>
+              {interconsulta.estado !== "revisada" && (
+                <p className="text-xs text-[var(--text-muted)]">
+                  Debe marcar la interconsulta como revisada para exportar
+                </p>
+              )}
+            </div>
           </div>
 
           {esValida &&
@@ -151,23 +212,4 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
       </div>
     </div>
   );
-}
-
-function descargarInterconsultaJson(interconsulta: Interconsulta) {
-  const payload = {
-    exportadoEn: new Date().toISOString(),
-    formato: "priorizai.interconsulta.v1",
-    interconsulta,
-  };
-  const contenido = JSON.stringify(payload, null, 2);
-  const blob = new Blob([contenido], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = `interconsulta-${interconsulta.id}.json`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
 }

@@ -6,13 +6,14 @@ import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "r
 import { usuarioActual } from "@/data/mock";
 import {
   EVENTO_INTERCONSULTAS_ACTUALIZADAS,
+  EVENTO_ERRORES_CARGA,
   subirCsvInterconsultas,
 } from "@/services/interconsultas";
 
 interface ItemNavegacion {
   nombre: string;
   ruta: string;
-  icono: "dashboard" | "interconsultas";
+  icono: "dashboard" | "interconsultas" | "configuracion";
 }
 
 interface NotificacionCarga {
@@ -24,6 +25,7 @@ interface NotificacionCarga {
 const itemsNavegacion: ItemNavegacion[] = [
   { nombre: "Dashboard", ruta: "/dashboard", icono: "dashboard" },
   { nombre: "Interconsultas", ruta: "/interconsultas", icono: "interconsultas" },
+  { nombre: "Configuración", ruta: "/configuracion", icono: "configuracion" },
 ];
 
 export default function Sidebar() {
@@ -65,15 +67,38 @@ export default function Sidebar() {
       const resultado = await subirCsvInterconsultas(archivo);
       const total = resultado.stored ?? resultado.inserted;
       const priorizadas = resultado.prioritized ?? 0;
+      const rejectedCount = resultado.rejected_count ?? 0;
+
+      // Si hay filas rechazadas, despachar evento para mostrar el modal
+      if (rejectedCount > 0) {
+        window.dispatchEvent(
+          new CustomEvent(EVENTO_ERRORES_CARGA, {
+            detail: {
+              rejected: resultado.rejected,
+              rejected_count: rejectedCount,
+            },
+          })
+        );
+      }
+
       window.dispatchEvent(new Event(EVENTO_INTERCONSULTAS_ACTUALIZADAS));
+
+      let detalle = `${archivo.name}: ${total} interconsulta`;
+      detalle += total !== 1 ? "s" : "";
+      detalle += ` guardada${total !== 1 ? "s" : ""}`;
+      if (priorizadas > 0) {
+        detalle += `. ${priorizadas} priorizada${priorizadas !== 1 ? "s" : ""} con IA`;
+      }
+      if (rejectedCount > 0) {
+        detalle += `. ${rejectedCount} fila`;
+        detalle += rejectedCount !== 1 ? "s" : "";
+        detalle += " incompleta(s) no guardada(s)";
+      }
+
       setNotificacion({
         tipo: "success",
         titulo: "Carga completada",
-        detalle: `${archivo.name}: ${total} interconsulta${
-          total !== 1 ? "s" : ""
-        } guardada${
-          total !== 1 ? "s" : ""
-        }. ${priorizadas} priorizada${priorizadas !== 1 ? "s" : ""} con IA.`,
+        detalle,
       });
     } catch (error) {
       setNotificacion({
@@ -220,6 +245,15 @@ function IconoNavegacion({ tipo }: { tipo: ItemNavegacion["icono"] }) {
         <rect x="14" y="3" width="7" height="7" rx="1.5" />
         <rect x="3" y="14" width="7" height="7" rx="1.5" />
         <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </IconoBase>
+    );
+  }
+
+  if (tipo === "configuracion") {
+    return (
+      <IconoBase>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </IconoBase>
     );
   }

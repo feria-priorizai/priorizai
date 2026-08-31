@@ -34,8 +34,11 @@ export default function DashboardPage() {
       {/* Tarjetas de resumen estadístico */}
       <ResumenEstadisticas interconsultas={interconsultas} />
 
-      {/* Tabla de interconsultas recientes */}
-      <TablaInterconsultasRecientes interconsultas={interconsultas} />
+      {/* Tabla de interconsultas recientes - sin botón de descarga múltiple */}
+      <TablaInterconsultasRecientes
+        interconsultas={interconsultas}
+        mostrarBotonDescargaMultiple={false}
+      />
     </div>
   );
 }

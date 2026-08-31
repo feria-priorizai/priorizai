@@ -11,6 +11,7 @@ import { usuarioActual } from "@/data/sesion";
 const titulosPorRuta: Record<string, { seccion: string; titulo: string }> = {
   "/dashboard": { seccion: "01 / Panel", titulo: "Dashboard" },
   "/interconsultas": { seccion: "02 / Lista de espera", titulo: "Interconsultas" },
+  "/configuracion": { seccion: "03 / Ajustes", titulo: "Configuración" },
 };
 
 export default function Header() {

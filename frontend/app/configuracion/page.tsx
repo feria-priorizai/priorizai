@@ -4,15 +4,11 @@ import { ConfiguracionSidebar } from "@/components/configuracion/ConfiguracionSi
 
 export default function ConfiguracionPage() {
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">
-          Configuración
-        </h1>
-        <p className="mt-1 text-[var(--text-secondary)]">
-          Gestiona los campos obligatorios para import y los campos visibles en export.
-        </p>
-      </div>
+    <div className="mx-auto flex max-w-5xl flex-col gap-5">
+      <p className="pz-panel__sub max-w-[60ch]">
+        Define qué campos son obligatorios al importar un archivo y cuáles se
+        incluyen al exportar en JSON, CSV o XLSX.
+      </p>
 
       <ConfiguracionSidebar />
     </div>

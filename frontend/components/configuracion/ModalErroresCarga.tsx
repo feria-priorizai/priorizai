@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export interface ErrorFila {
   fila: number;
@@ -34,54 +34,75 @@ export function useErroresCarga() {
   return { errores, limpiar };
 }
 
-export function ModalErroresCarga({
-  children,
-}: {
-  children?: ReactNode;
-}) {
+export function ModalErroresCarga() {
   const { errores, limpiar } = useErroresCarga();
 
   if (!errores || errores.rejected_count === 0) return null;
 
+  const plural = errores.rejected_count !== 1;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="max-h-[80vh] w-[90%] max-w-[720px] overflow-y-auto rounded-xl border border-red-200 bg-red-50 p-6 shadow-xl text-red-950">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <h2 className="text-lg font-bold">
-            Archivo con {errores.rejected_count} fila
-            {errores.rejected_count !== 1 ? "s" : ""} incompleta
-            {errores.rejected_count !== 1 ? "s" : ""}
-          </h2>
+    <div
+      className="pz-modal-fondo"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="titulo-errores-carga"
+    >
+      <div className="pz-modal">
+        <div className="pz-panel__head flex items-start justify-between gap-4">
+          <div>
+            <span className="pz-eyebrow pz-eyebrow--alta">Carga incompleta</span>
+            <h2 id="titulo-errores-carga" className="pz-panel__title">
+              {errores.rejected_count} fila{plural ? "s" : ""} no se guard
+              {plural ? "aron" : "ó"}
+            </h2>
+            <p className="pz-panel__sub">
+              El resto del archivo se cargó correctamente. Estas filas venían sin
+              algún campo obligatorio.
+            </p>
+          </div>
+
           <button
             type="button"
             onClick={limpiar}
-            className="rounded-md px-2 py-1 text-sm font-semibold hover:bg-red-100"
+            aria-label="Cerrar"
+            className="pz-mono flex-none px-2 py-1 text-[.8rem] text-[var(--pz-ink-3)] hover:text-[var(--pz-ink)]"
           >
-            X
+            ✕
           </button>
         </div>
 
-        <p className="mb-4 text-sm">
-          Las filas con campos obligatorios vacíos no se guardaron. El resto
-          del archivo se cargó correctamente. Las siguientes filas están incompletas:
-        </p>
-
-        <div className="flex flex-col gap-3">
+        <div className="pz-panel__body flex flex-col gap-2">
           {errores.rejected.map((r) => (
             <div
               key={r.fila}
-              className="rounded-lg bg-white p-4 shadow-sm"
+              className="flex flex-wrap items-center gap-2 px-3 py-2.5"
+              style={{
+                background: "var(--pz-paper-2)",
+                borderLeft: "2px solid var(--pz-alta)",
+              }}
             >
-              <p className="font-semibold text-sm">
-                Fila {r.fila} — faltan:{" "}
-                {r.campos_faltantes.map((c) => (
-                  <span key={c} className="inline-block rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 mr-1">
-                    {c}
-                  </span>
-                ))}
-              </p>
+              <span className="pz-mono text-[.72rem] font-semibold text-[var(--pz-ink)]">
+                Fila {r.fila}
+              </span>
+              <span className="pz-label">faltan</span>
+              {r.campos_faltantes.map((c) => (
+                <span key={c} className="pz-chip pz-chip--alta">
+                  {c}
+                </span>
+              ))}
             </div>
           ))}
+        </div>
+
+        <div className="pz-panel__body pt-0">
+          <button
+            type="button"
+            onClick={limpiar}
+            className="pz-btn pz-btn--solid pz-btn--block"
+          >
+            Entendido
+          </button>
         </div>
       </div>
     </div>

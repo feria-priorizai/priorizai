@@ -338,8 +338,15 @@ h1, h2, h3, h4, h5 {
   gap: .5rem;
   cursor: pointer;
 }
-.pz-btn:disabled { cursor: not-allowed; opacity: .55; }
-.pz-btn:disabled:hover { transform: none; }
+.pz-btn:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+  box-shadow: none;
+  background: var(--pz-paper-2);
+  color: var(--pz-ink-3);
+  border-color: var(--pz-line-2);
+}
+.pz-btn:disabled:hover { transform: none; box-shadow: none; }
 
 .pz-btn--solid {
   background: var(--pz-ink);
@@ -586,6 +593,67 @@ h1, h2, h3, h4, h5 {
   color: rgba(226,236,248,.38);
   display: block;
   padding: 0 .75rem .6rem;
+}
+
+/* ---------- Columna de decision ---------- */
+
+/* Se queda fija mientras el sustento clinico scrollea al lado. */
+.pz-decision {
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+
+/* Prioridad vigente: la cifra del plano, no un badge mas. */
+.pz-vigente {
+  font-family: var(--pz-display);
+  font-variation-settings: "wdth" 86;
+  font-size: clamp(2.4rem, 5vw, 3.1rem);
+  font-weight: 800;
+  line-height: .95;
+  letter-spacing: -.035em;
+  text-transform: uppercase;
+  display: block;
+}
+.pz-vigente--alta  { color: var(--pz-alta); }
+.pz-vigente--media { color: var(--pz-media); }
+.pz-vigente--baja  { color: var(--pz-green-ink); }
+.pz-vigente--ninguna { color: var(--pz-ink-3); font-size: 1.5rem; }
+
+/* Selector segmentado de prioridad. */
+.pz-seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--pz-line-2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pz-seg__op {
+  font-family: var(--pz-mono);
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: .6rem .3rem;
+  background: #fff;
+  color: var(--pz-ink-2);
+  border: 0;
+  border-left: 1px solid var(--pz-line);
+  cursor: pointer;
+  transition: background-color .18s ease, color .18s ease;
+}
+.pz-seg__op:first-child { border-left: 0; }
+.pz-seg__op:hover:not(:disabled):not(.is-on) { background: var(--pz-paper-2); }
+.pz-seg__op:disabled { cursor: not-allowed; opacity: .5; }
+.pz-seg__op.is-on { color: #fff; }
+.pz-seg__op.is-on[data-nivel="alta"]  { background: var(--pz-alta); }
+.pz-seg__op.is-on[data-nivel="media"] { background: var(--pz-media); }
+.pz-seg__op.is-on[data-nivel="baja"]  { background: var(--pz-green-ink); }
+
+/* Bloque separador dentro de la columna de decision. */
+.pz-decision__seccion {
+  padding: 1.1rem 1.15rem;
+  border-top: 1px solid var(--pz-line);
 }
 
 /* Barra de acciones del detalle: identidad a la izquierda, acciones a la

@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import type { Interconsulta } from "@/types";
-import BadgeBanderaRoja from "@/components/ui/BadgeBanderaRoja";
 import { formatearFechaHoraChileLarga } from "@/utils/fechas";
 
 interface DetalleInterconsultaProps {
@@ -26,12 +25,6 @@ export default function DetalleInterconsulta({
         <p className="pz-panel__sub">
           Folio {ic.id.slice(0, 8).toUpperCase()} · {ic.pacienteEdad} años
         </p>
-
-        {ic.banderaRoja && (
-          <div className="mt-3">
-            <BadgeBanderaRoja terminos={ic.terminosBanderaRoja} tamano="lg" />
-          </div>
-        )}
       </div>
 
       {ic.esValidaParaPriorizacion === false && (

@@ -15,6 +15,15 @@ class ModificarEstadoRequest(BaseModel):
     estado: str
 
 
+class EntidadClinica(BaseModel):
+    clase: str
+    clase_original: str
+    texto: str
+    inicio: int
+    fin: int
+    score: float
+
+
 class ModificacionPrioridadResponse(BaseModel):
     id: str
     prioridad_anterior: str | None
@@ -48,6 +57,8 @@ class InterconsultaResponse(BaseModel):
     prob_media: float | None
     prob_alta: float | None
     prioridad_actual: str | None
+    entidades: dict[str, list[EntidadClinica]] | None = None
+    entidades_error: str | None = None
     estado: str
     motivo_sin_prioridad: str | None
     fecha_emision: datetime | None

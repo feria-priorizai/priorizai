@@ -15,6 +15,31 @@ export interface ResultadoPriorizacion {
   justificacion: string;
 }
 
+/** Clases que devuelve el NER, ya traducidas por el backend. */
+export type ClaseEntidad = "Enfermedad" | "Farmaco" | "Sigla" | "Sintoma";
+
+/** Entidad clinica detectada. `inicio`/`fin` son offsets sobre el texto
+ *  original del campo, asi que texto.slice(inicio, fin) la reconstruye. */
+export interface EntidadClinica {
+  clase: ClaseEntidad;
+  clase_original: string;
+  texto: string;
+  inicio: number;
+  fin: number;
+  score: number;
+}
+
+/** Entidades agrupadas por campo clinico de la interconsulta. */
+export type EntidadesPorCampo = Partial<
+  Record<
+    | "historia_clinica"
+    | "fundamentos_diagnostico"
+    | "examenes_complementarios"
+    | "motivo_interconsulta",
+    EntidadClinica[]
+  >
+>;
+
 export interface ModificacionPrioridad {
   id: string;
   prioridadAnterior: NivelPrioridad;
@@ -65,4 +90,8 @@ export interface Interconsulta {
   fundamentosDiagnostico?: string;
   examenesComplementarios?: string | null;
   prioridadOriginalCsv?: string | null;
+
+  // Entidades clinicas detectadas por el NER en la ingesta.
+  entidades?: EntidadesPorCampo | null;
+  entidadesError?: string | null;
 }

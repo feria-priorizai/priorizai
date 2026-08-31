@@ -11,6 +11,7 @@ import BotonPriorizarIA from "@/components/interconsultas/BotonPriorizarIA";
 import FormularioModificarPrioridad from "@/components/interconsultas/FormularioModificarPrioridad";
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
+import TablaEntidades from "@/components/interconsultas/TablaEntidades";
 import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
 import { exportarInterconsulta } from "@/utils/exportUtils";
 
@@ -125,7 +126,14 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">
           <DetalleInterconsulta interconsulta={interconsulta} />
-          <ResumenClinico pacienteId={interconsulta.pacienteId} />
+          <ResumenClinico
+            pacienteId={interconsulta.pacienteId}
+            entidades={interconsulta.entidades}
+          />
+          <TablaEntidades
+            entidades={interconsulta.entidades}
+            error={interconsulta.entidadesError}
+          />
         </div>
 
         <div className="flex flex-col gap-6">

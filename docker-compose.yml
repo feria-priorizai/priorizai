@@ -20,7 +20,8 @@ services:
       DATABASE_USER: ${POSTGRES_USER}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
-      MODEL_PATH: /workspace/models
+      MODEL_PATH: /workspace/models/priorizacion
+      NER_MODEL_PATH: /workspace/models/NER/modelo
 
   frontend:
       build:

@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -41,6 +41,12 @@ class Interconsulta(Base):
     prob_media: Mapped[float | None] = mapped_column(Float, nullable=True)
     prob_alta: Mapped[float | None] = mapped_column(Float, nullable=True)
     prioridad_actual: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Entidades clinicas detectadas por el NER, agrupadas por campo:
+    # {"historia_clinica": [{clase, texto, inicio, fin, score}, ...], ...}
+    # Los offsets son sobre el texto de ese campo, para poder resaltarlo.
+    entidades: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    entidades_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     estado: Mapped[str] = mapped_column(
         String(20),
         default="pendiente",

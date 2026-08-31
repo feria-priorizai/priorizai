@@ -13,7 +13,8 @@ import {
 import { usuarioActual } from "@/data/sesion";
 
 export interface FiltrosInterconsulta {
-  prioridad: NivelPrioridad | "todas";
+  /** "sin" busca las que no tienen ninguna prioridad asignada. */
+  prioridad: NivelPrioridad | "sin" | "todas";
   estado: EstadoInterconsulta | "todos";
   busqueda: string;
 }
@@ -27,6 +28,8 @@ interface UseInterconsultasReturn {
   pendientesInvalidas: number;
   filtros: FiltrosInterconsulta;
   actualizarFiltros: (nuevosFiltros: Partial<FiltrosInterconsulta>) => void;
+  limpiarFiltros: () => void;
+  hayFiltrosActivos: boolean;
   cambiarPrioridad: (
     id: string,
     nuevaPrioridad: NivelPrioridad,
@@ -125,8 +128,17 @@ export function useInterconsultas(): UseInterconsultasReturn {
   }, [recargar]);
 
   const interconsultasFiltradas = estado.interconsultas.filter((ic) => {
-    if (filtros.prioridad !== "todas" && ic.prioridadActual !== filtros.prioridad) {
-      return false;
+    // sinPrioridad rellena prioridadActual con "baja" para satisfacer el tipo,
+    // asi que filtrar por nivel debe descartarlas explicitamente o se cuelan
+    // todas en el filtro "Baja".
+    if (filtros.prioridad === "sin") {
+      if (!ic.sinPrioridad) {
+        return false;
+      }
+    } else if (filtros.prioridad !== "todas") {
+      if (ic.sinPrioridad || ic.prioridadActual !== filtros.prioridad) {
+        return false;
+      }
     }
     if (filtros.estado !== "todos" && ic.estado !== filtros.estado) {
       return false;
@@ -147,6 +159,13 @@ export function useInterconsultas(): UseInterconsultasReturn {
   const actualizarFiltros = (nuevosFiltros: Partial<FiltrosInterconsulta>) => {
     setFiltros((prev) => ({ ...prev, ...nuevosFiltros }));
   };
+
+  const limpiarFiltros = () => setFiltros(filtrosIniciales);
+
+  const hayFiltrosActivos =
+    filtros.prioridad !== "todas" ||
+    filtros.estado !== "todos" ||
+    filtros.busqueda.trim() !== "";
 
   const pendientesPriorizables = estado.interconsultas.filter(
     (ic) =>
@@ -196,6 +215,8 @@ export function useInterconsultas(): UseInterconsultasReturn {
     pendientesInvalidas,
     filtros,
     actualizarFiltros,
+    limpiarFiltros,
+    hayFiltrosActivos,
     cambiarPrioridad,
     recargar,
   };

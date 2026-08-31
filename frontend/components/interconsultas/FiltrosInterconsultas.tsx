@@ -8,12 +8,21 @@ interface FiltrosInterconsultasProps {
   /** HU13: al preparar una descarga multiple los filtros se congelan en
    * "revisadas", porque solo esas se pueden exportar. */
   deshabilitado?: boolean;
+  hayFiltrosActivos?: boolean;
+  onLimpiar?: () => void;
+  /** Para poder decir cuantas quedan fuera del filtro. */
+  visibles?: number;
+  total?: number;
 }
 
 export default function FiltrosInterconsultas({
   filtros,
   onCambiarFiltros,
   deshabilitado = false,
+  hayFiltrosActivos = false,
+  onLimpiar,
+  visibles,
+  total,
 }: FiltrosInterconsultasProps) {
   return (
     <div className="pz-panel pz-form">
@@ -53,6 +62,7 @@ export default function FiltrosInterconsultas({
               <option value="alta">Alta</option>
               <option value="media">Media</option>
               <option value="baja">Baja</option>
+              <option value="sin">Sin priorizar</option>
             </select>
           </div>
 
@@ -82,6 +92,36 @@ export default function FiltrosInterconsultas({
           <p className="pz-eyebrow pz-eyebrow--muted mt-3">
             Filtros bloqueados · solo interconsultas revisadas
           </p>
+        )}
+
+        {/* Sin este aviso, un filtro olvidado parece una lista vacia. */}
+        {!deshabilitado && hayFiltrosActivos && (
+          <div
+            className="mt-3 flex flex-wrap items-center gap-3 px-3 py-2"
+            style={{
+              background: "var(--pz-media-bg)",
+              borderLeft: "2px solid var(--pz-media)",
+            }}
+          >
+            <span
+              className="pz-mono text-[.7rem]"
+              style={{ color: "var(--pz-media)" }}
+            >
+              Filtro activo
+              {visibles !== undefined && total !== undefined
+                ? `: se ocultan ${total - visibles} de ${total}`
+                : ""}
+            </span>
+            {onLimpiar && (
+              <button
+                type="button"
+                onClick={onLimpiar}
+                className="pz-btn pz-btn--ghost pz-btn--mini ms-auto"
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

@@ -16,6 +16,8 @@ export default function InterconsultasPage() {
     totalInterconsultas,
     filtros,
     actualizarFiltros,
+    limpiarFiltros,
+    hayFiltrosActivos,
   } = useInterconsultas();
   const { config } = useConfiguracionExport();
 
@@ -92,6 +94,10 @@ export default function InterconsultasPage() {
         filtros={filtros}
         onCambiarFiltros={actualizarFiltros}
         deshabilitado={modoDescargaMultiple}
+        hayFiltrosActivos={hayFiltrosActivos}
+        onLimpiar={limpiarFiltros}
+        visibles={interconsultas.length}
+        total={totalInterconsultas}
       />
 
       <ColaInterconsultas

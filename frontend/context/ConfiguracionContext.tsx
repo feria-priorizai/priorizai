@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import type { ConfiguracionCampos, PerfilConfiguracion, Usuario } from "@/types/campos";
-import { DEFAULT_CONFIG, mergeConfigPerfil } from "@/types/campos";
+import { DEFAULT_CONFIG, mergeConfigPerfil, TODOS_LOS_CAMPOS } from "@/types/campos";
 
 const STORAGE_KEY = "priorizai-config-campos";
 
@@ -33,11 +33,11 @@ export function ConfiguracionProvider({ children }: { children: ReactNode }) {
         const exportGuardado = Array.isArray(parsed.camposExport) ? parsed.camposExport : [];
         const importGuardado = Array.isArray(parsed.camposObligatoriosImport) ? parsed.camposObligatoriosImport : [];
 
-        // Claves que la UI puede mostrar: vienen de TODOS_LOS_CAMPOS
-        const clavesConocidas = new Set([
-          ...DEFAULT_CONFIG.camposExport,
-          ...DEFAULT_CONFIG.camposObligatoriosImport,
-        ]);
+        // Claves que la UI puede mostrar: el catalogo completo. Antes se armaba
+        // con DEFAULT_CONFIG, que solo trae los activados de fabrica, asi que
+        // marcar cualquier campo no-por-defecto volvia "obsoleta" la config y la
+        // borraba entera en la siguiente carga.
+        const clavesConocidas = new Set(TODOS_LOS_CAMPOS.map((c) => c.clave));
 
         const exportTieneObsoletos = exportGuardado.some(c => !clavesConocidas.has(c));
         const importTieneObsoletos = importGuardado.some(c => !clavesConocidas.has(c));

@@ -2,8 +2,6 @@
 
 import type { ReactNode } from "react";
 import type { Interconsulta } from "@/types";
-import BadgeEstado from "@/components/ui/BadgeEstado";
-import BadgePrioridad from "@/components/ui/BadgePrioridad";
 import BadgeBanderaRoja from "@/components/ui/BadgeBanderaRoja";
 import { formatearFechaHoraChileLarga } from "@/utils/fechas";
 
@@ -17,27 +15,17 @@ export default function DetalleInterconsulta({
   return (
     <div className="pz-panel">
       <div className="pz-panel__head">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <span className="pz-eyebrow">Folio</span>
-            <h3 className="pz-mono mt-1.5 text-[1.15rem] font-semibold tracking-[.04em] text-[var(--pz-ink)]">
-              {ic.id.slice(0, 8).toUpperCase()}
-            </h3>
-            <p className="pz-panel__sub">
-              {ic.pacienteEdad} años · {ic.centroOrigen} → {ic.especialidad}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {ic.esValidaParaPriorizacion !== false &&
-              (ic.sinPrioridad ? (
-                <span className="pz-label">Sin prioridad</span>
-              ) : (
-                <BadgePrioridad prioridad={ic.prioridadActual} tamano="lg" />
-              ))}
-            <BadgeEstado estado={ic.estado} />
-          </div>
-        </div>
+        {/* Manda el diagnostico: es lo que el medico busca. El folio queda como
+            referencia arriba, y prioridad/estado viven en la barra de acciones. */}
+        <span className="pz-eyebrow">
+          {ic.centroOrigen} → {ic.especialidad}
+        </span>
+        <h3 className="pz-panel__title text-[1.15rem] leading-snug">
+          {ic.diagnostico}
+        </h3>
+        <p className="pz-panel__sub">
+          Folio {ic.id.slice(0, 8).toUpperCase()} · {ic.pacienteEdad} años
+        </p>
 
         {ic.banderaRoja && (
           <div className="mt-3">
@@ -69,8 +57,8 @@ export default function DetalleInterconsulta({
           <div className="col-12 col-md-6">
             <Dato etiqueta="Especialidad de destino">{ic.especialidad}</Dato>
             <Dato etiqueta="Especialidad de origen">{ic.centroOrigen}</Dato>
-            <Dato etiqueta="Diagnóstico" destacado>
-              {ic.diagnostico}
+            <Dato etiqueta="Estado de revisión">
+              {ic.estado === "revisada" ? "Revisada" : "Pendiente de revisión"}
             </Dato>
           </div>
 

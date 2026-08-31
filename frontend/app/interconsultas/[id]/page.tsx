@@ -11,6 +11,8 @@ import BotonPriorizarIA from "@/components/interconsultas/BotonPriorizarIA";
 import FormularioModificarPrioridad from "@/components/interconsultas/FormularioModificarPrioridad";
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
+import BadgePrioridad from "@/components/ui/BadgePrioridad";
+import BadgeEstado from "@/components/ui/BadgeEstado";
 import EstadoVista from "@/components/ui/EstadoVista";
 import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
 import { exportarInterconsulta } from "@/utils/exportUtils";
@@ -24,7 +26,7 @@ type FormatoExportacion = "json" | "csv" | "xlsx";
 const FORMATOS_EXPORTACION: { valor: FormatoExportacion; etiqueta: string }[] = [
   { valor: "json", etiqueta: "JSON" },
   { valor: "csv", etiqueta: "CSV" },
-  { valor: "xlsx", etiqueta: "Excel (XLSX)" },
+  { valor: "xlsx", etiqueta: "XLSX" },
 ];
 
 export default function InterconsultaDetallePage({ params }: PageProps) {
@@ -60,9 +62,7 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
           tipo="error"
           texto={error ?? "Interconsulta no encontrada"}
         />
-        <Link href="/interconsultas" className="pz-btn pz-btn--ghost">
-          Volver al listado
-        </Link>
+        <BotonVolver />
       </div>
     );
   }
@@ -100,12 +100,66 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link
-        href="/interconsultas"
-        className="pz-eyebrow pz-eyebrow--muted hover:text-[var(--pz-blue-deep)]"
-      >
-        Volver al listado
-      </Link>
+      {/* Identidad y acciones, siempre a la vista al hacer scroll. */}
+      <div className="pz-barra">
+        <BotonVolver />
+
+        <span className="pz-barra__id">
+          {interconsulta.id.slice(0, 8).toUpperCase()}
+        </span>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {esValida &&
+            (interconsulta.sinPrioridad ? (
+              <span className="pz-label">Sin prioridad</span>
+            ) : (
+              <BadgePrioridad prioridad={interconsulta.prioridadActual} />
+            ))}
+          <BadgeEstado estado={interconsulta.estado} />
+        </div>
+
+        <div className="pz-form ms-auto flex flex-wrap items-center gap-2">
+          {!estaRevisada && (
+            <button
+              type="button"
+              onClick={marcarComoRevisada}
+              disabled={actualizandoEstado}
+              className="pz-btn pz-btn--solid pz-btn--mini"
+            >
+              {actualizandoEstado ? "Actualizando…" : "Marcar como revisada"}
+            </button>
+          )}
+
+          {/* HU13: solo se exporta una interconsulta ya revisada. */}
+          <select
+            aria-label="Formato de exportación"
+            className="form-select pz-select--mini"
+            value={formato}
+            disabled={!estaRevisada}
+            onChange={(e) => setFormato(e.target.value as FormatoExportacion)}
+          >
+            {FORMATOS_EXPORTACION.map((f) => (
+              <option key={f.valor} value={f.valor}>
+                {f.etiqueta}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={() => exportarInterconsulta(interconsulta, formato, config)}
+            disabled={!estaRevisada}
+            title={
+              estaRevisada
+                ? undefined
+                : "La interconsulta debe estar revisada para poder exportar"
+            }
+            className="pz-btn pz-btn--ghost pz-btn--mini"
+          >
+            Exportar
+          </button>
+        </div>
+      </div>
 
       <div className="row g-4">
         <div className="col-12 col-xl-8">
@@ -126,73 +180,6 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
                 terminosBanderaRoja={interconsulta.terminosBanderaRoja}
               />
             )}
-
-            {!estaRevisada && (
-              <div className="pz-panel">
-                <div className="pz-panel__body">
-                  <button
-                    type="button"
-                    onClick={marcarComoRevisada}
-                    disabled={actualizandoEstado}
-                    className="pz-btn pz-btn--solid pz-btn--block"
-                  >
-                    {actualizandoEstado ? "Actualizando…" : "Marcar como revisada"}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* HU13: solo se exporta una interconsulta ya revisada. */}
-            <div className="pz-panel pz-form">
-              <div className="pz-panel__head">
-                <span className="pz-eyebrow pz-eyebrow--muted">Salida</span>
-                <h3 className="pz-panel__title">Exportar interconsulta</h3>
-              </div>
-              <div className="pz-panel__body flex flex-col gap-3">
-                <div>
-                  <label htmlFor="formato-exportacion" className="form-label">
-                    Formato
-                  </label>
-                  <select
-                    id="formato-exportacion"
-                    className="form-select"
-                    value={formato}
-                    disabled={!estaRevisada}
-                    onChange={(e) =>
-                      setFormato(e.target.value as FormatoExportacion)
-                    }
-                  >
-                    {FORMATOS_EXPORTACION.map((f) => (
-                      <option key={f.valor} value={f.valor}>
-                        {f.etiqueta}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    exportarInterconsulta(interconsulta, formato, config)
-                  }
-                  disabled={!estaRevisada}
-                  title={
-                    estaRevisada
-                      ? undefined
-                      : "La interconsulta debe estar revisada para poder exportar"
-                  }
-                  className="pz-btn pz-btn--ghost pz-btn--block"
-                >
-                  Descargar
-                </button>
-
-                {!estaRevisada && (
-                  <p className="pz-label">
-                    Marque la interconsulta como revisada para exportar
-                  </p>
-                )}
-              </div>
-            </div>
 
             {esValida &&
               (tienePrioridad ? (
@@ -215,6 +202,31 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
           </div>
         </div>
       </div>
+
+      <div className="flex justify-center pt-1 pb-2">
+        <BotonVolver />
+      </div>
     </div>
+  );
+}
+
+/** Vuelta al listado. Aparece arriba en la barra y de nuevo al pie, para no
+ *  obligar a subir todo el scroll cuando la interconsulta es larga. */
+function BotonVolver() {
+  return (
+    <Link href="/interconsultas" className="pz-btn pz-btn--ghost pz-btn--mini">
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        className="h-3.5 w-3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="square"
+      >
+        <path d="M15 5l-7 7 7 7" />
+      </svg>
+      Volver al listado
+    </Link>
   );
 }

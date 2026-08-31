@@ -380,7 +380,9 @@ h1, h2, h3, h4, h5 {
   /* Grosor explicito: el preflight de Tailwind pone border-width:0 en todo y,
      al estar Bootstrap en una capa inferior, su .form-control ya no lo repone. */
   border: 1px solid var(--pz-line-2);
-  background: #fff;
+  /* background-color, no la abreviada: "background" borraria el background-image
+     con el que Bootstrap dibuja la flecha de los .form-select. */
+  background-color: #fff;
   padding: .62rem .8rem;
   font-size: .93rem;
   color: var(--pz-ink);
@@ -584,6 +586,42 @@ h1, h2, h3, h4, h5 {
   color: rgba(226,236,248,.38);
   display: block;
   padding: 0 .75rem .6rem;
+}
+
+/* Barra de acciones del detalle: identidad a la izquierda, acciones a la
+   derecha, pegada al borde superior del area de contenido. */
+.pz-barra {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .75rem 1rem;
+  padding: .75rem 1rem;
+  background: rgba(251, 252, 254, .92);
+  backdrop-filter: saturate(150%) blur(10px);
+  -webkit-backdrop-filter: saturate(150%) blur(10px);
+  border: 1px solid var(--pz-line-2);
+  border-radius: 2px;
+}
+.pz-barra__id {
+  font-family: var(--pz-mono);
+  font-size: .82rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--pz-ink);
+}
+
+/* Botones compactos para barras y encabezados de panel. */
+.pz-btn--mini { padding: .5rem .85rem; font-size: .66rem; }
+.pz-select--mini {
+  width: auto;
+  min-width: 5.6rem;
+  font-size: .78rem;
+  /* Holgura a la derecha para que la flecha no se monte sobre el texto. */
+  padding: .45rem 2.3rem .45rem .7rem;
+  background-position: right .7rem center;
 }
 
 /* ---------- Barras de probabilidad ---------- */

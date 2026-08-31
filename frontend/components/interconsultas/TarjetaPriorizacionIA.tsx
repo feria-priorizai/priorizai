@@ -27,7 +27,7 @@ export default function TarjetaPriorizacionIA({
   const estaPriorizada = priorizacion.priorizada ?? true;
 
   return (
-    <div className="pz-panel pz-crop">
+    <div className={`pz-panel ${estaPriorizada || prioridadForzadaPorRegla ? "pz-crop" : ""}`}>
       <div className="pz-panel__head">
         <span className="pz-eyebrow pz-eyebrow--purple">Modelo predictivo</span>
         <h3 className="pz-panel__title">Priorización automática</h3>
@@ -60,11 +60,8 @@ export default function TarjetaPriorizacionIA({
             )}
           </div>
         ) : (
-          <p
-            className="p-3 text-[.88rem] text-[var(--pz-ink-2)]"
-            style={{ background: "var(--pz-paper-2)" }}
-          >
-            Esta interconsulta todavía no ha sido priorizada por IA.
+          <p className="text-[.88rem] text-[var(--pz-ink-2)]">
+            El modelo aún no ha priorizado esta interconsulta.
           </p>
         )}
 
@@ -113,12 +110,17 @@ export default function TarjetaPriorizacionIA({
           </div>
         )}
 
-        <div style={{ borderTop: "1px solid var(--pz-line)" }} className="pt-3.5">
-          <span className="pz-label">Lectura del modelo</span>
-          <p className="mt-1.5 text-[.88rem] leading-relaxed text-[var(--pz-ink-2)]">
-            {priorizacion.justificacion}
-          </p>
-        </div>
+        {estaPriorizada && (
+          <div
+            style={{ borderTop: "1px solid var(--pz-line)" }}
+            className="pt-3.5"
+          >
+            <span className="pz-label">Lectura del modelo</span>
+            <p className="mt-1.5 text-[.88rem] leading-relaxed text-[var(--pz-ink-2)]">
+              {priorizacion.justificacion}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

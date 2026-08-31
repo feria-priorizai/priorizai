@@ -114,7 +114,7 @@ def test_agrupar_por_clase_deduplica_sin_distinguir_mayusculas() -> None:
             {"clase": "Enfermedad", "texto": "cancer"},
         ],
     }
-    agrupado = agrupar_por_clase(entidades)  # type: ignore[arg-type]
+    agrupado = agrupar_por_clase(entidades)
 
     assert agrupado["Sigla"] == ["HTA"]
     assert agrupado["Enfermedad"] == ["diabetes", "cancer"]

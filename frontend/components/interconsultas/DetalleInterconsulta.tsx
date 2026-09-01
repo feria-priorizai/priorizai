@@ -22,9 +22,9 @@ export default function DetalleInterconsulta({
         <span className="pz-eyebrow">
           {ic.centroOrigen} → {ic.especialidad}
         </span>
-        <h3 className="pz-panel__title text-[1.15rem] leading-snug">
+        <h2 className="pz-panel__title text-[1.15rem] leading-snug">
           {ic.diagnostico}
-        </h3>
+        </h2>
         <p className="pz-panel__sub">
           Folio {ic.id.slice(0, 8).toUpperCase()} · {ic.pacienteEdad} años
         </p>

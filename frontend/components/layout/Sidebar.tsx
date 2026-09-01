@@ -208,6 +208,7 @@ export default function Sidebar() {
               <Link
                 href={item.ruta}
                 title={colapsado ? item.nombre : undefined}
+                aria-current={esRutaActiva(item.ruta) ? "page" : undefined}
                 className={`pz-navlink ${colapsado ? "pz-navlink--icono" : ""} ${
                   esRutaActiva(item.ruta) ? "is-active" : ""
                 }`}

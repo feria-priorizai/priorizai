@@ -639,8 +639,10 @@ h1, h2, h3, h4, h5 {
   cursor: pointer;
   transition: background-color .15s ease;
 }
-.pz-fila-cola:hover { background: var(--pz-paper-2); }
-.pz-fila-cola:hover .pz-fila-cola__dx { text-decoration: underline; }
+.pz-fila-cola:hover,
+.pz-fila-cola:focus-within { background: var(--pz-paper-2); }
+.pz-fila-cola:hover .pz-fila-cola__dx,
+.pz-fila-cola:focus-within .pz-fila-cola__dx { text-decoration: underline; }
 .pz-fila-cola__id { width: 6.5rem; flex: none; }
 .pz-fila-cola__cuerpo { flex: 1; min-width: 0; }
 .pz-fila-cola__dx {

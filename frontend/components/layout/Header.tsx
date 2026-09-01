@@ -38,7 +38,7 @@ export default function Header() {
     >
       <div>
         <span className="pz-eyebrow">{seccion}</span>
-        <h2 className="mt-1 text-[1.35rem]">{titulo}</h2>
+        <h1 className="mt-1 text-[1.35rem]">{titulo}</h1>
       </div>
 
       <div className="text-right">

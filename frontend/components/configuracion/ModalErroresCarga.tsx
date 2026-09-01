@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { EVENTO_ERRORES_CARGA } from "@/services/interconsultas";
 
 export interface ErrorFila {
   fila: number;
@@ -12,8 +13,6 @@ export interface ErroresCarga {
   rejected: ErrorFila[];
   rejected_count: number;
 }
-
-export const EVENTO_ERRORES_CARGA = "priorizai:errores-carga";
 
 export function useErroresCarga() {
   const [errores, setErrores] = useState<ErroresCarga | null>(null);
@@ -36,6 +35,60 @@ export function useErroresCarga() {
 
 export function ModalErroresCarga() {
   const { errores, limpiar } = useErroresCarga();
+  const dialogoRef = useRef<HTMLDivElement | null>(null);
+  const cerrarRef = useRef<HTMLButtonElement | null>(null);
+  // Para devolver el foco a donde estaba (el boton "Cargar archivo" del
+  // sidebar) cuando el modal se cierra.
+  const focoPrevioRef = useRef<HTMLElement | null>(null);
+
+  const abierto = Boolean(errores) && (errores?.rejected_count ?? 0) > 0;
+
+  useEffect(() => {
+    if (!abierto) {
+      return;
+    }
+
+    focoPrevioRef.current = document.activeElement as HTMLElement | null;
+    cerrarRef.current?.focus();
+
+    // Un dialogo modal tiene que atrapar el foco: sin esto el tabulador se va a
+    // la pagina de atras, que el lector de pantalla no deberia poder alcanzar.
+    const manejarTeclado = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        limpiar();
+        return;
+      }
+
+      if (e.key !== "Tab" || !dialogoRef.current) {
+        return;
+      }
+
+      const focusables = dialogoRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusables.length === 0) {
+        return;
+      }
+
+      const primero = focusables[0];
+      const ultimo = focusables[focusables.length - 1];
+
+      if (e.shiftKey && document.activeElement === primero) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && document.activeElement === ultimo) {
+        e.preventDefault();
+        primero.focus();
+      }
+    };
+
+    document.addEventListener("keydown", manejarTeclado);
+    return () => {
+      document.removeEventListener("keydown", manejarTeclado);
+      focoPrevioRef.current?.focus();
+    };
+  }, [abierto, limpiar]);
 
   if (!errores || errores.rejected_count === 0) return null;
 
@@ -44,11 +97,18 @@ export function ModalErroresCarga() {
   return (
     <div
       className="pz-modal-fondo"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="titulo-errores-carga"
+      // Clic fuera del panel: misma salida que Escape.
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) limpiar();
+      }}
     >
-      <div className="pz-modal">
+      <div
+        ref={dialogoRef}
+        className="pz-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titulo-errores-carga"
+      >
         <div className="pz-panel__head flex items-start justify-between gap-4">
           <div>
             <span className="pz-eyebrow pz-eyebrow--alta">Carga incompleta</span>
@@ -63,6 +123,7 @@ export function ModalErroresCarga() {
           </div>
 
           <button
+            ref={cerrarRef}
             type="button"
             onClick={limpiar}
             aria-label="Cerrar"

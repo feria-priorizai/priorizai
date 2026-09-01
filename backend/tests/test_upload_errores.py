@@ -245,11 +245,11 @@ def test_edad_no_numerica_rechaza_la_fila(
     assert body["rejected"][0]["campos_faltantes"] == ["EDAD (formato inválido)"]
 
 
-def test_edad_con_separadores_de_miles_se_acepta(
+def test_edad_con_espacios_intercalados_se_acepta(
     client: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
-    # _validar_filas limpia puntos, comas y espacios antes de convertir.
+    # Los espacios se limpian; el separador decimal NO (ver B1).
     contenido = HEADER + FILA.replace(",46,", ',"4 6",')
 
     response = _subir(client, "edad_espacios.csv", contenido)
@@ -399,3 +399,51 @@ def test_httpexception_durante_la_insercion_hace_rollback_y_se_propaga(
     assert response.json()["detail"] == "conflicto de insercion"
     assert session.rollbacks == 1
     assert session.cerrada is True
+
+
+def test_edad_decimal_no_se_convierte_en_otro_numero(
+    client: TestClient,
+    ingesta_con_modelo: object,
+) -> None:
+    """Regresion: "53.0" -lo que exporta cualquier planilla- se guardaba como
+    530 anios, y de ahi pasaba al texto que ve el modelo y al export."""
+    contenido = HEADER + FILA.replace(",46,", ",53.0,")
+
+    response = _subir(client, "edad_decimal.csv", contenido)
+
+    assert response.status_code == 200
+    assert response.json()["rejected_count"] == 0
+
+    listado = client.get("/api/interconsultas").json()
+    assert [interconsulta["edad"] for interconsulta in listado] == [53]
+
+
+def test_edad_fuera_de_rango_se_rechaza_con_su_propio_motivo(
+    client: TestClient,
+    ingesta_con_modelo: object,
+) -> None:
+    contenido = HEADER + FILA + FILA.replace(",46,", ",530,")
+
+    response = _subir(client, "edad_imposible.csv", contenido)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["inserted"] == 1
+    assert body["rejected_count"] == 1
+    assert body["rejected"][0]["campos_faltantes"] == ["EDAD (fuera de rango)"]
+
+
+def test_edad_cero_se_acepta(
+    client: TestClient,
+    ingesta_con_modelo: object,
+) -> None:
+    """Un recien nacido es una edad valida, no un campo vacio."""
+    contenido = HEADER + FILA.replace(",46,", ",0,")
+
+    response = _subir(client, "edad_cero.csv", contenido)
+
+    assert response.status_code == 200
+    assert response.json()["rejected_count"] == 0
+
+    listado = client.get("/api/interconsultas").json()
+    assert [interconsulta["edad"] for interconsulta in listado] == [0]

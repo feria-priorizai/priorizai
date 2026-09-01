@@ -16,6 +16,16 @@ class Settings:
     database_user: str = os.getenv("DATABASE_USER", "priorizai_user")
     database_password: str = os.getenv("DATABASE_PASSWORD", "priorizai_password")
     model_path: str = os.getenv("MODEL_PATH", "/models")
+    # Orden de las clases del modelo, indice a indice (LABEL_0,LABEL_1,...).
+    # El config.json del modelo trae labels genericos, asi que sin esto se usa
+    # FALLBACK_ID2LABEL, que es una suposicion escrita a mano: si no coincide
+    # con el LabelEncoder del entrenamiento, el sistema prioriza al reves sin
+    # ningun sintoma. Setear MODEL_LABELS fija el orden real sin tocar codigo.
+    model_labels: tuple[str, ...] = tuple(
+        etiqueta.strip()
+        for etiqueta in os.getenv("MODEL_LABELS", "").split(",")
+        if etiqueta.strip()
+    )
     model_max_length: int = int(os.getenv("MODEL_MAX_LENGTH", "512"))
     model_batch_size: int = int(os.getenv("MODEL_BATCH_SIZE", "16"))
 

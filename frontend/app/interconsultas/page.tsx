@@ -14,6 +14,7 @@ export default function InterconsultasPage() {
     cargando,
     error,
     totalInterconsultas,
+    listadoTruncado,
     filtros,
     actualizarFiltros,
     limpiarFiltros,
@@ -118,6 +119,8 @@ export default function InterconsultasPage() {
         {modoDescargaMultiple
           ? `Descarga múltiple · ${seleccionadas.size} de ${interconsultas.length} seleccionadas · solo revisadas`
           : `Mostrando ${interconsultas.length} de ${totalInterconsultas} interconsulta${totalInterconsultas !== 1 ? "s" : ""}`}
+        {listadoTruncado &&
+          " · la lista supera lo que se puede mostrar de una vez; usá los filtros para acotarla"}
       </p>
     </div>
   );

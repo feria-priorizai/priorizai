@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import unicodedata
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
@@ -11,6 +12,8 @@ if TYPE_CHECKING:
     from app.models.interconsulta import Interconsulta
 
 
+logger = logging.getLogger(__name__)
+
 PRIORITY_ORDER = ["baja", "media", "alta"]
 FALLBACK_ID2LABEL = {0: "baja", 1: "media", 2: "alta"}
 
@@ -20,6 +23,8 @@ class ModeloConfiguracion:
     path: str
     max_length: int
     batch_size: int
+    # Vacio = deducir del modelo. Ver Settings.model_labels.
+    labels: tuple[str, ...] = ()
 
 
 def normalizar_clase(texto: str) -> str:
@@ -123,6 +128,9 @@ class PriorizadorRigoBerta:
     def _resolver_labels(self) -> list[str]:
         model = cast(Any, self._model)
         config = model.config
+
+        if self.config.labels:
+            return self._labels_configurados(config.num_labels)
         id2label = getattr(config, "id2label", None) or {}
         raw = []
         for i in range(config.num_labels):
@@ -138,9 +146,31 @@ class PriorizadorRigoBerta:
             raise ValueError(
                 "El numero de clases del modelo no coincide con FALLBACK_ID2LABEL",
             )
+
+        logger.warning(
+            "El modelo no declara sus clases (id2label=%s): se asume el orden de FALLBACK_ID2LABEL=%s. Si no coincide con el LabelEncoder del entrenamiento, TODAS las prioridades quedan mal asignadas. Fijar el orden real con la variable MODEL_LABELS.",
+            raw,
+            FALLBACK_ID2LABEL,
+        )
         return [
             normalizar_clase(FALLBACK_ID2LABEL[i]) for i in range(config.num_labels)
         ]
+
+    def _labels_configurados(self, num_labels: int) -> list[str]:
+        """Orden fijado a mano por configuracion (MODEL_LABELS)."""
+        labels = [normalizar_clase(label) for label in self.config.labels]
+        if len(labels) != num_labels:
+            raise ValueError(
+                f"MODEL_LABELS define {len(labels)} clases y el modelo tiene "
+                f"{num_labels}",
+            )
+        desconocidas = [label for label in labels if label not in PRIORITY_ORDER]
+        if desconocidas:
+            raise ValueError(
+                f"MODEL_LABELS contiene clases desconocidas: {desconocidas}. "
+                f"Las validas son {PRIORITY_ORDER}",
+            )
+        return labels
 
     def _predecir_textos(self, textos: list[str]) -> Any:
         import torch
@@ -200,6 +230,7 @@ priorizador = PriorizadorRigoBerta(
         path=settings.model_path,
         max_length=settings.model_max_length,
         batch_size=settings.model_batch_size,
+        labels=settings.model_labels,
     ),
 )
 

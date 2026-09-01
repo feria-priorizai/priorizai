@@ -200,3 +200,46 @@ def test_nombres_de_terminos_tolera_vacios_e_ids_desconocidos() -> None:
     # Un id que ya no esta en el catalogo se devuelve tal cual, para no perder el
     # motivo de una bandera guardada antes de editar el catalogo.
     assert nombres_de_terminos("termino_eliminado") == ["termino_eliminado"]
+
+
+def test_reevaluar_libera_el_forzado_cuando_el_termino_deja_de_aplicar() -> None:
+    """Regresion: `prioridad_forzada_por_regla` no tenia rama contraria, asi que
+    quedaba pegada en True. Como `aplicar_resultado` la respeta, esa
+    interconsulta no volvia a recibir nunca la prioridad del modelo."""
+    interconsulta = _interconsulta("Control de rutina, paciente asintomatico")
+    interconsulta.prioridad_sugerida_modelo = "baja"
+    interconsulta.prioridad_actual = "alta"
+    interconsulta.prioridad_forzada_por_regla = True
+    interconsulta.bandera_roja = True
+    interconsulta.terminos_bandera_roja = "dolor_toracico"
+
+    resultado = aplicar_banderas_a_interconsulta(
+        interconsulta, ya_modificada_por_medico=False
+    )
+
+    assert resultado.bandera_roja is False
+    assert interconsulta.prioridad_forzada_por_regla is False
+    assert interconsulta.prioridad_actual == "baja"
+    assert interconsulta.terminos_bandera_roja is None
+
+
+def test_reevaluar_sin_sugerencia_del_modelo_deja_la_prioridad_vacia() -> None:
+    interconsulta = _interconsulta("Control de rutina, paciente asintomatico")
+    interconsulta.prioridad_actual = "alta"
+    interconsulta.prioridad_forzada_por_regla = True
+
+    aplicar_banderas_a_interconsulta(interconsulta, ya_modificada_por_medico=False)
+
+    assert interconsulta.prioridad_forzada_por_regla is False
+    assert interconsulta.prioridad_actual is None
+
+
+def test_reevaluar_mantiene_el_forzado_si_el_termino_sigue_estando() -> None:
+    interconsulta = _interconsulta("Paciente con dolor toracico de inicio subito")
+    interconsulta.prioridad_actual = "alta"
+    interconsulta.prioridad_forzada_por_regla = True
+
+    aplicar_banderas_a_interconsulta(interconsulta, ya_modificada_por_medico=False)
+
+    assert interconsulta.prioridad_forzada_por_regla is True
+    assert interconsulta.prioridad_actual == "alta"

@@ -69,17 +69,57 @@ interface PriorizarResponse {
   }>;
 }
 
-/** Obtiene interconsultas reales desde el backend. */
-export async function obtenerInterconsultas(): Promise<Interconsulta[]> {
-  const respuesta = await fetch(`${API_BASE}/api/interconsultas?limit=100`, {
-    cache: "no-store",
-  });
-  if (!respuesta.ok) {
-    throw new Error("Error al cargar las interconsultas");
+/** Filas por peticion y tope de lo que el cliente mantiene en memoria. */
+const TAMANO_PAGINA = 100;
+const MAXIMO_EN_MEMORIA = 2000;
+
+export interface ListadoInterconsultas {
+  interconsultas: Interconsulta[];
+  /** Total en el servidor, no el largo de lo cargado. */
+  total: number;
+  /** true si el servidor tiene mas de las que se pudieron cargar. */
+  truncado: boolean;
+}
+
+/**
+ * Obtiene la lista de espera completa, pagina por pagina.
+ *
+ * Antes se pedia una sola pagina de 100 y se mostraba su largo como si fuera el
+ * total: con un archivo real el resto de la lista desaparecia en silencio, y
+ * justo el final de la cola (las de menor prioridad y las mas nuevas), que es
+ * el orden que define el backend.
+ */
+export async function obtenerInterconsultas(): Promise<ListadoInterconsultas> {
+  const acumuladas: Interconsulta[] = [];
+  let total = 0;
+
+  for (let offset = 0; offset < MAXIMO_EN_MEMORIA; offset += TAMANO_PAGINA) {
+    const respuesta = await fetch(
+      `${API_BASE}/api/interconsultas?limit=${TAMANO_PAGINA}&offset=${offset}`,
+      { cache: "no-store" }
+    );
+    if (!respuesta.ok) {
+      throw new Error("Error al cargar las interconsultas");
+    }
+
+    const informado = Number(respuesta.headers.get("X-Total-Count"));
+    if (Number.isFinite(informado) && informado > 0) {
+      total = informado;
+    }
+
+    const pagina = (await respuesta.json()) as InterconsultaApi[];
+    acumuladas.push(...pagina.map(mapearInterconsulta));
+
+    if (pagina.length < TAMANO_PAGINA || acumuladas.length >= total) {
+      break;
+    }
   }
 
-  const data = (await respuesta.json()) as InterconsultaApi[];
-  return data.map(mapearInterconsulta);
+  return {
+    interconsultas: acumuladas,
+    total: Math.max(total, acumuladas.length),
+    truncado: acumuladas.length < total,
+  };
 }
 
 /** Obtiene una interconsulta real por ID. */

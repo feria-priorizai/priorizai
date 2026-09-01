@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import type { MouseEvent } from "react";
 import type { Interconsulta, NivelPrioridad } from "@/types";
 import BadgeEstado from "@/components/ui/BadgeEstado";
-import { formatearFechaHoraChile } from "@/utils/fechas";
+import {
+  formatearFechaCalendario,
+  formatearFechaHoraChile,
+} from "@/utils/fechas";
 
 type FormatoDescarga = "json" | "csv" | "xlsx";
 type ClaveGrupo = NivelPrioridad | "sin" | "invalida";
@@ -207,7 +210,9 @@ export default function ColaInterconsultas({
                   <span className="pz-fila-cola__dx">{ic.diagnostico}</span>
                   <span className="pz-fila-cola__meta">
                     {ic.centroOrigen} → {ic.especialidad} ·{" "}
-                    {formatearFechaHoraChile(ic.fechaEmision ?? ic.fechaIngreso)}
+                    {ic.fechaEmision
+                      ? formatearFechaCalendario(ic.fechaEmision)
+                      : formatearFechaHoraChile(ic.fechaIngreso)}
                     {ic.prioridadForzadaPorRegla && " · regla clínica"}
                     {!ic.prioridadForzadaPorRegla &&
                       (ic.priorizacionIA.priorizada ?? true) &&

@@ -224,3 +224,60 @@ def test_reevaluar_banderas_marca_las_que_tienen_termino_de_alarma(
     assert con_alarma is not None
     assert con_alarma.bandera_roja is True
     assert con_alarma.prioridad_actual == "alta"
+
+
+# --------------------------------------------------------------------------
+# Paginacion del listado
+# --------------------------------------------------------------------------
+
+
+def test_listado_publica_el_total_real_en_la_cabecera(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """Regresion: el cliente pedia una pagina fija y mostraba su tamano como si
+    fuera el total, asi que el resto de la lista de espera desaparecia."""
+    for indice in range(7):
+        guardar_interconsulta(id=f"ic-pag-{indice}")
+
+    response = client.get("/api/interconsultas", params={"limit": 3})
+
+    assert response.status_code == 200
+    assert len(response.json()) == 3
+    assert response.headers["X-Total-Count"] == "7"
+
+
+def test_listado_pagina_sin_repetir_ni_perder_filas(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    for indice in range(5):
+        guardar_interconsulta(id=f"ic-pag-{indice}")
+
+    primera = client.get("/api/interconsultas", params={"limit": 2, "offset": 0})
+    segunda = client.get("/api/interconsultas", params={"limit": 2, "offset": 2})
+    tercera = client.get("/api/interconsultas", params={"limit": 2, "offset": 4})
+
+    ids = [
+        interconsulta["id"]
+        for pagina in (primera, segunda, tercera)
+        for interconsulta in pagina.json()
+    ]
+
+    assert len(ids) == 5
+    assert len(set(ids)) == 5
+
+
+def test_listado_sin_filas_reporta_total_cero(client: TestClient) -> None:
+    response = client.get("/api/interconsultas")
+
+    assert response.json() == []
+    assert response.headers["X-Total-Count"] == "0"
+
+
+def test_listado_rechaza_un_limit_desmedido(client: TestClient) -> None:
+    """Sin tope, un `?limit=999999` traia la tabla entera."""
+    assert (
+        client.get("/api/interconsultas", params={"limit": 999999}).status_code == 422
+    )
+    assert client.get("/api/interconsultas", params={"limit": 0}).status_code == 422

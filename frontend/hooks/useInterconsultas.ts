@@ -24,6 +24,8 @@ interface UseInterconsultasReturn {
   cargando: boolean;
   error: string | null;
   totalInterconsultas: number;
+  /** true si el servidor tiene mas de las que se alcanzaron a cargar. */
+  listadoTruncado: boolean;
   pendientesPriorizables: number;
   pendientesInvalidas: number;
   filtros: FiltrosInterconsulta;
@@ -42,6 +44,9 @@ interface EstadoListado {
   interconsultas: Interconsulta[];
   cargando: boolean;
   error: string | null;
+  /** Total en el servidor, que puede ser mayor que lo cargado. */
+  total: number;
+  truncado: boolean;
 }
 
 interface EstadoDetalle {
@@ -68,19 +73,29 @@ export function useInterconsultas(): UseInterconsultasReturn {
     interconsultas: [],
     cargando: true,
     error: null,
+    total: 0,
+    truncado: false,
   });
   const [filtros, setFiltros] = useState<FiltrosInterconsulta>(filtrosIniciales);
 
   const recargar = useCallback(async () => {
     setEstado((prev) => ({ ...prev, cargando: true, error: null }));
     try {
-      const data = await obtenerInterconsultas();
-      setEstado({ interconsultas: data, cargando: false, error: null });
+      const listado = await obtenerInterconsultas();
+      setEstado({
+        interconsultas: listado.interconsultas,
+        cargando: false,
+        error: null,
+        total: listado.total,
+        truncado: listado.truncado,
+      });
     } catch {
       setEstado({
         interconsultas: [],
         cargando: false,
         error: "Error al cargar las interconsultas",
+        total: 0,
+        truncado: false,
       });
     }
   }, []);
@@ -89,9 +104,15 @@ export function useInterconsultas(): UseInterconsultasReturn {
     let activo = true;
 
     void obtenerInterconsultas()
-      .then((data) => {
+      .then((listado) => {
         if (activo) {
-          setEstado({ interconsultas: data, cargando: false, error: null });
+          setEstado({
+            interconsultas: listado.interconsultas,
+            cargando: false,
+            error: null,
+            total: listado.total,
+            truncado: listado.truncado,
+          });
         }
       })
       .catch(() => {
@@ -100,6 +121,8 @@ export function useInterconsultas(): UseInterconsultasReturn {
             interconsultas: [],
             cargando: false,
             error: "Error al cargar las interconsultas",
+            total: 0,
+            truncado: false,
           });
         }
       });
@@ -210,7 +233,8 @@ export function useInterconsultas(): UseInterconsultasReturn {
     interconsultas: interconsultasFiltradas,
     cargando: estado.cargando,
     error: estado.error,
-    totalInterconsultas: estado.interconsultas.length,
+    totalInterconsultas: estado.total,
+    listadoTruncado: estado.truncado,
     pendientesPriorizables,
     pendientesInvalidas,
     filtros,

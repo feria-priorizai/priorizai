@@ -2,7 +2,10 @@
 
 import type { ReactNode } from "react";
 import type { Interconsulta } from "@/types";
-import { formatearFechaHoraChileLarga } from "@/utils/fechas";
+import {
+  formatearFechaCalendarioLarga,
+  formatearFechaHoraChileLarga,
+} from "@/utils/fechas";
 
 interface DetalleInterconsultaProps {
   interconsulta: Interconsulta;
@@ -58,7 +61,7 @@ export default function DetalleInterconsulta({
           <div className="col-12 col-md-6">
             <Dato etiqueta="Fecha de emisión">
               {ic.fechaEmision
-                ? formatearFechaHoraChileLarga(ic.fechaEmision)
+                ? formatearFechaCalendarioLarga(ic.fechaEmision)
                 : "No registrada"}
             </Dato>
             <Dato etiqueta="Ingreso al sistema">

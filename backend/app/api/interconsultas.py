@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -25,6 +25,9 @@ from app.services.priorizador import (
 )
 
 router = APIRouter(prefix="/api/interconsultas", tags=["interconsultas"])
+
+# Tope de filas por pagina. Sin tope, un `?limit=999999` trae la tabla entera.
+LIMITE_LISTADO = 100
 DbSession = Depends(get_db)
 PriorizadorDependency = Depends(get_priorizador)
 
@@ -58,10 +61,16 @@ _ORDEN_PRIORIDAD = case(
 
 @router.get("", response_model=list[InterconsultaResponse])
 def listar_interconsultas(
-    limit: int = 100,
+    response: Response,
+    limit: int = Query(default=LIMITE_LISTADO, ge=1, le=500),
     offset: int = 0,
     db: Session = DbSession,
 ) -> list[Interconsulta]:
+    """El total va en la cabecera `X-Total-Count`: sin el, el cliente no puede
+    distinguir 'no hay mas' de 'la pagina se lleno' y termina mostrando como total
+    lo que entro en la primera pagina."""
+    total = db.scalar(select(func.count()).select_from(Interconsulta)) or 0
+    response.headers["X-Total-Count"] = str(total)
     stmt = (
         select(Interconsulta)
         .options(selectinload(Interconsulta.modificaciones))

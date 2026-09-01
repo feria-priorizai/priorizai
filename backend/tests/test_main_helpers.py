@@ -5,7 +5,7 @@ test: un formato mal parseado no rompe la carga, devuelve None en silencio y la
 interconsulta cae al final de la lista.
 """
 
-from datetime import UTC, datetime
+from datetime import datetime
 
 import pytest
 
@@ -13,6 +13,7 @@ from app.main import (
     _estado_priorizacion,
     _normalizar_encabezado,
     _normalizar_valor,
+    _parsear_edad,
     _parsear_fecha_emision,
     _texto_o_none,
 )
@@ -27,10 +28,10 @@ from app.services.priorizador import tiene_informacion_clinica
 @pytest.mark.parametrize(
     ("entrada", "esperado"),
     [
-        ("2026-03-15", datetime(2026, 3, 15, tzinfo=UTC)),
-        ("15-03-2026", datetime(2026, 3, 15, tzinfo=UTC)),
-        ("15/03/2026", datetime(2026, 3, 15, tzinfo=UTC)),
-        ("  2026-03-15  ", datetime(2026, 3, 15, tzinfo=UTC)),
+        ("2026-03-15", datetime(2026, 3, 15)),
+        ("15-03-2026", datetime(2026, 3, 15)),
+        ("15/03/2026", datetime(2026, 3, 15)),
+        ("  2026-03-15  ", datetime(2026, 3, 15)),
     ],
 )
 def test_parsear_fecha_emision_acepta_los_formatos_conocidos(
@@ -62,14 +63,17 @@ def test_parsear_fecha_emision_devuelve_none_si_no_reconoce_el_formato(
 
 def test_parsear_fecha_emision_distingue_dia_de_mes() -> None:
     # "%d-%m-%Y" antes que cualquier lectura al reves: 03-04 es 3 de abril.
-    assert _parsear_fecha_emision("03-04-2026") == datetime(2026, 4, 3, tzinfo=UTC)
+    assert _parsear_fecha_emision("03-04-2026") == datetime(2026, 4, 3)
 
 
-def test_parsear_fecha_emision_devuelve_fecha_con_zona_utc() -> None:
+def test_parsear_fecha_emision_devuelve_una_fecha_sin_zona() -> None:
+    """Regresion: se marcaba como UTC y el frontend, al pasarla a horario de
+    Chile, mostraba el dia anterior. Es una fecha de calendario, no un instante."""
     fecha = _parsear_fecha_emision("2026-03-15")
 
     assert fecha is not None
-    assert fecha.tzinfo is UTC
+    assert fecha.tzinfo is None
+    assert (fecha.year, fecha.month, fecha.day) == (2026, 3, 15)
 
 
 # --------------------------------------------------------------------------
@@ -195,3 +199,50 @@ def test_tiene_informacion_clinica_tolera_none() -> None:
     )
 
     assert tiene_informacion_clinica(interconsulta) is False
+
+
+# --------------------------------------------------------------------------
+# _parsear_edad
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("entrada", "esperado"),
+    [
+        ("53", 53),
+        ("53.0", 53),
+        ("53,0", 53),
+        (" 4 6 ", 46),
+        ("4,5", 4),
+        ("0", 0),
+        (0, 0),
+        (0.0, 0),
+        (46.0, 46),
+    ],
+)
+def test_parsear_edad_acepta_los_formatos_que_llegan_en_los_archivos(
+    entrada: object, esperado: int
+) -> None:
+    assert _parsear_edad(entrada) == esperado
+
+
+def test_parsear_edad_no_borra_el_separador_decimal() -> None:
+    """Regresion: se limpiaban puntos y comas antes de convertir a int, asi que
+    el "53.0" que exporta cualquier planilla se guardaba como 530 anios."""
+    assert _parsear_edad("53.0") == 53
+    assert _parsear_edad("4,5") == 4
+
+
+@pytest.mark.parametrize(
+    "entrada",
+    [None, "", "   ", "cuarenta y seis", "1.2.3", "12,5,3", "abc", "-"],
+)
+def test_parsear_edad_devuelve_none_si_no_es_un_numero(entrada: object) -> None:
+    assert _parsear_edad(entrada) is None
+
+
+def test_parsear_edad_no_valida_el_rango() -> None:
+    """El rango lo decide la llamante, para distinguir 'no es un numero' de
+    'no es una edad posible' en el motivo de rechazo."""
+    assert _parsear_edad("530") == 530
+    assert _parsear_edad("-3") == -3

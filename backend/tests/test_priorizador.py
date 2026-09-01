@@ -356,3 +356,85 @@ def test_get_priorizador_devuelve_siempre_la_misma_instancia() -> None:
     # request, cada request volveria a cargar el modelo.
     assert get_priorizador() is get_priorizador()
     assert isinstance(get_priorizador(), PriorizadorRigoBerta)
+
+
+# --------------------------------------------------------------------------
+# MODEL_LABELS: orden de clases fijado por configuracion
+# --------------------------------------------------------------------------
+
+
+def _priorizador_con_labels(
+    id2label: dict[Any, str | None] | None,
+    labels: tuple[str, ...],
+    num_labels: int | None = None,
+) -> PriorizadorRigoBerta:
+    priorizador = PriorizadorRigoBerta(
+        ModeloConfiguracion(
+            path="/models", max_length=512, batch_size=16, labels=labels
+        ),
+    )
+    priorizador._model = ModeloFalso(ConfigFalsa(id2label, num_labels))
+    return priorizador
+
+
+def test_model_labels_fija_el_orden_cuando_el_modelo_no_lo_declara() -> None:
+    """El modelo real trae LABEL_0/1/2 y hoy se cae a FALLBACK_ID2LABEL, que es
+    una suposicion: si no coincide con el entrenamiento, todas las prioridades
+    quedan mal asignadas. MODEL_LABELS permite fijar el orden real."""
+    priorizador = _priorizador_con_labels(
+        {0: "LABEL_0", 1: "LABEL_1", 2: "LABEL_2"},
+        labels=("alta", "media", "baja"),
+    )
+
+    assert priorizador._resolver_labels() == ["alta", "media", "baja"]
+
+
+def test_model_labels_manda_sobre_los_labels_del_modelo() -> None:
+    priorizador = _priorizador_con_labels(
+        {0: "baja", 1: "media", 2: "alta"},
+        labels=("alta", "media", "baja"),
+    )
+
+    assert priorizador._resolver_labels() == ["alta", "media", "baja"]
+
+
+def test_model_labels_normaliza_tildes_y_mayusculas() -> None:
+    priorizador = _priorizador_con_labels(
+        {0: "LABEL_0", 1: "LABEL_1", 2: "LABEL_2"},
+        labels=("ALTA", "  Médía  ", "Baja"),
+    )
+
+    assert priorizador._resolver_labels() == ["alta", "media", "baja"]
+
+
+def test_model_labels_con_cantidad_distinta_a_la_del_modelo_falla() -> None:
+    priorizador = _priorizador_con_labels(
+        {0: "LABEL_0", 1: "LABEL_1", 2: "LABEL_2"},
+        labels=("alta", "baja"),
+    )
+
+    with pytest.raises(ValueError, match="MODEL_LABELS define 2 clases"):
+        priorizador._resolver_labels()
+
+
+def test_model_labels_con_una_clase_desconocida_falla() -> None:
+    priorizador = _priorizador_con_labels(
+        {0: "LABEL_0", 1: "LABEL_1", 2: "LABEL_2"},
+        labels=("alta", "media", "urgente"),
+    )
+
+    with pytest.raises(ValueError, match="clases desconocidas"):
+        priorizador._resolver_labels()
+
+
+def test_el_fallback_avisa_por_log_que_esta_suponiendo_el_orden(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    priorizador = _priorizador(
+        {0: "LABEL_0", 1: "LABEL_1", 2: "LABEL_2"},
+    )
+
+    with caplog.at_level("WARNING"):
+        assert priorizador._resolver_labels() == ["baja", "media", "alta"]
+
+    assert "MODEL_LABELS" in caplog.text

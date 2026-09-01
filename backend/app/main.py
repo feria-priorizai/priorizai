@@ -1,5 +1,6 @@
 import csv
 import io
+import math
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -65,6 +66,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # El listado publica el total real ahi; sin exponerla, el navegador la oculta.
+    expose_headers=["X-Total-Count"],
 )
 
 app.include_router(interconsultas_router)
@@ -229,19 +232,24 @@ def _validar_filas(filas: list[dict[str, str]]) -> dict[str, list]:
             continue
 
         # Validar EDAD numérica
-        raw_edad = str(datos.get("EDAD", ""))
-        raw_edad_clean = raw_edad.replace(".", "").replace(",", "").replace(" ", "")
-        try:
-            datos["EDAD"] = int(raw_edad_clean)
-        except ValueError:
+        edad = _parsear_edad(datos.get("EDAD"))
+        if edad is None:
+            motivo_edad = "EDAD (formato inválido)"
+        elif not 0 <= edad <= EDAD_MAXIMA:
+            motivo_edad = "EDAD (fuera de rango)"
+        else:
+            motivo_edad = None
+
+        if motivo_edad is not None:
             rejected.append(
                 {
                     "fila": idx,
-                    "campos_faltantes": ["EDAD (formato inválido)"],
+                    "campos_faltantes": [motivo_edad],
                     "datos_raw": datos,
                 }
             )
             continue
+        datos["EDAD"] = edad
 
         filas_validas.append(datos)
 
@@ -435,17 +443,54 @@ def _parsear_fecha_emision(valor: object) -> datetime | None:
     """FECHA_EMISION es opcional (HU3-c1): no viene en COLUMNAS_ESPERADAS y aun no
     se conoce el formato real del archivo del sistema hospitalario (D18). Si no
     esta presente o no calza con un formato conocido, se guarda como None en vez
-    de romper la carga completa."""
+    de romper la carga completa.
+
+    Se guarda como datetime naive a proposito: es una fecha de calendario, no un
+    instante. Marcarla como UTC hacia que el frontend la convirtiera a horario de
+    Chile y mostrara el dia anterior.
+    """
     texto = str(valor or "").strip()
     if not texto:
         return None
 
     for formato in FORMATOS_FECHA_EMISION:
         try:
-            return datetime.strptime(texto, formato).replace(tzinfo=UTC)
+            return datetime.strptime(texto, formato)
         except ValueError:
             continue
     return None
+
+
+EDAD_MAXIMA = 130
+
+
+def _parsear_edad(valor: object) -> int | None:
+    """Anios cumplidos a partir de la celda del archivo.
+
+    Un CSV entrega cada celda como texto, asi que "53.0" -lo que exporta
+    cualquier planilla- llegaba como cadena y borrarle el punto lo convertia
+    en 530. El separador se interpreta como decimal, nunca como separador de
+    miles: en una edad no tiene sentido. Los decimales se truncan, que es la
+    convencion clinica (4,5 anios son 4 anios cumplidos).
+
+    Devuelve None si el valor no es un numero; el rango lo valida la llamante,
+    para poder distinguir 'no es un numero' de 'no es una edad posible'.
+    """
+    if valor is None:
+        return None
+
+    texto = str(valor).strip().replace(" ", "")
+    if not texto:
+        return None
+
+    normalizado = texto.replace(",", ".")
+    if normalizado.count(".") > 1:
+        return None
+
+    try:
+        return math.floor(float(normalizado))
+    except (ValueError, OverflowError):
+        return None
 
 
 def _normalizar_encabezado(valor: object) -> str:

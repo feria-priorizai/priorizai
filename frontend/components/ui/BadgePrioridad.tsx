@@ -7,8 +7,6 @@ import type { NivelPrioridad } from "@/types";
 
 interface BadgePrioridadProps {
   prioridad: NivelPrioridad;
-  /** 'sm' para tablas, 'lg' para el detalle */
-  tamano?: "sm" | "lg";
 }
 
 const etiquetasPrioridad: Record<NivelPrioridad, string> = {
@@ -17,14 +15,9 @@ const etiquetasPrioridad: Record<NivelPrioridad, string> = {
   baja: "Baja",
 };
 
-export default function BadgePrioridad({
-  prioridad,
-  tamano = "sm",
-}: BadgePrioridadProps) {
+export default function BadgePrioridad({ prioridad }: BadgePrioridadProps) {
   return (
-    <span
-      className={`pz-chip pz-chip--${prioridad} ${tamano === "lg" ? "pz-chip--lg" : ""}`}
-    >
+    <span className={`pz-chip pz-chip--${prioridad}`}>
       {etiquetasPrioridad[prioridad]}
     </span>
   );

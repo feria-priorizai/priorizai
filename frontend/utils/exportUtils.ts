@@ -1,8 +1,8 @@
 "use client";
 
 import type { Interconsulta } from "@/types";
-import type { ConfiguracionCampos, DefinicionCampo } from "@/types/campos";
-import { TODOS_LOS_CAMPOS, getCampoPorClave } from "@/types/campos";
+import type { ConfiguracionCampos } from "@/types/campos";
+import { getCampoPorClave } from "@/types/campos";
 
 /**
  * Utilidades de exportación dinámicas basadas en configuración.

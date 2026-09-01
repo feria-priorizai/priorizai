@@ -93,24 +93,14 @@ export default function DetalleInterconsulta({
 function Dato({
   etiqueta,
   children,
-  destacado = false,
 }: {
   etiqueta: string;
   children: ReactNode;
-  destacado?: boolean;
 }) {
   return (
     <div className="mb-3.5 last:mb-0">
       <span className="pz-label">{etiqueta}</span>
-      <p
-        className={`mt-1 text-[.9rem] ${
-          destacado
-            ? "font-semibold text-[var(--pz-ink)]"
-            : "text-[var(--pz-ink-2)]"
-        }`}
-      >
-        {children}
-      </p>
+      <p className="mt-1 text-[.9rem] text-[var(--pz-ink-2)]">{children}</p>
     </div>
   );
 }

@@ -1,8 +1,7 @@
 "use client";
 
 import { useConfiguracion } from "@/context/ConfiguracionContext";
-import type { ConfiguracionCampos, PerfilConfiguracion, DefinicionCampo, GrupoCampo } from "@/types/campos";
-import { DEFAULT_CONFIG, TODOS_LOS_CAMPOS, mergeConfigPerfil } from "@/types/campos";
+import { DEFAULT_CONFIG, mergeConfigPerfil } from "@/types/campos";
 
 /**
  * Hook para acceder a la configuración de campos de import/export
@@ -19,7 +18,6 @@ export function useConfiguracionCampos() {
   return {
     // Estado
     config: configEfectiva,
-    configGlobal: config,
     usuario,
     puedeEditar,
     perfilActual,
@@ -30,10 +28,6 @@ export function useConfiguracionCampos() {
     restablecerDefaults,
     setPerfil,
     setUsuario,
-
-    // Utilidades de consulta
-    esCampoObligatorioImport: (clave: string) => configEfectiva.camposObligatoriosImport.includes(clave),
-    esCampoExportable: (clave: string) => configEfectiva.camposExport.includes(clave),
   };
 }
 
@@ -93,26 +87,5 @@ export function useConfiguracionExport() {
     setUsuario,
     usuario,
     ...resto,
-  };
-}
-
-/**
- * Hook para obtener campos agrupados por grupo (para UI)
- */
-export function useCamposAgrupados() {
-  const { esCampoObligatorioImport, esCampoExportable, puedeEditar } = useConfiguracionCampos();
-
-  const grupos: Record<GrupoCampo, DefinicionCampo[]> = {
-    paciente: TODOS_LOS_CAMPOS.filter(c => c.grupo === "paciente"),
-    clinico: TODOS_LOS_CAMPOS.filter(c => c.grupo === "clinico"),
-    priorizacion: TODOS_LOS_CAMPOS.filter(c => c.grupo === "priorizacion"),
-    metadatos: TODOS_LOS_CAMPOS.filter(c => c.grupo === "metadatos"),
-  };
-
-  return {
-    grupos,
-    esCampoObligatorioImport,
-    esCampoExportable,
-    puedeEditar,
   };
 }

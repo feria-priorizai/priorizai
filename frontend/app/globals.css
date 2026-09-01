@@ -85,10 +85,6 @@
   --estado-revisada: var(--pz-green-ink);
   --estado-revisada-bg: var(--pz-baja-bg);
 
-  --confianza-alta: var(--pz-green-ink);
-  --confianza-media: var(--pz-media);
-  --confianza-baja: var(--pz-alta);
-
   --sidebar-bg: var(--pz-night);
   --sidebar-text: rgba(226,236,248,.60);
   --sidebar-text-active: #ffffff;
@@ -306,7 +302,6 @@ h1, h2, h3, h4, h5 {
   vertical-align: middle;
   white-space: nowrap;
 }
-.pz-chip--lg { font-size: .68rem; padding: .3rem .6rem; }
 .pz-chip--alta  { background: var(--pz-alta-bg);  color: var(--pz-alta); }
 .pz-chip--media { background: var(--pz-media-bg); color: var(--pz-media); }
 .pz-chip--baja  { background: var(--pz-baja-bg);  color: var(--pz-green-ink); }
@@ -492,11 +487,6 @@ h1, h2, h3, h4, h5 {
 }
 .pz-table > tbody tr { transition: background-color .15s ease; }
 .pz-table > tbody tr:hover { background: var(--pz-paper-2); }
-.pz-table > tbody tr.pz-fila { cursor: pointer; }
-/* El folio sigue siendo el objetivo de teclado; se subraya al pasar por la fila
-   para que se vea que toda la fila lleva al mismo sitio. */
-.pz-table > tbody tr.pz-fila:hover a { text-decoration: underline; }
-.pz-table__dx { color: var(--pz-ink); font-weight: 600; letter-spacing: -.01em; }
 .pz-mono-cell { font-family: var(--pz-mono); font-size: .74rem; color: var(--pz-ink-3); letter-spacing: .04em; }
 
 /* ---------- Sidebar ---------- */

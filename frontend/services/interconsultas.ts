@@ -89,14 +89,16 @@ export interface ListadoInterconsultas {
  * justo el final de la cola (las de menor prioridad y las mas nuevas), que es
  * el orden que define el backend.
  */
-export async function obtenerInterconsultas(): Promise<ListadoInterconsultas> {
+export async function obtenerInterconsultas(
+  signal?: AbortSignal,
+): Promise<ListadoInterconsultas> {
   const acumuladas: Interconsulta[] = [];
   let total = 0;
 
   for (let offset = 0; offset < MAXIMO_EN_MEMORIA; offset += TAMANO_PAGINA) {
     const respuesta = await fetch(
       `${API_BASE}/api/interconsultas?limit=${TAMANO_PAGINA}&offset=${offset}`,
-      { cache: "no-store" }
+      { cache: "no-store", signal }
     );
     if (!respuesta.ok) {
       throw new Error("Error al cargar las interconsultas");
@@ -231,7 +233,9 @@ export async function modificarPrioridad(
 
   if (!respuesta.ok) {
     const error = await respuesta.json().catch(() => null);
-    throw new Error(error?.detail || "No se pudo modificar la prioridad");
+    throw new Error(
+      obtenerMensajeError(error?.detail, "No se pudo modificar la prioridad")
+    );
   }
 
   return mapearInterconsulta((await respuesta.json()) as InterconsultaApi);
@@ -252,14 +256,17 @@ export async function modificarEstadoInterconsulta(
 
   if (!respuesta.ok) {
     const error = await respuesta.json().catch(() => null);
-    throw new Error(error?.detail || "No se pudo actualizar el estado");
+    throw new Error(
+      obtenerMensajeError(error?.detail, "No se pudo actualizar el estado")
+    );
   }
 
   return mapearInterconsulta((await respuesta.json()) as InterconsultaApi);
 }
 
 export async function subirCsvInterconsultas(
-  archivo: File
+  archivo: File,
+  camposObligatorios?: string[],
 ): Promise<{
   inserted: number;
   stored: number;
@@ -272,6 +279,11 @@ export async function subirCsvInterconsultas(
 }> {
   const formData = new FormData();
   formData.append("file", archivo);
+  // Sin esto el backend valida contra sus propias listas fijas y la
+  // pestaña de configuración de import no tenía ningún efecto.
+  if (camposObligatorios) {
+    formData.append("campos_obligatorios", camposObligatorios.join(","));
+  }
 
   const respuesta = await fetch(`${API_BASE}/upload-csv`, {
     method: "POST",
@@ -280,7 +292,9 @@ export async function subirCsvInterconsultas(
 
   if (!respuesta.ok) {
     const error = await respuesta.json().catch(() => null);
-    throw new Error(error?.detail || "Error al enviar el archivo al backend");
+    throw new Error(
+      obtenerMensajeError(error?.detail, "Error al enviar el archivo al backend")
+    );
   }
 
   return respuesta.json();

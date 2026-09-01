@@ -9,6 +9,8 @@ from typing import Any
 import app.main as main_module
 from app.models.interconsulta import Interconsulta
 from app.services.ner import (
+    ConfiguracionNER,
+    ExtractorEntidades,
     agrupar_por_clase,
     resolver_solapamientos,
     segmentar,
@@ -177,3 +179,99 @@ def test_extraer_entidades_sin_interconsultas_no_carga_el_modelo(monkeypatch) ->
     monkeypatch.setattr(main_module, "get_extractor_ner", explotar)
 
     assert main_module._extraer_entidades([]) == 0
+
+
+# --------------------------------------------------------------------------
+# extraer: filtros de clase, umbral y bordes
+# --------------------------------------------------------------------------
+
+
+def _extractor_con(predicciones: list[dict[str, Any]]) -> ExtractorEntidades:
+    """Extractor con el pipeline ya resuelto: no carga el modelo."""
+    extractor = ExtractorEntidades(
+        ConfiguracionNER(
+            path="/models",
+            clases=("Disease", "Medication"),
+            umbral=0.5,
+            max_length=256,
+        )
+    )
+    extractor._pipeline = lambda _fragmento: predicciones
+    return extractor
+
+
+def test_extraer_descarta_las_clases_que_no_interesan() -> None:
+    texto = "control por hipertension"
+    extractor = _extractor_con(
+        [
+            {
+                "entity_group": "Symptom",
+                "score": 0.99,
+                "start": 10,
+                "end": 22,
+            }
+        ]
+    )
+
+    assert extractor.extraer(texto) == []
+
+
+def test_extraer_descarta_lo_que_no_llega_al_umbral() -> None:
+    texto = "control por hipertension"
+    extractor = _extractor_con(
+        [
+            {
+                "entity_group": "Disease",
+                "score": 0.30,
+                "start": 12,
+                "end": 24,
+            }
+        ]
+    )
+
+    assert extractor.extraer(texto) == []
+
+
+def test_extraer_descarta_un_span_que_queda_vacio_al_recortar() -> None:
+    """El tokenizador a veces arrastra solo puntuacion al borde."""
+    texto = "hipertension , control"
+    extractor = _extractor_con(
+        [
+            {
+                "entity_group": "Disease",
+                "score": 0.99,
+                "start": 12,
+                "end": 14,
+            }
+        ]
+    )
+
+    assert extractor.extraer(texto) == []
+
+
+def test_extraer_recorta_la_puntuacion_de_los_bordes() -> None:
+    texto = "dx: (hipertension)."
+    extractor = _extractor_con(
+        [
+            {
+                "entity_group": "Disease",
+                "score": 0.99,
+                "start": 4,
+                "end": 19,
+            }
+        ]
+    )
+
+    entidades = extractor.extraer(texto)
+
+    assert len(entidades) == 1
+    assert entidades[0]["texto"] == "hipertension"
+    assert texto[entidades[0]["inicio"] : entidades[0]["fin"]] == "hipertension"
+    assert entidades[0]["clase"] == "Enfermedad"
+    assert entidades[0]["clase_original"] == "Disease"
+
+
+def test_extraer_no_llama_al_modelo_con_texto_vacio() -> None:
+    extractor = _extractor_con([])
+
+    assert extractor.extraer("   ") == []

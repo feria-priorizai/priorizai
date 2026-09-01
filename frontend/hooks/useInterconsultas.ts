@@ -61,10 +61,20 @@ const filtrosIniciales: FiltrosInterconsulta = {
   busqueda: "",
 };
 
-/** Avisa al resto de la app (listado, dashboard) que hay datos frescos. */
-function notificarActualizacion(): void {
+/**
+ * Avisa al resto de la app (listado, dashboard) que hay datos frescos.
+ *
+ * Con `actualizada` el listado reemplaza solo esa fila. Sin ella recarga
+ * todo, que hoy son tantas peticiones como páginas tenga la lista: eso se
+ * reserva para las cargas de archivo, donde sí cambió el conjunto entero.
+ */
+function notificarActualizacion(actualizada?: Interconsulta): void {
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(EVENTO_INTERCONSULTAS_ACTUALIZADAS));
+    window.dispatchEvent(
+      new CustomEvent(EVENTO_INTERCONSULTAS_ACTUALIZADAS, {
+        detail: actualizada ?? null,
+      }),
+    );
   }
 }
 
@@ -102,8 +112,9 @@ export function useInterconsultas(): UseInterconsultasReturn {
 
   useEffect(() => {
     let activo = true;
+    const control = new AbortController();
 
-    void obtenerInterconsultas()
+    void obtenerInterconsultas(control.signal)
       .then((listado) => {
         if (activo) {
           setEstado({
@@ -129,11 +140,23 @@ export function useInterconsultas(): UseInterconsultasReturn {
 
     return () => {
       activo = false;
+      control.abort();
     };
   }, []);
 
   useEffect(() => {
-    const manejarActualizacion = () => {
+    const manejarActualizacion = (evento: Event) => {
+      const actualizada = (evento as CustomEvent<Interconsulta | null>)
+        .detail;
+      if (actualizada) {
+        setEstado((prev) => ({
+          ...prev,
+          interconsultas: prev.interconsultas.map((ic) =>
+            ic.id === actualizada.id ? actualizada : ic,
+          ),
+        }));
+        return;
+      }
       void recargar();
     };
 
@@ -219,6 +242,7 @@ export function useInterconsultas(): UseInterconsultasReturn {
           ic.id === actualizada.id ? actualizada : ic,
         ),
       }));
+      notificarActualizacion(actualizada);
       return true;
     } catch {
       setEstado((prev) => ({
@@ -312,7 +336,7 @@ export function useInterconsultaDetalle(id: string) {
         usuarioActual.nombre,
       );
       setEstado({ id, interconsulta: actualizada, error: null });
-      notificarActualizacion();
+      notificarActualizacion(actualizada);
       return true;
     } catch {
       setEstado((prev) => ({
@@ -327,7 +351,7 @@ export function useInterconsultaDetalle(id: string) {
     try {
       const actualizada = await priorizarInterconsulta(id);
       setEstado({ id, interconsulta: actualizada, error: null });
-      notificarActualizacion();
+      notificarActualizacion(actualizada);
       return true;
     } catch (error) {
       setEstado((prev) => ({
@@ -347,7 +371,7 @@ export function useInterconsultaDetalle(id: string) {
     try {
       const actualizada = await modificarEstadoInterconsulta(id, nuevoEstado);
       setEstado({ id, interconsulta: actualizada, error: null });
-      notificarActualizacion();
+      notificarActualizacion(actualizada);
       return true;
     } catch {
       setEstado((prev) => ({

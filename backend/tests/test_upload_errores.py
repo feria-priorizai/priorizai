@@ -26,6 +26,36 @@ FILA = (
 )
 
 
+# Una linea en blanco y una fila de solo comas: las dos se saltean al leer.
+BLANCO = "\n"
+VACIA = ",,,,,,,,\n"
+ENCABEZADOS_XLSX = [
+    "ESPEC_ORIGEN",
+    "EDAD",
+    "SEXO",
+    "ESPEC_DESTINO",
+    "PRIORIDAD",
+    "HISTORIA_CLINICA",
+    "FUNDAMENTOS_DIAGNOSTICO",
+    "EXAMENES_COMPLEMENTARIOS",
+    "MOTIVO_INTERCONSULTA",
+]
+FILA_XLSX = [
+    "MEDICINA GENERAL",
+    46,
+    "FEMENINO",
+    "RESPIRATORIO ADULTO",
+    "ALTA",
+    "CANCER PULMONAR",
+    "Paciente estable.",
+    "",
+    "CONTROL DE ESPECIALIDAD",
+]
+
+# Fila con menos columnas que el encabezado.
+CORTA = "MEDICINA GENERAL,46\n"
+
+
 def _subir(client: TestClient, nombre: str, contenido: bytes | str):
     return client.post("/upload-csv", files={"file": (nombre, contenido, "text/csv")})
 
@@ -74,13 +104,21 @@ def test_csv_ilegible_devuelve_400(
     assert "Error al parsear el CSV" in response.json()["detail"]
 
 
-def test_csv_con_columnas_de_mas_en_una_fila_devuelve_400(client: TestClient) -> None:
-    contenido = HEADER + FILA.replace("\n", ",columna extra\n")
+def test_csv_con_columnas_de_mas_rechaza_solo_esa_fila(
+    client: TestClient,
+    ingesta_con_modelo: object,
+) -> None:
+    """Regresion: cualquier fila mal formada devolvia 400 y no entraba
+    ninguna, aunque el resto del archivo estuviera bien."""
+    contenido = HEADER + FILA + FILA.replace("\n", ",columna extra\n")
 
     response = _subir(client, "extra.csv", contenido)
 
-    assert response.status_code == 400
-    assert "Fila CSV 2 invalida" in response.json()["detail"]
+    assert response.status_code == 200
+    body = response.json()
+    assert body["inserted"] == 1
+    assert body["rejected_count"] == 1
+    assert body["rejected"][0]["fila"] == 3
 
 
 def test_csv_saltea_las_filas_completamente_vacias(
@@ -245,18 +283,19 @@ def test_edad_no_numerica_rechaza_la_fila(
     assert body["rejected"][0]["campos_faltantes"] == ["EDAD (formato inválido)"]
 
 
-def test_edad_con_espacios_intercalados_se_acepta(
+def test_edad_con_espacios_intercalados_se_rechaza(
     client: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
-    # Los espacios se limpian; el separador decimal NO (ver B1).
+    """ "4 6" se leia como 46. Es mas probable que sea un error de tipeo."""
     contenido = HEADER + FILA.replace(",46,", ',"4 6",')
 
     response = _subir(client, "edad_espacios.csv", contenido)
 
     assert response.status_code == 200
-    assert response.json()["inserted"] == 1
-    assert response.json()["rejected_count"] == 0
+    body = response.json()
+    assert body["inserted"] == 0
+    assert body["rejected"][0]["campos_faltantes"] == ["EDAD (formato inválido)"]
 
 
 def test_fila_sin_campo_obligatorio_se_rechaza_con_el_detalle(
@@ -447,3 +486,113 @@ def test_edad_cero_se_acepta(
 
     listado = client.get("/api/interconsultas").json()
     assert [interconsulta["edad"] for interconsulta in listado] == [0]
+
+
+def test_la_fila_rechazada_conserva_su_numero_de_linea_real(
+    client: TestClient,
+    ingesta_con_modelo: object,
+) -> None:
+    """Las filas en blanco se saltean al leer: numerarlas despues corria el
+    indice y el modal de errores senalaba una fila distinta a la del archivo."""
+    contenido = HEADER + FILA + BLANCO + VACIA + FILA.replace(",46,", ",,")
+
+    response = _subir(client, "con_blancos.csv", contenido)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["inserted"] == 1
+    assert body["rejected_count"] == 1
+    # linea 1 encabezado, 2 valida, 3 y 4 en blanco, 5 la incompleta
+    assert body["rejected"][0]["fila"] == 5
+
+
+def test_una_fila_con_menos_columnas_se_rechaza_sola(
+    client: TestClient,
+    ingesta_con_modelo: object,
+) -> None:
+    contenido = HEADER + FILA + CORTA
+
+    response = _subir(client, "corta.csv", contenido)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["inserted"] == 1
+    assert body["rejected_count"] == 1
+    assert "llegaron 2" in body["rejected"][0]["campos_faltantes"][0]
+
+
+class HojaIrregular:
+    """Filas de distinto largo.
+
+    openpyxl rellena todas las filas hasta la columna mas larga, asi que un
+    archivo escrito con la propia libreria nunca llega con celdas de mas: la
+    rama existe para libros generados por otras herramientas.
+    """
+
+    def __init__(self, filas: list[tuple[object, ...]]) -> None:
+        self._filas = filas
+
+    def iter_rows(self, values_only: bool = False) -> object:
+        return iter(self._filas)
+
+
+class LibroIrregular:
+    def __init__(self, filas: list[tuple[object, ...]]) -> None:
+        self.active = HojaIrregular(filas)
+
+
+def test_xlsx_con_celdas_de_mas_rechaza_solo_esa_fila(
+    client: TestClient,
+    ingesta_con_modelo: object,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Una fila con datos fuera del encabezado no tumba el archivo entero."""
+    filas = [
+        tuple(ENCABEZADOS_XLSX),
+        tuple(FILA_XLSX),
+        (*FILA_XLSX, "sobra"),
+    ]
+    monkeypatch.setattr(
+        main_module, "load_workbook", lambda *_, **__: LibroIrregular(filas)
+    )
+
+    response = client.post(
+        "/upload-csv",
+        files={
+            "file": (
+                "extra.xlsx",
+                b"no importa: load_workbook esta sustituido",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["inserted"] == 1
+    assert body["rejected_count"] == 1
+    assert body["rejected"][0]["fila"] == 3
+    assert body["rejected"][0]["campos_faltantes"] == [
+        "Contiene columnas extra con datos"
+    ]
+
+
+def test_si_el_modelo_ner_no_carga_la_carga_igual_termina(
+    client: TestClient,
+    ingesta_con_modelo: object,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """El NER es accesorio: que no cargue no puede impedir guardar el archivo."""
+
+    def explota() -> object:
+        raise OSError("modelo NER no disponible")
+
+    monkeypatch.setattr(main_module, "get_extractor_ner", explota)
+
+    response = _subir(client, "sin_ner.csv", HEADER + FILA)
+
+    assert response.status_code == 200
+    assert response.json()["inserted"] == 1
+
+    listado = client.get("/api/interconsultas").json()
+    assert "modelo NER" in listado[0]["entidades_error"]

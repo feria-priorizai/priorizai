@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import type { Interconsulta, NivelPrioridad } from "@/types";
 import FormularioModificarPrioridad from "./FormularioModificarPrioridad";
@@ -45,6 +46,7 @@ export default function PanelDecision({
   onModificarPrioridad,
   onPriorizarConIA,
 }: PanelDecisionProps) {
+  const [priorizando, setPriorizando] = useState(false);
   const esValida = ic.esValidaParaPriorizacion ?? true;
   const tienePrioridad = !ic.sinPrioridad;
   const priorizadaPorIA = ic.priorizacionIA.priorizada ?? true;
@@ -89,13 +91,23 @@ export default function PanelDecision({
                 La prioridad solo puede corregirse una vez que el sistema la haya
                 asignado.
               </p>
+              {/* La inferencia tarda: sin bloquear el botón, el segundo
+                  clic dispara una segunda ejecución del modelo. */}
               <button
                 type="button"
-                onClick={onPriorizarConIA}
-                disabled={priorizadaPorIA}
+                onClick={async () => {
+                  if (priorizando) return;
+                  setPriorizando(true);
+                  try {
+                    await onPriorizarConIA();
+                  } finally {
+                    setPriorizando(false);
+                  }
+                }}
+                disabled={priorizadaPorIA || priorizando}
                 className="pz-btn pz-btn--solid pz-btn--block"
               >
-                Priorizar con IA
+                {priorizando ? "Priorizando…" : "Priorizar con IA"}
               </button>
             </div>
           )}

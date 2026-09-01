@@ -22,7 +22,7 @@ show_error_codes = true
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 pythonpath = ["."]
-addopts = "-ra --cov=app --cov-report=term-missing --cov-fail-under=82"
+addopts = "-ra --cov=app --cov-report=term-missing --cov-fail-under=95"
 
 [tool.coverage.run]
 source = ["app"]

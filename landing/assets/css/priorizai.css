@@ -695,7 +695,8 @@ a { text-underline-offset: .22em; }
   font-size: .93rem;
   flex: 1;
 }
-.pz-adv:hover .pz-adv__claim { background: var(--pz-green-ink); }
+.pz-adv__claim:hover  { background: var(--pz-green-ink); }
+.pz-adv__conseq:hover { background: var(--pz-purple-ink); }
 .pz-adv__claim, .pz-adv__conseq { transition: background-color .25s ease; }
 
 /* ---------- 14. Acordeón ---------- */

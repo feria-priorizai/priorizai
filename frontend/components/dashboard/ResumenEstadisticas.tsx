@@ -21,47 +21,42 @@ export default function ResumenEstadisticas({
   const banderasRojas = interconsultas.filter((ic) => ic.banderaRoja).length;
 
   return (
-    <section className="pz-rail">
-      <div className="row g-0">
-        <div className="col-6 col-lg">
-          <TarjetaEstadistica
-            titulo="Total"
-            valor={total}
-            icono={<IconoClipboard />}
-          />
-        </div>
-        <div className="col-6 col-lg">
-          <TarjetaEstadistica
-            titulo="Pendientes"
-            valor={pendientes}
-            icono={<IconoReloj />}
-          />
-        </div>
-        <div className="col-6 col-lg">
-          <TarjetaEstadistica
-            titulo="Revisadas"
-            valor={revisadas}
-            icono={<IconoCheck />}
-            colorAccento="var(--pz-green-ink)"
-          />
-        </div>
-        <div className="col-6 col-lg">
-          <TarjetaEstadistica
-            titulo="Prioridad alta"
-            valor={prioridadAlta}
-            icono={<IconoAlerta />}
-            colorAccento="var(--pz-alta)"
-          />
-        </div>
-        <div className="col-6 col-lg">
-          <TarjetaEstadistica
-            titulo="Banderas rojas"
-            valor={banderasRojas}
-            icono={<IconoBandera />}
-            colorAccento="var(--pz-alta)"
-          />
-        </div>
-      </div>
+    <section className="pz-rail" aria-label="Resumen de la lista de espera">
+      <TarjetaEstadistica
+        titulo="Total"
+        valor={total}
+        icono={<IconoClipboard />}
+        acento="var(--pz-blue-deep)"
+        acentoFondo="var(--primary-light)"
+      />
+      <TarjetaEstadistica
+        titulo="Pendientes"
+        valor={pendientes}
+        icono={<IconoReloj />}
+        acento="var(--pz-media)"
+        acentoFondo="var(--pz-media-bg)"
+      />
+      <TarjetaEstadistica
+        titulo="Revisadas"
+        valor={revisadas}
+        icono={<IconoCheck />}
+        acento="var(--pz-green-ink)"
+        acentoFondo="var(--pz-baja-bg)"
+      />
+      <TarjetaEstadistica
+        titulo="Prioridad alta"
+        valor={prioridadAlta}
+        icono={<IconoAlerta />}
+        acento="var(--pz-alta)"
+        acentoFondo="var(--pz-alta-bg)"
+      />
+      <TarjetaEstadistica
+        titulo="Banderas rojas"
+        valor={banderasRojas}
+        icono={<IconoBandera />}
+        acento="var(--pz-purple-ink)"
+        acentoFondo="#EAE2FB"
+      />
     </section>
   );
 }
@@ -74,9 +69,9 @@ function IconoBase({ children }: { children: ReactNode }) {
       className="h-5 w-5"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="square"
-      strokeLinejoin="miter"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
       {children}
     </svg>
@@ -86,7 +81,7 @@ function IconoBase({ children }: { children: ReactNode }) {
 function IconoClipboard() {
   return (
     <IconoBase>
-      <rect x="8" y="2" width="8" height="4" />
+      <rect x="8" y="2" width="8" height="4" rx="1" />
       <path d="M9 4H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2" />
       <path d="M9 12h6" />
       <path d="M9 16h4" />

@@ -4,7 +4,6 @@ import type {
   Interconsulta,
   NivelPrioridad,
 } from "@/types/interconsulta";
-import type { ResumenClinicoPaciente } from "@/types/paciente";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ??
@@ -165,27 +164,6 @@ export async function priorizarInterconsulta(id: string): Promise<Interconsulta>
   return actualizada;
 }
 
-/** Construye un resumen clinico con los campos reales disponibles de la IC. */
-export async function obtenerResumenClinico(
-  pacienteId: string
-): Promise<ResumenClinicoPaciente | null> {
-  const interconsulta = await obtenerInterconsultaApiPorId(pacienteId);
-  if (!interconsulta) {
-    return null;
-  }
-
-  return {
-    pacienteId: interconsulta.id,
-    informacionSuficiente: tieneInformacionClinica(interconsulta),
-    camposInterconsulta: {
-      historiaClinica: interconsulta.historia_clinica,
-      fundamentosDiagnostico: interconsulta.fundamentos_diagnostico,
-      examenesComplementarios: interconsulta.examenes_complementarios ?? "",
-      motivoInterconsulta: interconsulta.motivo_interconsulta,
-    },
-  };
-}
-
 /** RF7: vuelve a evaluar el catalogo de banderas rojas sobre todas las IC. */
 export async function reevaluarBanderasRojas(): Promise<{
   total_evaluadas: number;
@@ -284,19 +262,6 @@ export async function subirCsvInterconsultas(
   }
 
   return respuesta.json();
-}
-
-async function obtenerInterconsultaApiPorId(
-  id: string
-): Promise<InterconsultaApi | null> {
-  const respuesta = await fetch(`${API_BASE}/api/interconsultas/${id}`, {
-    cache: "no-store",
-  });
-  if (respuesta.status === 404) return null;
-  if (!respuesta.ok) {
-    throw new Error("Error al cargar la interconsulta");
-  }
-  return (await respuesta.json()) as InterconsultaApi;
 }
 
 function mapearInterconsulta(api: InterconsultaApi): Interconsulta {

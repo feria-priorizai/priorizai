@@ -1,4 +1,5 @@
 import type {
+  EntidadesPorCampo,
   EstadoInterconsulta,
   Interconsulta,
   NivelPrioridad,
@@ -44,6 +45,8 @@ interface InterconsultaApi {
   prioridad_forzada_por_regla: boolean;
   created_at: string;
   updated_at: string;
+  entidades?: EntidadesPorCampo | null;
+  entidades_error?: string | null;
   modificaciones?: ModificacionPrioridadApi[];
 }
 
@@ -354,6 +357,8 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
     fundamentosDiagnostico: api.fundamentos_diagnostico,
     examenesComplementarios: api.examenes_complementarios,
     prioridadOriginalCsv: api.prioridad_original_csv,
+    entidades: api.entidades ?? null,
+    entidadesError: api.entidades_error ?? null,
   };
 }
 

@@ -1,19 +1,17 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
-import Link from "next/link";
-import type { Interconsulta, NivelPrioridad } from "@/types";
+import { use, useEffect, useState } from "react";
+import type { NivelPrioridad } from "@/types";
 import { useInterconsultaDetalle } from "@/hooks/useInterconsultas";
-import { usuarioActual } from "@/data/mock";
+import { usuarioActual } from "@/data/sesion";
+import PanelDecision from "@/components/interconsultas/PanelDecision";
 import DetalleInterconsulta from "@/components/interconsultas/DetalleInterconsulta";
-import TarjetaPriorizacionIA from "@/components/interconsultas/TarjetaPriorizacionIA";
-import BotonPriorizarIA from "@/components/interconsultas/BotonPriorizarIA";
-import FormularioModificarPrioridad from "@/components/interconsultas/FormularioModificarPrioridad";
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
 import TablaEntidades from "@/components/interconsultas/TablaEntidades";
 import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
 import { exportarInterconsulta } from "@/utils/exportUtils";
+import Link from "next/link";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -21,19 +19,10 @@ interface PageProps {
 
 type FormatoExportacion = "json" | "csv" | "xlsx";
 
-interface OpcionExportacion {
-  valor: FormatoExportacion;
-  etiqueta: string;
-  extension: string;
-  mimeType: string;
-}
-
-const FORMATOS_EXPORTACION: OpcionExportacion[] = [
-  { valor: "json", etiqueta: "JSON", extension: ".json", mimeType: "application/json" },
-  { valor: "csv", etiqueta: "CSV", extension: ".csv", mimeType: "text/csv" },
-  { valor: "xlsx", etiqueta: "Excel (XLSX)", extension: ".xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
-];
-
+/**
+ * Detalle de interconsulta: a la izquierda la decisión clínica, fija; a la
+ * derecha el sustento que la respalda, con scroll propio.
+ */
 export default function InterconsultaDetallePage({ params }: PageProps) {
   const { id } = use(params);
   const {
@@ -44,51 +33,35 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
     cambiarEstado,
     priorizarConIA,
   } = useInterconsultaDetalle(id);
-  const { config, usuario, setUsuario } = useConfiguracionExport();
+  const { config, setUsuario } = useConfiguracionExport();
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
-  const [formatoSeleccionado, setFormatoSeleccionado] = useState<FormatoExportacion>("json");
+  const [formato, setFormato] = useState<FormatoExportacion>("json");
 
-  // Inicializar usuario en el context de configuración
   useEffect(() => {
     setUsuario({
-      id: "1",
+      id: usuarioActual.id,
       nombre: usuarioActual.nombre,
-      rol: "medico", // Default a médico, admin se configuraría desde auth real
+      rol: "medico",
     });
   }, [setUsuario]);
 
   if (cargando) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-[var(--text-secondary)]">
-          Cargando interconsulta...
-        </p>
-      </div>
-    );
+    return <EstadoVista tipo="cargando" texto="Cargando interconsulta…" />;
   }
 
   if (error || !interconsulta) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
-        <p className="text-[var(--prioridad-alta)]">
-          {error ?? "Interconsulta no encontrada"}
-        </p>
-        <Link
-          href="/interconsultas"
-          className="text-sm text-[var(--primary)] hover:underline"
-        >
+        <EstadoVista
+          tipo="error"
+          texto={error ?? "Interconsulta no encontrada"}
+        />
+        <Link href="/interconsultas" className="pz-btn pz-btn--ghost">
           Volver al listado
         </Link>
       </div>
     );
   }
-
-  const esValida = interconsulta.esValidaParaPriorizacion ?? true;
-  const estaPriorizada = interconsulta.priorizacionIA.priorizada ?? true;
-  const fueModificada =
-    esValida &&
-    interconsulta.prioridadActual !==
-      interconsulta.priorizacionIA.nivelSugerido;
 
   const marcarComoRevisada = async () => {
     setActualizandoEstado(true);
@@ -109,22 +82,26 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
     return exito;
   };
 
-  const manejarExport = () => {
-    if (!interconsulta) return;
-    exportarInterconsulta(interconsulta, formatoSeleccionado, config);
-  };
-
   return (
-    <div className="flex flex-col gap-6">
-      <Link
-        href="/interconsultas"
-        className="inline-flex items-center gap-1 text-sm text-[var(--primary)] hover:underline"
-      >
-        {"<-"} Volver al listado
-      </Link>
+    <div className="row g-4">
+      <div className="col-12 col-lg-5 col-xl-4">
+        <PanelDecision
+          interconsulta={interconsulta}
+          medicoResponsable={usuarioActual.nombre}
+          actualizandoEstado={actualizandoEstado}
+          formato={formato}
+          onCambiarFormato={setFormato}
+          onExportar={() =>
+            exportarInterconsulta(interconsulta, formato, config)
+          }
+          onMarcarRevisada={marcarComoRevisada}
+          onModificarPrioridad={modificarPrioridad}
+          onPriorizarConIA={priorizarConIA}
+        />
+      </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-6 lg:col-span-2">
+      <div className="col-12 col-lg-7 col-xl-8">
+        <div className="flex flex-col gap-4">
           <DetalleInterconsulta interconsulta={interconsulta} />
           <ResumenClinico
             pacienteId={interconsulta.pacienteId}

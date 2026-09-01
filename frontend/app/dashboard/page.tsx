@@ -1,42 +1,34 @@
 "use client";
 
 /**
- * Página principal del Dashboard (HdU05).
- * Muestra un resumen de las interconsultas y una tabla con las más recientes.
- * Permite al médico visualizar su carga de trabajo en un solo lugar.
+ * Panel principal (HdU05): riel de cifras y lista de espera ordenada por el
+ * backend según prioridad y fecha de emisión.
  */
 
 import { useInterconsultas } from "@/hooks/useInterconsultas";
 import ResumenEstadisticas from "@/components/dashboard/ResumenEstadisticas";
-import TablaInterconsultasRecientes from "@/components/dashboard/TablaInterconsultasRecientes";
+import ColaInterconsultas from "@/components/interconsultas/ColaInterconsultas";
+import EstadoVista from "@/components/ui/EstadoVista";
 
 export default function DashboardPage() {
   const { interconsultas, cargando, error } = useInterconsultas();
 
   if (cargando) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-[var(--text-secondary)]">Cargando interconsultas...</p>
-      </div>
-    );
+    return <EstadoVista tipo="cargando" texto="Cargando interconsultas…" />;
   }
 
   if (error) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-[var(--prioridad-alta)]">{error}</p>
-      </div>
-    );
+    return <EstadoVista tipo="error" texto={error} />;
   }
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Tarjetas de resumen estadístico */}
       <ResumenEstadisticas interconsultas={interconsultas} />
-
-      {/* Tabla de interconsultas recientes - sin botón de descarga múltiple */}
-      <TablaInterconsultasRecientes
+      {/* La descarga multiple vive en el listado, no en el panel. */}
+      <ColaInterconsultas
         interconsultas={interconsultas}
+        titulo="Interconsultas recientes"
+        subtitulo="Agrupadas por prioridad"
         mostrarBotonDescargaMultiple={false}
       />
     </div>

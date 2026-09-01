@@ -1,104 +1,814 @@
+/* El reboot de Bootstrap pisaba el preflight de Tailwind (subrayado en los <a>,
+   padding-left en los <ul>) porque el CSS sin capa siempre le gana al CSS en
+   capas, sin importar el orden. Declarar "bootstrap" antes que las capas de
+   Tailwind invierte esa precedencia. Las reglas .pz-* siguen sin capa, asi que
+   mandan sobre ambas. */
+@layer bootstrap;
+@import "bootstrap/dist/css/bootstrap.min.css" layer(bootstrap);
 @import "tailwindcss";
 
-/*
- * Sistema de diseño PriorizAI
- * Paleta orientada al contexto médico/hospitalario chileno.
- * Variables CSS para mantener consistencia visual en toda la aplicación.
- */
+/* ============================================================
+   Sistema de diseno PriorizAI — aplicacion
+   Comparte el lenguaje visual de la landing ("plano tecnico
+   clinico"): retorica de plano, tinta sobre papel, mono para
+   etiquetas y datos, radios de 2px y sombras duras.
+   Los tokens --pz-* vienen de landing/assets/css/priorizai.css.
+   ============================================================ */
 
 :root {
-  /* Colores base */
-  --background: #f8fafc;
-  --foreground: #1e293b;
+  /* ---------- Marca ---------- */
+  --pz-green:      #09BC8A;
+  --pz-green-ink:  #05815F;
+  --pz-blue:       #4F86C6;
+  --pz-blue-deep:  #003D96;
+  --pz-purple:     #744FC6;
+  --pz-purple-ink: #4C2E92;
+
+  /* ---------- Papel y tinta ---------- */
+  --pz-paper:      #FBFCFE;
+  --pz-paper-2:    #F1F5FB;
+  --pz-ink:        #0A1A2F;
+  --pz-ink-2:      #3C4C63;
+  --pz-ink-3:      #74839A;
+  --pz-line:       #DCE4F0;
+  --pz-line-2:     #C3D2E7;
+
+  /* ---------- Nocturno (sidebar) ---------- */
+  --pz-night:      #061225;
+  --pz-night-2:    #0C2143;
+  --pz-night-line: rgba(126,168,224,.16);
+
+  /* ---------- Triage ---------- */
+  --pz-alta:   #C22B2B;
+  --pz-media:  #A56606;
+  --pz-alta-bg:  rgba(226, 61, 61, .1);
+  --pz-media-bg: rgba(230, 149, 20, .12);
+  --pz-baja-bg:  rgba(9, 188, 138, .13);
+
+  /* ---------- Reticula ---------- */
+  --pz-grid: 28px;
+
+  /* ---------- Tipografia ---------- */
+  --pz-display: var(--font-display), "Helvetica Neue", Arial, sans-serif;
+  --pz-body:    var(--font-body), "Helvetica Neue", Arial, sans-serif;
+  --pz-mono:    var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* ============================================================
+     Remapeo de los tokens historicos de la app sobre la paleta de
+     marca. Los componentes ya leen estas variables via clases
+     arbitrarias de Tailwind (bg-[var(--surface)]), asi que el
+     cambio de piel entra sin reescribir cada archivo.
+     ============================================================ */
+  --background: var(--pz-paper);
+  --foreground: var(--pz-ink);
   --surface: #ffffff;
-  --surface-hover: #f1f5f9;
-  --border: #e2e8f0;
-  --border-light: #f1f5f9;
+  --surface-hover: var(--pz-paper-2);
+  --border: var(--pz-line);
+  --border-light: var(--pz-paper-2);
 
-  /* Colores de marca */
-  --primary: #1d4ed8;
-  --primary-light: #dbeafe;
-  --primary-dark: #1e40af;
+  --primary: var(--pz-blue-deep);
+  --primary-light: #E4EDFB;
+  --primary-dark: var(--pz-purple-ink);
 
-  /* Colores de prioridad clínica */
-  --prioridad-alta: #dc2626;
-  --prioridad-alta-bg: #fef2f2;
-  --prioridad-alta-border: #fecaca;
-  --prioridad-media: #d97706;
-  --prioridad-media-bg: #fffbeb;
-  --prioridad-media-border: #fde68a;
-  --prioridad-baja: #16a34a;
-  --prioridad-baja-bg: #f0fdf4;
-  --prioridad-baja-border: #bbf7d0;
+  --prioridad-alta: var(--pz-alta);
+  --prioridad-alta-bg: var(--pz-alta-bg);
+  --prioridad-alta-border: rgba(194, 43, 43, .35);
+  --prioridad-media: var(--pz-media);
+  --prioridad-media-bg: var(--pz-media-bg);
+  --prioridad-media-border: rgba(165, 102, 6, .35);
+  --prioridad-baja: var(--pz-green-ink);
+  --prioridad-baja-bg: var(--pz-baja-bg);
+  --prioridad-baja-border: rgba(9, 188, 138, .4);
 
-  /* Colores de estado de interconsulta */
-  --estado-pendiente: #6366f1;
-  --estado-pendiente-bg: #eef2ff;
-  --estado-revisada: #0891b2;
-  --estado-revisada-bg: #ecfeff;
-  /* Colores de confianza del modelo IA */
-  --confianza-alta: #16a34a;
-  --confianza-media: #d97706;
-  --confianza-baja: #dc2626;
+  --estado-pendiente: var(--pz-ink-2);
+  --estado-pendiente-bg: var(--pz-paper-2);
+  --estado-revisada: var(--pz-green-ink);
+  --estado-revisada-bg: var(--pz-baja-bg);
 
-  /* Sidebar */
-  --sidebar-bg: #0f172a;
-  --sidebar-text: #94a3b8;
+  --confianza-alta: var(--pz-green-ink);
+  --confianza-media: var(--pz-media);
+  --confianza-baja: var(--pz-alta);
+
+  --sidebar-bg: var(--pz-night);
+  --sidebar-text: rgba(226,236,248,.60);
   --sidebar-text-active: #ffffff;
-  /*--sidebar-hover: #1d4ed8;*/
-  --sidebar-active: #1d4ed8;
+  --sidebar-active: var(--pz-green);
 
-  /* Texto */
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --text-muted: #94a3b8;
+  --text-primary: var(--pz-ink);
+  --text-secondary: var(--pz-ink-2);
+  --text-muted: var(--pz-ink-3);
 
-  /* Tipografía */
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
+  --font-sans: var(--pz-body);
 
-  /* Sombras */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  /* Sombras duras: el plano no difumina, desplaza. */
+  --shadow-sm: 2px 2px 0 rgba(0, 61, 150, .07);
+  --shadow-md: 4px 4px 0 rgba(0, 61, 150, .09);
+  --shadow-lg: 8px 8px 0 rgba(0, 61, 150, .10);
 
-  /* Bordes */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+
+  /* ---------- Overrides de Bootstrap ---------- */
+  --bs-body-font-family: var(--pz-body);
+  --bs-body-color: var(--pz-ink-2);
+  --bs-body-bg: var(--pz-paper);
+  --bs-primary: var(--pz-blue-deep);
+  --bs-primary-rgb: 0, 61, 150;
+  --bs-border-color: var(--pz-line);
+  --bs-border-radius: 2px;
+  --bs-border-radius-sm: 2px;
+  --bs-border-radius-lg: 3px;
+  --bs-link-color: var(--pz-blue-deep);
+  --bs-link-hover-color: var(--pz-purple);
+  --bs-emphasis-color: var(--pz-ink);
+  --bs-heading-color: var(--pz-ink);
+  --bs-focus-ring-color: rgba(9, 188, 138, .35);
 }
 
-/* Registro de variables en Tailwind v4 */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-primary: var(--primary);
   --color-primary-light: var(--primary-light);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+  --font-sans: var(--pz-body);
+  --font-mono: var(--pz-mono);
 }
 
-/* Estilos globales */
+/* ---------- Base ---------- */
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
+  color: var(--pz-ink-2);
+  font-family: var(--pz-body);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar personalizado para el sidebar y tablas */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+h1, h2, h3, h4, h5 {
+  font-family: var(--pz-display);
+  font-variation-settings: "wdth" 92;
+  color: var(--pz-ink);
+  letter-spacing: -.022em;
+  line-height: 1.08;
+  font-weight: 700;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
+
+::selection { background: var(--pz-green); color: #fff; }
+
+:focus-visible {
+  outline: 2px solid var(--pz-green);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ============================================================
+   Elementos de "plano"
+   ============================================================ */
+
+/* Etiqueta mono con regla previa. Encabeza tarjetas y secciones. */
+.pz-eyebrow {
+  font-family: var(--pz-mono);
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--pz-blue-deep);
+  display: inline-flex;
+  align-items: center;
+  gap: .6rem;
+}
+.pz-eyebrow::before {
+  content: "";
+  width: 1.6rem;
+  height: 1px;
+  background: currentColor;
+  opacity: .55;
+  flex: none;
+}
+.pz-eyebrow--green  { color: var(--pz-green-ink); }
+.pz-eyebrow--purple { color: var(--pz-purple-ink); }
+.pz-eyebrow--alta   { color: var(--pz-alta); }
+.pz-eyebrow--muted  { color: var(--pz-ink-3); }
+.pz-eyebrow--light  { color: #7FB8FF; }
+
+/* Marcas de corte. Reservadas para los paneles criticos. */
+.pz-crop { position: relative; }
+.pz-crop::before,
+.pz-crop::after {
+  content: "";
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  pointer-events: none;
+  opacity: .9;
+}
+.pz-crop::before {
+  top: -1px; left: -1px;
+  border-top: 2px solid var(--pz-green);
+  border-left: 2px solid var(--pz-green);
+}
+.pz-crop::after {
+  bottom: -1px; right: -1px;
+  border-bottom: 2px solid var(--pz-purple);
+  border-right: 2px solid var(--pz-purple);
+}
+
+/* Fondo de plano para el area de contenido. */
+.pz-blueprint {
+  background-color: var(--pz-paper);
+  background-image:
+    linear-gradient(var(--pz-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--pz-line) 1px, transparent 1px),
+    linear-gradient(rgba(79,134,198,.13) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,134,198,.13) 1px, transparent 1px);
+  background-size:
+    var(--pz-grid) var(--pz-grid),
+    var(--pz-grid) var(--pz-grid),
+    calc(var(--pz-grid) * 5) calc(var(--pz-grid) * 5),
+    calc(var(--pz-grid) * 5) calc(var(--pz-grid) * 5);
+  background-position: -1px -1px;
+}
+
+/* Panel: la unidad base de contenido. */
+.pz-panel {
+  background: #fff;
+  border: 1px solid var(--pz-line);
+  border-radius: 2px;
+}
+.pz-panel__head {
+  padding: .95rem 1.15rem;
+  border-bottom: 1px solid var(--pz-line);
+}
+.pz-panel__title {
+  font-family: var(--pz-body);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--pz-ink);
+  letter-spacing: -.015em;
+  margin: .45rem 0 0;
+}
+.pz-panel__sub {
+  font-size: .86rem;
+  color: var(--pz-ink-2);
+  margin: .2rem 0 0;
+}
+.pz-panel__body { padding: 1.15rem; }
+
+/* Numeral de dato, en display comprimido. */
+.pz-num {
+  font-family: var(--pz-display);
+  font-variation-settings: "wdth" 86;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -.03em;
+  color: var(--pz-ink);
+  display: block;
+}
+.pz-num--lg { font-size: clamp(1.9rem, 3.6vw, 2.6rem); }
+.pz-num--sm { font-size: 1.35rem; }
+
+.pz-label {
+  font-family: var(--pz-mono);
+  font-size: .64rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--pz-ink-3);
+  display: block;
+}
+
+/* Riel de cifras: divisores verticales, sin cajas. */
+.pz-rail {
+  border-top: 1px solid var(--pz-line-2);
+  border-bottom: 1px solid var(--pz-line-2);
+  background: rgba(255,255,255,.65);
+}
+.pz-rail__item {
+  padding: 1.5rem 1.25rem;
+  border-left: 1px solid var(--pz-line);
+  height: 100%;
+}
+.pz-rail__item:first-child { border-left: 0; }
+@media (max-width: 767.98px) {
+  .pz-rail__item { border-left: 0; border-top: 1px solid var(--pz-line); }
+  .pz-rail__item:first-child { border-top: 0; }
+}
+
+/* Chip de triage. */
+.pz-chip {
+  font-family: var(--pz-mono);
+  font-size: .58rem;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: .2rem .45rem;
+  border-radius: 2px;
+  display: inline-block;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.pz-chip--lg { font-size: .68rem; padding: .3rem .6rem; }
+.pz-chip--alta  { background: var(--pz-alta-bg);  color: var(--pz-alta); }
+.pz-chip--media { background: var(--pz-media-bg); color: var(--pz-media); }
+.pz-chip--baja  { background: var(--pz-baja-bg);  color: var(--pz-green-ink); }
+.pz-chip--neutral { background: var(--pz-paper-2); color: var(--pz-ink-2); }
+.pz-chip--ink   { background: var(--pz-ink); color: #fff; }
+.pz-chip--flag  { background: var(--pz-alta); color: #fff; }
+
+/* Fila con borde de triage a la izquierda. */
+.pz-edge { border-left: 3px solid var(--pz-line-2); }
+.pz-edge--alta  { border-left-color: var(--pz-alta); }
+.pz-edge--media { border-left-color: var(--pz-media); }
+.pz-edge--baja  { border-left-color: var(--pz-green); }
+
+/* Botones: sombra dura, mono en mayusculas. */
+.pz-btn {
+  font-family: var(--pz-mono);
+  font-size: .72rem;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  padding: .7rem 1.1rem;
+  border: 1px solid transparent;
+  transition: transform .18s ease, box-shadow .18s ease,
+              background-color .18s ease, color .18s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  cursor: pointer;
+}
+.pz-btn:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+  box-shadow: none;
+  background: var(--pz-paper-2);
+  color: var(--pz-ink-3);
+  border-color: var(--pz-line-2);
+}
+.pz-btn:disabled:hover { transform: none; box-shadow: none; }
+
+.pz-btn--solid {
+  background: var(--pz-ink);
+  color: #fff;
+  box-shadow: 3px 3px 0 var(--pz-green);
+}
+.pz-btn--solid:hover:not(:disabled) {
+  background: var(--pz-blue-deep);
+  color: #fff;
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--pz-green);
+}
+.pz-btn--ghost {
+  background: #fff;
+  color: var(--pz-ink);
+  border-color: var(--pz-line-2);
+}
+.pz-btn--ghost:hover:not(:disabled) {
+  border-color: var(--pz-ink);
+  transform: translate(-2px, -2px);
+  box-shadow: 3px 3px 0 var(--pz-purple);
+}
+.pz-btn--danger {
+  background: var(--pz-alta);
+  color: #fff;
+  box-shadow: 3px 3px 0 rgba(194,43,43,.28);
+}
+.pz-btn--danger:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 rgba(194,43,43,.28);
+}
+.pz-btn--block { width: 100%; }
+
+/* ---------- Formularios (Bootstrap) ---------- */
+.pz-form .form-control,
+.pz-form .form-select {
+  border-radius: 2px;
+  /* Grosor explicito: el preflight de Tailwind pone border-width:0 en todo y,
+     al estar Bootstrap en una capa inferior, su .form-control ya no lo repone. */
+  border: 1px solid var(--pz-line-2);
+  /* background-color, no la abreviada: "background" borraria el background-image
+     con el que Bootstrap dibuja la flecha de los .form-select. */
+  background-color: #fff;
+  padding: .62rem .8rem;
+  font-size: .93rem;
+  color: var(--pz-ink);
+}
+.pz-form .form-control:focus,
+.pz-form .form-select:focus {
+  border-color: var(--pz-green);
+  box-shadow: 0 0 0 3px rgba(9,188,138,.16);
+}
+.pz-form .form-control[aria-invalid="true"] { border-color: var(--pz-alta); }
+.pz-form .form-label {
+  font-family: var(--pz-mono);
+  font-size: .64rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--pz-ink-3);
+  margin-bottom: .35rem;
+}
+
+/* Casillas: Bootstrap quedo en una capa inferior, asi que el grosor del borde
+   y el color de marcado se declaran aqui o el preflight los anula. */
+.form-check-input {
+  border: 1px solid var(--pz-line-2);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.form-check-input:checked {
+  background-color: var(--pz-green);
+  border-color: var(--pz-green);
+}
+.form-check-input:focus {
+  border-color: var(--pz-green);
+  box-shadow: 0 0 0 3px rgba(9, 188, 138, .16);
+}
+.form-check-input:disabled { cursor: not-allowed; opacity: .5; }
+
+/* Fila de campo configurable. */
+.pz-campo {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  padding: .6rem .75rem;
+  border: 1px solid var(--pz-line);
+  border-radius: 2px;
+  background: #fff;
+  transition: border-color .18s ease, background-color .18s ease;
+}
+.pz-campo:hover:not(.pz-campo--off) {
+  border-color: var(--pz-line-2);
+  background: var(--pz-paper-2);
+}
+.pz-campo--off { opacity: .55; cursor: not-allowed; }
+
+/* Capa modal. */
+.pz-modal-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(6, 18, 37, .62);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.pz-modal {
+  width: min(720px, 100%);
+  max-height: 80vh;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--pz-line-2);
+  border-radius: 3px;
+  box-shadow: 12px 12px 0 rgba(6, 18, 37, .18);
+}
+
+/* ---------- Tablas (Bootstrap) ---------- */
+.pz-table { --bs-table-bg: transparent; margin-bottom: 0; }
+.pz-table > thead th {
+  font-family: var(--pz-mono);
+  font-size: .62rem;
+  font-weight: 500;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--pz-ink-3);
+  border-bottom: 1px solid var(--pz-line-2);
+  padding: .8rem .9rem;
+  vertical-align: bottom;
   background: transparent;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--text-muted);
-  border-radius: 4px;
+/* Solo la primera columna va en una linea; las que llevan boton necesitan
+   envolver su etiqueta. */
+.pz-table > thead th:first-child { white-space: nowrap; }
+.pz-table > tbody td {
+  border-bottom: 1px solid var(--pz-line);
+  padding: .8rem .9rem;
+  vertical-align: middle;
+  color: var(--pz-ink-2);
+  font-size: .9rem;
+  background: transparent;
+}
+.pz-table > tbody tr { transition: background-color .15s ease; }
+.pz-table > tbody tr:hover { background: var(--pz-paper-2); }
+.pz-table > tbody tr.pz-fila { cursor: pointer; }
+/* El folio sigue siendo el objetivo de teclado; se subraya al pasar por la fila
+   para que se vea que toda la fila lleva al mismo sitio. */
+.pz-table > tbody tr.pz-fila:hover a { text-decoration: underline; }
+.pz-table__dx { color: var(--pz-ink); font-weight: 600; letter-spacing: -.01em; }
+.pz-mono-cell { font-family: var(--pz-mono); font-size: .74rem; color: var(--pz-ink-3); letter-spacing: .04em; }
+
+/* ---------- Sidebar ---------- */
+.pz-sidebar {
+  background: var(--pz-night);
+  position: relative;
+}
+.pz-sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--pz-night-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--pz-night-line) 1px, transparent 1px);
+  background-size: var(--pz-grid) var(--pz-grid);
+  mask-image: radial-gradient(120% 60% at 50% 0%, #000 20%, transparent 80%);
+  -webkit-mask-image: radial-gradient(120% 60% at 50% 0%, #000 20%, transparent 80%);
+  pointer-events: none;
+}
+.pz-sidebar > * { position: relative; z-index: 1; }
+
+.pz-sidebar {
+  width: 16rem;
+  transition: width .24s cubic-bezier(.2,.7,.3,1);
+}
+.pz-sidebar--colapsado { width: 4.5rem; }
+@media (prefers-reduced-motion: reduce) {
+  .pz-sidebar { transition: none; }
 }
 
-/* Animación suave para transiciones de estado */
-.transicion-suave {
-  transition: all 0.2s ease-in-out;
+/* Boton de colapso: cuadrado, mono, sobre el fondo nocturno. */
+.pz-toggle {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(126,168,224,.28);
+  border-radius: 2px;
+  color: rgba(226,236,248,.7);
+  background: transparent;
+  transition: color .2s ease, border-color .2s ease, background-color .2s ease;
+}
+.pz-toggle:hover {
+  color: #fff;
+  border-color: var(--pz-green);
+  background: rgba(9,188,138,.12);
+}
+
+/* Dentro del sidebar la sombra dura se recorta contra el borde, asi que los
+   botones usan relleno y borde en vez de desplazamiento. */
+.pz-btn--nav {
+  background: rgba(255,255,255,.06);
+  color: rgba(226,236,248,.82);
+  border-color: rgba(126,168,224,.28);
+  box-shadow: none;
+  padding: .62rem .75rem;
+}
+.pz-btn--nav:hover:not(:disabled) {
+  background: var(--pz-green);
+  color: #05231B;
+  border-color: var(--pz-green);
+  transform: none;
+  box-shadow: none;
+}
+.pz-btn--nav.pz-btn--icono { padding: .62rem 0; }
+
+.pz-navlink {
+  font-family: var(--pz-mono);
+  font-size: .72rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(226,236,248,.6);
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: .6rem .75rem;
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  transition: color .2s ease, border-color .2s ease, background-color .2s ease;
+}
+.pz-navlink:hover { color: #fff; border-color: rgba(126,168,224,.35); }
+.pz-navlink.is-active {
+  background: var(--pz-green);
+  color: #05231B;
+  border-color: var(--pz-green);
+  font-weight: 600;
+}
+.pz-navlink--icono { justify-content: center; padding-inline: 0; }
+
+/* Etiqueta de grupo dentro del sidebar. */
+.pz-nav-group {
+  font-family: var(--pz-mono);
+  font-size: .58rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(226,236,248,.38);
+  display: block;
+  padding: 0 .75rem .6rem;
+}
+
+/* ---------- Cola de espera agrupada ---------- */
+
+/* Encabezado de grupo: barra del color del triage, etiqueta mono, recuento y
+   una regla que llega hasta el borde. */
+.pz-grupo {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: 1.15rem 1.15rem .6rem;
+}
+.pz-grupo__barra {
+  width: 1.6rem;
+  height: 3px;
+  flex: none;
+  background: var(--pz-line-2);
+}
+.pz-grupo--alta  .pz-grupo__barra { background: var(--pz-alta); }
+.pz-grupo--media .pz-grupo__barra { background: var(--pz-media); }
+.pz-grupo--baja  .pz-grupo__barra { background: var(--pz-green); }
+.pz-grupo__t {
+  font-family: var(--pz-mono);
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--pz-ink);
+  flex: none;
+}
+.pz-grupo--sin .pz-grupo__t { color: var(--pz-ink-3); }
+.pz-grupo__n {
+  font-family: var(--pz-mono);
+  font-size: .68rem;
+  color: var(--pz-ink-3);
+  flex: none;
+}
+.pz-grupo__regla {
+  flex: 1;
+  height: 1px;
+  background: var(--pz-line);
+}
+
+/* Fila de la cola: dos lineas, lo clinico manda y el resto es metadato. */
+.pz-fila-cola {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: .7rem 1.15rem;
+  border-top: 1px solid var(--pz-line);
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+.pz-fila-cola:hover { background: var(--pz-paper-2); }
+.pz-fila-cola:hover .pz-fila-cola__dx { text-decoration: underline; }
+.pz-fila-cola__id { width: 6.5rem; flex: none; }
+.pz-fila-cola__cuerpo { flex: 1; min-width: 0; }
+.pz-fila-cola__dx {
+  font-size: .92rem;
+  font-weight: 600;
+  color: var(--pz-ink);
+  letter-spacing: -.01em;
+  line-height: 1.35;
+  display: block;
+}
+.pz-fila-cola__meta {
+  font-family: var(--pz-mono);
+  font-size: .68rem;
+  color: var(--pz-ink-3);
+  letter-spacing: .03em;
+  margin-top: .25rem;
+  display: block;
+}
+.pz-fila-cola__lado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .35rem;
+  flex: none;
+}
+@media (max-width: 767.98px) {
+  .pz-fila-cola { flex-wrap: wrap; }
+  .pz-fila-cola__lado { align-items: flex-start; flex-direction: row; }
+}
+
+/* ---------- Columna de decision ---------- */
+
+/* Se queda fija mientras el sustento clinico scrollea al lado. */
+.pz-decision {
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+
+/* Prioridad vigente: la cifra del plano, no un badge mas. */
+.pz-vigente {
+  font-family: var(--pz-display);
+  font-variation-settings: "wdth" 86;
+  font-size: clamp(2.4rem, 5vw, 3.1rem);
+  font-weight: 800;
+  line-height: .95;
+  letter-spacing: -.035em;
+  text-transform: uppercase;
+  display: block;
+}
+.pz-vigente--alta  { color: var(--pz-alta); }
+.pz-vigente--media { color: var(--pz-media); }
+.pz-vigente--baja  { color: var(--pz-green-ink); }
+.pz-vigente--ninguna { color: var(--pz-ink-3); font-size: 1.5rem; }
+
+/* Selector segmentado de prioridad. */
+.pz-seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--pz-line-2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pz-seg__op {
+  font-family: var(--pz-mono);
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: .6rem .3rem;
+  background: #fff;
+  color: var(--pz-ink-2);
+  border: 0;
+  border-left: 1px solid var(--pz-line);
+  cursor: pointer;
+  transition: background-color .18s ease, color .18s ease;
+}
+.pz-seg__op:first-child { border-left: 0; }
+.pz-seg__op:hover:not(:disabled):not(.is-on) { background: var(--pz-paper-2); }
+.pz-seg__op:disabled { cursor: not-allowed; opacity: .5; }
+.pz-seg__op.is-on { color: #fff; }
+.pz-seg__op.is-on[data-nivel="alta"]  { background: var(--pz-alta); }
+.pz-seg__op.is-on[data-nivel="media"] { background: var(--pz-media); }
+.pz-seg__op.is-on[data-nivel="baja"]  { background: var(--pz-green-ink); }
+
+/* Bloque separador dentro de la columna de decision. */
+.pz-decision__seccion {
+  padding: 1.1rem 1.15rem;
+  border-top: 1px solid var(--pz-line);
+}
+
+/* Barra de acciones del detalle: identidad a la izquierda, acciones a la
+   derecha, pegada al borde superior del area de contenido. */
+.pz-barra {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .75rem 1rem;
+  padding: .75rem 1rem;
+  background: rgba(251, 252, 254, .92);
+  backdrop-filter: saturate(150%) blur(10px);
+  -webkit-backdrop-filter: saturate(150%) blur(10px);
+  border: 1px solid var(--pz-line-2);
+  border-radius: 2px;
+}
+.pz-barra__id {
+  font-family: var(--pz-mono);
+  font-size: .82rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--pz-ink);
+}
+
+/* Botones compactos para barras y encabezados de panel. */
+.pz-btn--mini { padding: .5rem .85rem; font-size: .66rem; }
+.pz-select--mini {
+  width: auto;
+  min-width: 5.6rem;
+  font-size: .78rem;
+  /* Holgura a la derecha para que la flecha no se monte sobre el texto. */
+  padding: .45rem 2.3rem .45rem .7rem;
+  background-position: right .7rem center;
+}
+
+/* ---------- Barras de probabilidad ---------- */
+.pz-meter {
+  height: 8px;
+  background: var(--pz-paper-2);
+  border: 1px solid var(--pz-line);
+  border-radius: 0;
+  overflow: hidden;
+}
+.pz-meter__fill {
+  height: 100%;
+  background: var(--pz-green);
+  transition: width .8s cubic-bezier(.2,.75,.25,1);
+}
+.pz-meter__fill--alta  { background: var(--pz-alta); }
+.pz-meter__fill--media { background: var(--pz-media); }
+.pz-meter__fill--baja  { background: var(--pz-green); }
+
+/* ---------- Utilidades ---------- */
+.pz-mono { font-family: var(--pz-mono); }
+.pz-rule {
+  height: 5px;
+  border-top: 1px solid var(--pz-line-2);
+  background-image: repeating-linear-gradient(90deg, var(--pz-line-2) 0 1px, transparent 1px var(--pz-grid));
+  background-repeat: no-repeat;
+  background-size: 100% 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--pz-line-2); border-radius: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pz-btn, .pz-meter__fill, .pz-navlink, .pz-table > tbody tr { transition: none; }
 }

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { NivelPrioridad } from "@/types";
-import BadgePrioridad from "@/components/ui/BadgePrioridad";
 
 interface FormularioModificarPrioridadProps {
   prioridadActual: NivelPrioridad;
@@ -11,14 +10,13 @@ interface FormularioModificarPrioridadProps {
   onModificar: (nuevaPrioridad: NivelPrioridad, motivo: string) => Promise<boolean>;
 }
 
-const opcionesPrioridad: { valor: NivelPrioridad; etiqueta: string }[] = [
-  { valor: "alta", etiqueta: "Alta - Atencion urgente" },
-  { valor: "media", etiqueta: "Media - Atencion preferente" },
-  { valor: "baja", etiqueta: "Baja - Atencion electiva" },
-];
-
+const NIVELES: NivelPrioridad[] = ["alta", "media", "baja"];
 const MOTIVO_MINIMO = 10;
 
+/**
+ * Cambio manual de prioridad (HdU02). Vive dentro de la columna de decisión,
+ * así que no dibuja su propio marco.
+ */
 export default function FormularioModificarPrioridad({
   prioridadActual,
   medicoResponsable,
@@ -45,16 +43,18 @@ export default function FormularioModificarPrioridad({
   }
 
   const motivoLimpio = motivo.trim();
-  const motivoInvalido = mensaje?.tipo === "error" && motivoLimpio.length < MOTIVO_MINIMO;
+  const hayCambio = nuevaPrioridad !== prioridadActual;
+  const motivoInvalido =
+    mensaje?.tipo === "error" && motivoLimpio.length < MOTIVO_MINIMO;
 
   const manejarEnvio = (e: FormEvent) => {
     e.preventDefault();
     setMensaje(null);
 
-    if (nuevaPrioridad === prioridadActual) {
+    if (!hayCambio) {
       setMensaje({
         tipo: "error",
-        texto: "Seleccione una prioridad diferente a la actual.",
+        texto: "Seleccione una prioridad diferente a la vigente.",
       });
       return;
     }
@@ -63,7 +63,7 @@ export default function FormularioModificarPrioridad({
       setMensaje({
         tipo: "error",
         texto:
-          "Debe ingresar un motivo para la modificacion. El cambio no fue guardado.",
+          "Debe ingresar un motivo para la modificación. El cambio no fue guardado.",
       });
       return;
     }
@@ -71,7 +71,7 @@ export default function FormularioModificarPrioridad({
     if (motivoLimpio.length < MOTIVO_MINIMO) {
       setMensaje({
         tipo: "error",
-        texto: `El motivo debe tener al menos ${MOTIVO_MINIMO} caracteres para justificar el cambio. El cambio no fue guardado.`,
+        texto: `El motivo debe tener al menos ${MOTIVO_MINIMO} caracteres. El cambio no fue guardado.`,
       });
       return;
     }
@@ -88,8 +88,7 @@ export default function FormularioModificarPrioridad({
     if (exito) {
       setMensaje({
         tipo: "exito",
-        texto:
-          "Prioridad modificada exitosamente. El cambio quedo registrado en el historial.",
+        texto: "Prioridad modificada. Quedó registrada en el historial.",
       });
       setMotivo("");
       return;
@@ -97,138 +96,119 @@ export default function FormularioModificarPrioridad({
 
     setMensaje({
       tipo: "error",
-      texto:
-        "Error al modificar la prioridad. El cambio no fue guardado.",
+      texto: "Error al modificar la prioridad. El cambio no fue guardado.",
     });
   };
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
-      <div className="border-b border-[var(--border)] px-5 py-4">
-        <h3 className="text-base font-semibold text-[var(--text-primary)]">
-          Modificar prioridad
-        </h3>
-        <p className="text-sm text-[var(--text-secondary)]">
-          Corrija la prioridad si el criterio clinico difiere de la sugerencia.
+    <form onSubmit={manejarEnvio} className="pz-form flex flex-col gap-3">
+      <div>
+        <span className="pz-label mb-1.5">Cambiar a</span>
+        <div className="pz-seg" role="group" aria-label="Nueva prioridad">
+          {NIVELES.map((nivel) => (
+            <button
+              key={nivel}
+              type="button"
+              data-nivel={nivel}
+              aria-pressed={nuevaPrioridad === nivel}
+              disabled={confirmando || enviando}
+              onClick={() => setNuevaPrioridad(nivel)}
+              className={`pz-seg__op ${nuevaPrioridad === nivel ? "is-on" : ""}`}
+            >
+              {nivel}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="motivo-modificacion" className="form-label">
+          Motivo *
+        </label>
+        <textarea
+          id="motivo-modificacion"
+          className="form-control"
+          value={motivo}
+          disabled={confirmando || enviando}
+          aria-invalid={motivoInvalido}
+          aria-describedby="motivo-ayuda"
+          onChange={(e) => setMotivo(e.target.value)}
+          placeholder="Criterio clínico que justifica el cambio…"
+          rows={3}
+          style={{ resize: "none" }}
+        />
+        <p id="motivo-ayuda" className="pz-label mt-1.5">
+          Obligatorio · mínimo {MOTIVO_MINIMO} ({motivoLimpio.length}/
+          {MOTIVO_MINIMO})
         </p>
       </div>
 
-      <form onSubmit={manejarEnvio} className="flex flex-col gap-4 p-5">
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="nueva-prioridad"
-            className="text-sm font-medium text-[var(--text-primary)]"
-          >
-            Nueva prioridad
-          </label>
-          <select
-            id="nueva-prioridad"
-            value={nuevaPrioridad}
-            disabled={confirmando || enviando}
-            onChange={(e) =>
-              setNuevaPrioridad(e.target.value as NivelPrioridad)
-            }
-            className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] disabled:opacity-60"
-          >
-            {opcionesPrioridad.map((op) => (
-              <option key={op.valor} value={op.valor}>
-                {op.etiqueta}
-              </option>
-            ))}
-          </select>
+      {mensaje && (
+        <div
+          role={mensaje.tipo === "error" ? "alert" : "status"}
+          aria-live="polite"
+          className="px-3 py-2.5 text-[.82rem]"
+          style={{
+            background:
+              mensaje.tipo === "exito" ? "var(--pz-baja-bg)" : "var(--pz-alta-bg)",
+            borderLeft: `2px solid ${
+              mensaje.tipo === "exito" ? "var(--pz-green)" : "var(--pz-alta)"
+            }`,
+            color:
+              mensaje.tipo === "exito" ? "var(--pz-green-ink)" : "var(--pz-alta)",
+          }}
+        >
+          {mensaje.texto}
         </div>
+      )}
 
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="motivo-modificacion"
-            className="text-sm font-medium text-[var(--text-primary)]"
-          >
-            Motivo de la modificacion *
-          </label>
-          <textarea
-            id="motivo-modificacion"
-            value={motivo}
-            disabled={confirmando || enviando}
-            aria-invalid={motivoInvalido}
-            aria-describedby="motivo-ayuda"
-            onChange={(e) => setMotivo(e.target.value)}
-            placeholder="Ingrese el criterio clinico que justifica el cambio de prioridad..."
-            rows={3}
-            className="resize-none rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] disabled:opacity-60 aria-[invalid=true]:border-[var(--prioridad-alta)]"
-          />
-          <p
-            id="motivo-ayuda"
-            className="text-xs text-[var(--text-muted)]"
-          >
-            Obligatorio, minimo {MOTIVO_MINIMO} caracteres ({motivoLimpio.length}/
-            {MOTIVO_MINIMO}).
+      {confirmando ? (
+        <div
+          className="flex flex-col gap-2.5 p-3"
+          style={{
+            background: "var(--pz-paper-2)",
+            border: "1px solid var(--pz-line-2)",
+          }}
+        >
+          <span className="pz-eyebrow pz-eyebrow--alta">Confirme el cambio</span>
+          <p className="text-[.82rem] text-[var(--pz-ink-2)]">
+            <strong className="text-[var(--pz-ink)] uppercase">
+              {prioridadActual}
+            </strong>{" "}
+            →{" "}
+            <strong className="text-[var(--pz-ink)] uppercase">
+              {nuevaPrioridad}
+            </strong>
+            , a nombre de {medicoResponsable}.
           </p>
-        </div>
-
-        <div className="rounded-lg bg-[var(--background)] px-4 py-3">
-          <span className="text-xs text-[var(--text-muted)]">
-            Responsable del cambio
-          </span>
-          <p className="text-sm font-medium text-[var(--text-primary)]">
-            {medicoResponsable}
-          </p>
-        </div>
-
-        {mensaje && (
-          <div
-            role={mensaje.tipo === "error" ? "alert" : "status"}
-            aria-live="polite"
-            className={`rounded-lg px-4 py-3 text-sm ${
-              mensaje.tipo === "exito"
-                ? "bg-[var(--prioridad-baja-bg)] text-[var(--prioridad-baja)]"
-                : "bg-[var(--prioridad-alta-bg)] text-[var(--prioridad-alta)]"
-            }`}
-          >
-            {mensaje.texto}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={confirmarModificacion}
+              disabled={enviando}
+              className="pz-btn pz-btn--solid flex-1"
+            >
+              {enviando ? "Guardando…" : "Confirmar"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmando(false)}
+              disabled={enviando}
+              className="pz-btn pz-btn--ghost"
+            >
+              Cancelar
+            </button>
           </div>
-        )}
-
-        {confirmando ? (
-          <div className="flex flex-col gap-3 rounded-lg border border-[var(--prioridad-alta-border)] bg-[var(--prioridad-alta-bg)] px-4 py-3">
-            <p className="text-sm font-medium text-[var(--text-primary)]">
-              Confirme el cambio de prioridad
-            </p>
-            <div className="flex items-center gap-2">
-              <BadgePrioridad prioridad={prioridadActual} />
-              <span className="text-[var(--text-muted)]">{"->"}</span>
-              <BadgePrioridad prioridad={nuevaPrioridad} />
-            </div>
-            <p className="text-sm text-[var(--text-secondary)]">
-              Quedara registrado en el historial a nombre de {medicoResponsable}.
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={confirmarModificacion}
-                disabled={enviando}
-                className="flex-1 rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--primary-dark)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {enviando ? "Guardando..." : "Confirmar cambio"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmando(false)}
-                disabled={enviando}
-                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="submit"
-            className="rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--primary-dark)]"
-          >
-            Modificar prioridad
-          </button>
-        )}
-      </form>
-    </div>
+        </div>
+      ) : (
+        <button
+          type="submit"
+          disabled={!hayCambio}
+          className="pz-btn pz-btn--solid pz-btn--block"
+        >
+          Confirmar cambio
+        </button>
+      )}
+    </form>
   );
 }

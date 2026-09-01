@@ -14,8 +14,10 @@ const MAPEO_CAMPOS: Record<string, (ic: Interconsulta) => string | number | unde
   // Datos base
   ID: ic => ic.id,
   PACIENTE_ID: ic => ic.pacienteId,
-  PACIENTE_NOMBRE: ic => ic.pacienteNombre,
-  PACIENTE_RUT: ic => ic.pacienteRut,
+  // PACIENTE_NOMBRE y PACIENTE_RUT se retiraron: el backend no guarda datos de
+  // paciente y el frontend los inventaba ("Paciente 3f2a1b8c", "XX.XXX.XXX-X").
+  // Exportarlos sacaba identidad ficticia de la app en un archivo descargable.
+  // No estaban en TODOS_LOS_CAMPOS, asi que ninguna configuracion los usaba.
   PACIENTE_EDAD: ic => ic.pacienteEdad,
   ESPECIALIDAD: ic => ic.especialidad,
   CENTRO_ORIGEN: ic => ic.centroOrigen,

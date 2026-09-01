@@ -11,14 +11,15 @@ export default function HistorialModificaciones({
 }: HistorialModificacionesProps) {
   if (modificaciones.length === 0) {
     return (
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
-        <div className="border-b border-[var(--border)] px-5 py-4">
-          <h3 className="text-base font-semibold text-[var(--text-primary)]">
-            Historial de modificaciones
-          </h3>
+      <div className="pz-panel">
+        <div className="pz-panel__head">
+          <span className="pz-eyebrow pz-eyebrow--muted">Trazabilidad</span>
+          <h3 className="pz-panel__title">Historial de modificaciones</h3>
         </div>
-        <div className="px-5 py-8 text-center text-sm text-[var(--text-muted)]">
-          No se han realizado modificaciones manuales a esta interconsulta.
+        <div className="px-5 py-8 text-center">
+          <span className="pz-label">
+            Sin modificaciones manuales registradas
+          </span>
         </div>
       </div>
     );
@@ -29,42 +30,46 @@ export default function HistorialModificaciones({
   );
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
-      <div className="border-b border-[var(--border)] px-5 py-4">
-        <h3 className="text-base font-semibold text-[var(--text-primary)]">
-          Historial de modificaciones
-        </h3>
-        <p className="text-sm text-[var(--text-secondary)]">
-          {ordenadas.length} modificacion
-          {ordenadas.length !== 1 ? "es" : ""} registrada
-          {ordenadas.length !== 1 ? "s" : ""} - mas recientes primero
+    <div className="pz-panel">
+      <div className="pz-panel__head">
+        <span className="pz-eyebrow pz-eyebrow--muted">Trazabilidad</span>
+        <h3 className="pz-panel__title">Historial de modificaciones</h3>
+        <p className="pz-panel__sub">
+          {ordenadas.length} registrada{ordenadas.length !== 1 ? "s" : ""} · más
+          recientes primero
         </p>
       </div>
 
-      <div className="flex flex-col divide-y divide-[var(--border-light)]">
+      <div className="flex flex-col">
         {ordenadas.map((mod, indice) => (
-          <div key={mod.id} className="flex flex-col gap-3 px-5 py-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-[var(--text-primary)]">
+          <div
+            key={mod.id}
+            className="flex flex-col gap-2.5 px-[1.15rem] py-4"
+            style={{
+              borderTop: indice === 0 ? "none" : "1px solid var(--pz-line)",
+            }}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-[.85rem] font-semibold text-[var(--pz-ink)]">
                 {mod.medicoResponsable}
               </span>
-              <span className="text-xs text-[var(--text-muted)]">
+              <span className="pz-mono text-[.68rem] text-[var(--pz-ink-3)]">
                 {formatearFechaHoraChile(mod.fecha)}
               </span>
             </div>
 
             <div className="flex items-center gap-2">
               <BadgePrioridad prioridad={mod.prioridadAnterior} />
-              <span className="text-[var(--text-muted)]">{"->"}</span>
+              <span className="pz-mono text-[var(--pz-ink-3)]" aria-hidden="true">
+                →
+              </span>
               <BadgePrioridad prioridad={mod.prioridadNueva} />
               {indice === 0 && (
-                <span className="rounded-full bg-[var(--background)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
-                  Vigente
-                </span>
+                <span className="pz-chip pz-chip--ink">Vigente</span>
               )}
             </div>
 
-            <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+            <p className="text-[.85rem] leading-relaxed text-[var(--pz-ink-2)]">
               {mod.motivo}
             </p>
           </div>

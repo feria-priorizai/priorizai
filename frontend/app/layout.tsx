@@ -1,22 +1,31 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Archivo, IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+/** Display de marca. El eje wdth se usa comprimido en cifras y titulares. */
+const archivo = Archivo({
+  variable: "--font-display",
+  subsets: ["latin"],
+  axes: ["wdth"],
+});
+
+const instrumentSans = Instrument_Sans({
+  variable: "--font-body",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const ibmPlexMono = IBM_Plex_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
   title: "PriorizAI - Sistema de Priorización de Interconsultas",
   description:
     "Plataforma de priorización automática de interconsultas médicas con inteligencia artificial para el sistema de salud pública de Chile.",
+  icons: { icon: "/img/logo-priorizai-mark.png" },
 };
 
 export default function RootLayout({
@@ -27,7 +36,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${archivo.variable} ${instrumentSans.variable} ${ibmPlexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         <AppShell>{children}</AppShell>

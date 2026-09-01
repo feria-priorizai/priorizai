@@ -1,7 +1,6 @@
 /**
- * Indicador visual del porcentaje de confianza del modelo de IA.
- * Muestra una barra de progreso con color según el nivel de certeza.
- * Requerido por HdU01: "mostrar claramente el porcentaje de certeza".
+ * Certeza del modelo (HdU01). Barra recta y cifra en mono: el plano mide, no
+ * redondea.
  */
 
 interface IndicadorConfianzaProps {
@@ -9,41 +8,45 @@ interface IndicadorConfianzaProps {
   porcentaje: number;
 }
 
-/** Determina el color de la barra según el porcentaje */
-function obtenerColorConfianza(porcentaje: number): string {
-  if (porcentaje >= 80) return "var(--confianza-alta)";
-  if (porcentaje >= 60) return "var(--confianza-media)";
-  return "var(--confianza-baja)";
+function nivelConfianza(porcentaje: number): "alta" | "media" | "baja" {
+  if (porcentaje >= 80) return "alta";
+  if (porcentaje >= 60) return "media";
+  return "baja";
 }
 
-/** Texto descriptivo del nivel de confianza */
-function obtenerTextoConfianza(porcentaje: number): string {
-  if (porcentaje >= 80) return "Confianza alta";
-  if (porcentaje >= 60) return "Confianza moderada";
-  return "Confianza baja";
-}
+const textos: Record<"alta" | "media" | "baja", string> = {
+  alta: "Confianza alta",
+  media: "Confianza moderada",
+  baja: "Confianza baja",
+};
 
 export default function IndicadorConfianza({
   porcentaje,
 }: IndicadorConfianzaProps) {
-  const color = obtenerColorConfianza(porcentaje);
-  const texto = obtenerTextoConfianza(porcentaje);
+  const nivel = nivelConfianza(porcentaje);
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-[var(--text-secondary)]">{texto}</span>
-        <span className="text-sm font-bold" style={{ color }}>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="pz-label">{textos[nivel]}</span>
+        <span
+          className="pz-mono text-[.95rem] font-semibold"
+          style={{ color: `var(--confianza-${nivel})` }}
+        >
           {porcentaje}%
         </span>
       </div>
-      <div className="h-2 w-full rounded-full bg-[var(--border-light)]">
+      <div
+        className="pz-meter"
+        role="meter"
+        aria-valuenow={porcentaje}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={textos[nivel]}
+      >
         <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{
-            width: `${porcentaje}%`,
-            backgroundColor: color,
-          }}
+          className={`pz-meter__fill pz-meter__fill--${nivel === "alta" ? "baja" : nivel}`}
+          style={{ width: `${porcentaje}%` }}
         />
       </div>
     </div>

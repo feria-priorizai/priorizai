@@ -5,7 +5,6 @@ import type {
   NivelPrioridad,
 } from "@/types/interconsulta";
 import type { ResumenClinicoPaciente } from "@/types/paciente";
-import { resumenesClinicosMock } from "@/data/mock";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ??
@@ -150,51 +149,18 @@ export async function priorizarInterconsultasPendientes(
   return (await respuesta.json()) as PriorizarResponse;
 }
 
-/** Construye un resumen clinico con los campos reales disponibles de la IC. */
+/** Construye el resumen clinico con los campos reales que trae la interconsulta. */
 export async function obtenerResumenClinico(
   pacienteId: string
 ): Promise<ResumenClinicoPaciente | null> {
   const interconsulta = await obtenerInterconsultaApiPorId(pacienteId);
   if (!interconsulta) {
-    return resumenesClinicosMock[pacienteId] ?? null;
+    return null;
   }
-
-  const tieneInformacion = [
-    interconsulta.historia_clinica,
-    interconsulta.fundamentos_diagnostico,
-    interconsulta.examenes_complementarios,
-    interconsulta.motivo_interconsulta,
-  ].some((campo) => Boolean(campo?.trim()));
 
   return {
     pacienteId: interconsulta.id,
-    nombre: `Paciente ${interconsulta.id.slice(0, 8)}`,
-    rut: "XX.XXX.XXX-X",
-    edad: interconsulta.edad,
-    sexo: normalizarSexo(interconsulta.sexo),
-    prevision: "No disponible",
-    diagnosticosPrevios: interconsulta.historia_clinica
-      ? [
-          {
-            codigo: "N/D",
-            nombre: interconsulta.historia_clinica,
-            fecha: interconsulta.created_at,
-            activo: true,
-          },
-        ]
-      : [],
-    tratamientos: [],
-    alergias: [],
-    atencionesRecientes: [
-      {
-        tipo: "Interconsulta",
-        especialidad: interconsulta.espec_destino,
-        fecha: interconsulta.created_at,
-        resumen: construirResumenCamposClinicos(interconsulta),
-      },
-    ],
-    factoresRiesgo: [],
-    informacionSuficiente: tieneInformacion,
+    informacionSuficiente: tieneInformacionClinica(interconsulta),
     camposInterconsulta: {
       historiaClinica: interconsulta.historia_clinica,
       fundamentosDiagnostico: interconsulta.fundamentos_diagnostico,
@@ -202,6 +168,29 @@ export async function obtenerResumenClinico(
       motivoInterconsulta: interconsulta.motivo_interconsulta,
     },
   };
+}
+
+/** RF7: vuelve a evaluar el catalogo de banderas rojas sobre todas las IC. */
+export async function reevaluarBanderasRojas(): Promise<{
+  total_evaluadas: number;
+  total_con_bandera_roja: number;
+}> {
+  const respuesta = await fetch(
+    `${API_BASE}/api/interconsultas/reevaluar-banderas`,
+    { method: "POST" }
+  );
+
+  if (!respuesta.ok) {
+    const error = await respuesta.json().catch(() => null);
+    throw new Error(
+      obtenerMensajeError(
+        error?.detail,
+        "No se pudo reevaluar las banderas rojas"
+      )
+    );
+  }
+
+  return respuesta.json();
 }
 
 /** Actualiza la prioridad de una interconsulta y guarda el historial (HdU02). */
@@ -316,8 +305,6 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
   return {
     id: api.id,
     pacienteId: api.id,
-    pacienteNombre: `Paciente ${api.id.slice(0, 8)}`,
-    pacienteRut: "XX.XXX.XXX-X",
     pacienteEdad: api.edad,
     especialidad: api.espec_destino,
     centroOrigen: api.espec_origen,
@@ -398,26 +385,8 @@ function normalizarPrioridad(prioridad: PrioridadApi): NivelPrioridad | null {
   return null;
 }
 
-function normalizarSexo(sexo: string): "M" | "F" {
-  return sexo.trim().toUpperCase().startsWith("M") ? "M" : "F";
-}
-
 function primerTextoNoVacio(...valores: Array<string | null | undefined>) {
   return valores.find((valor) => Boolean(valor?.trim()))?.trim();
-}
-
-function construirResumenCamposClinicos(interconsulta: InterconsultaApi): string {
-  const campos = [
-    ["Historia clinica", interconsulta.historia_clinica],
-    ["Fundamentos diagnostico", interconsulta.fundamentos_diagnostico],
-    ["Examenes complementarios", interconsulta.examenes_complementarios],
-    ["Motivo interconsulta", interconsulta.motivo_interconsulta],
-  ];
-
-  return campos
-    .filter(([, valor]) => Boolean(valor?.trim()))
-    .map(([label, valor]) => `${label}: ${valor}`)
-    .join("\n\n");
 }
 
 function normalizarEstado(estado: string): EstadoInterconsulta {

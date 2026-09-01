@@ -1,39 +1,51 @@
 "use client";
 
 /**
- * Encabezado superior de la aplicación.
- * Muestra el título de la sección actual y el centro de salud del usuario.
- * Preparado para incluir barra de búsqueda y notificaciones en futuras HdU.
+ * Encabezado superior. La ruta actual se muestra como eyebrow mono, igual que
+ * los numerales de sección de la landing.
  */
 
 import { usePathname } from "next/navigation";
-import { usuarioActual } from "@/data/mock";
+import { usuarioActual } from "@/data/sesion";
 
-/** Mapeo de rutas a títulos legibles */
-const titulosPorRuta: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/interconsultas": "Interconsultas",
+const titulosPorRuta: Record<string, { seccion: string; titulo: string }> = {
+  "/dashboard": { seccion: "01 / Panel", titulo: "Dashboard" },
+  "/interconsultas": { seccion: "02 / Lista de espera", titulo: "Interconsultas" },
+  "/configuracion": { seccion: "03 / Ajustes", titulo: "Configuración" },
 };
 
 export default function Header() {
   const pathname = usePathname();
 
-  /** Obtiene el título según la ruta actual, con fallback para sub-rutas */
-  const obtenerTitulo = (): string => {
-    if (pathname.startsWith("/interconsultas/")) return "Detalle Interconsulta";
-    return titulosPorRuta[pathname] ?? "PriorizAI";
+  const obtenerTitulo = () => {
+    if (pathname.startsWith("/interconsultas/")) {
+      return { seccion: "02 / Lista de espera", titulo: "Detalle de interconsulta" };
+    }
+    return titulosPorRuta[pathname] ?? { seccion: "PriorizAI", titulo: "PriorizAI" };
   };
 
-  return (
-    <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-6 shadow-[var(--shadow-sm)]">
-      <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-        {obtenerTitulo()}
-      </h2>
+  const { seccion, titulo } = obtenerTitulo();
 
-      <div className="flex items-center gap-4">
-        <span className="text-sm text-[var(--text-secondary)]">
+  return (
+    <header
+      className="sticky top-0 z-10 flex h-[72px] flex-none items-center justify-between px-6"
+      style={{
+        background: "rgba(251,252,254,.88)",
+        backdropFilter: "saturate(150%) blur(12px)",
+        WebkitBackdropFilter: "saturate(150%) blur(12px)",
+        borderBottom: "1px solid var(--pz-line-2)",
+      }}
+    >
+      <div>
+        <span className="pz-eyebrow">{seccion}</span>
+        <h2 className="mt-1 text-[1.35rem]">{titulo}</h2>
+      </div>
+
+      <div className="text-right">
+        <span className="pz-label">Establecimiento</span>
+        <p className="mt-0.5 text-[.88rem] font-semibold text-[var(--pz-ink)]">
           {usuarioActual.centroSalud}
-        </span>
+        </p>
       </div>
     </header>
   );

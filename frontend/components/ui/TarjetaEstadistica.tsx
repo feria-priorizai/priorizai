@@ -7,6 +7,10 @@ interface TarjetaEstadisticaProps {
   colorAccento?: string;
 }
 
+/**
+ * Celda del riel de cifras: el número manda, la etiqueta va debajo en mono.
+ * Mismo tratamiento que el riel de la landing.
+ */
 export default function TarjetaEstadistica({
   titulo,
   valor,
@@ -14,18 +18,22 @@ export default function TarjetaEstadistica({
   colorAccento,
 }: TarjetaEstadisticaProps) {
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)]">
-      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--primary-light)] text-[var(--primary)]">
+    <div className="pz-rail__item flex flex-col justify-between gap-3">
+      <div
+        className="flex h-6 w-6 items-center justify-center"
+        style={{ color: colorAccento ?? "var(--pz-ink-3)" }}
+        aria-hidden="true"
+      >
         {icono}
       </div>
       <div>
-        <p className="text-sm text-[var(--text-secondary)]">{titulo}</p>
-        <p
-          className="text-2xl font-bold"
-          style={{ color: colorAccento ?? "var(--text-primary)" }}
+        <span
+          className="pz-num pz-num--lg"
+          style={colorAccento ? { color: colorAccento } : undefined}
         >
           {valor}
-        </p>
+        </span>
+        <span className="pz-label mt-2">{titulo}</span>
       </div>
     </div>
   );

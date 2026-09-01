@@ -3,9 +3,10 @@
 import { useState, useCallback, useEffect } from "react";
 import { useInterconsultas } from "@/hooks/useInterconsultas";
 import FiltrosInterconsultas from "@/components/interconsultas/FiltrosInterconsultas";
-import TablaInterconsultasRecientes from "@/components/dashboard/TablaInterconsultasRecientes";
+import ColaInterconsultas from "@/components/interconsultas/ColaInterconsultas";
 import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
 import { exportarInterconsultas } from "@/utils/exportUtils";
+import EstadoVista from "@/components/ui/EstadoVista";
 
 export default function InterconsultasPage() {
   const {
@@ -15,6 +16,8 @@ export default function InterconsultasPage() {
     totalInterconsultas,
     filtros,
     actualizarFiltros,
+    limpiarFiltros,
+    hayFiltrosActivos,
   } = useInterconsultas();
   const { config } = useConfiguracionExport();
 
@@ -78,19 +81,11 @@ export default function InterconsultasPage() {
   }, [modoDescargaMultiple, filtros.estado, actualizarFiltros]);
 
   if (cargando) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-[var(--text-secondary)]">Cargando interconsultas...</p>
-      </div>
-    );
+    return <EstadoVista tipo="cargando" texto="Cargando interconsultas…" />;
   }
 
   if (error) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-[var(--prioridad-alta)]">{error}</p>
-      </div>
-    );
+    return <EstadoVista tipo="error" texto={error} />;
   }
 
   return (
@@ -99,10 +94,15 @@ export default function InterconsultasPage() {
         filtros={filtros}
         onCambiarFiltros={actualizarFiltros}
         deshabilitado={modoDescargaMultiple}
+        hayFiltrosActivos={hayFiltrosActivos}
+        onLimpiar={limpiarFiltros}
+        visibles={interconsultas.length}
+        total={totalInterconsultas}
       />
 
-      <TablaInterconsultasRecientes
+      <ColaInterconsultas
         interconsultas={interconsultas}
+        titulo="Lista de espera"
         modoDescargaMultiple={modoDescargaMultiple}
         seleccionadas={seleccionadas}
         onCambiarSeleccion={manejarCambiarSeleccion}
@@ -114,9 +114,9 @@ export default function InterconsultasPage() {
         onCambiarFormatoDescarga={setFormatoDescarga}
       />
 
-      <p className="text-sm text-[var(--text-muted)]">
+      <p className="pz-label">
         {modoDescargaMultiple
-          ? `Modo descarga múltiple: ${seleccionadas.size} de ${interconsultas.length} seleccionadas (solo interconsultas revisadas)`
+          ? `Descarga múltiple · ${seleccionadas.size} de ${interconsultas.length} seleccionadas · solo revisadas`
           : `Mostrando ${interconsultas.length} de ${totalInterconsultas} interconsulta${totalInterconsultas !== 1 ? "s" : ""}`}
       </p>
     </div>

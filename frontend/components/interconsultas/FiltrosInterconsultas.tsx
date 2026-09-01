@@ -116,7 +116,7 @@ export default function FiltrosInterconsultas({
               <button
                 type="button"
                 onClick={onLimpiar}
-                className="pz-btn pz-btn--ghost pz-btn--mini ms-auto"
+                className="pz-btn pz-btn--azul pz-btn--mini ms-auto"
               >
                 Limpiar filtros
               </button>

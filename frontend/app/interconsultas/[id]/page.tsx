@@ -57,7 +57,7 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
           tipo="error"
           texto={error ?? "Interconsulta no encontrada"}
         />
-        <Link href="/interconsultas" className="pz-btn pz-btn--ghost">
+        <Link href="/interconsultas" className="pz-btn pz-btn--azul">
           Volver al listado
         </Link>
       </div>

@@ -160,7 +160,7 @@ export function ModalErroresCarga() {
           <button
             type="button"
             onClick={limpiar}
-            className="pz-btn pz-btn--solid pz-btn--block"
+            className="pz-btn pz-btn--azul pz-btn--block"
           >
             Entendido
           </button>

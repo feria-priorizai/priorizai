@@ -93,7 +93,7 @@ export default function PanelDecision({
                 type="button"
                 onClick={onPriorizarConIA}
                 disabled={priorizadaPorIA}
-                className="pz-btn pz-btn--solid pz-btn--block"
+                className="pz-btn pz-btn--morado pz-btn--block"
               >
                 Priorizar con IA
               </button>
@@ -109,7 +109,7 @@ export default function PanelDecision({
             type="button"
             onClick={onMarcarRevisada}
             disabled={actualizandoEstado}
-            className="pz-btn pz-btn--ghost pz-btn--block"
+            className="pz-btn pz-btn--verde pz-btn--block"
           >
             {actualizandoEstado ? "Actualizando…" : "Marcar como revisada"}
           </button>
@@ -140,7 +140,7 @@ export default function PanelDecision({
                 ? undefined
                 : "La interconsulta debe estar revisada para poder exportar"
             }
-            className="pz-btn pz-btn--ghost flex-1"
+            className="pz-btn pz-btn--azul flex-1"
           >
             Exportar
           </button>
@@ -148,7 +148,7 @@ export default function PanelDecision({
 
         <Link
           href="/interconsultas"
-          className="pz-btn pz-btn--ghost pz-btn--block"
+          className="pz-btn pz-btn--claro pz-btn--block"
         >
           <svg
             aria-hidden="true"

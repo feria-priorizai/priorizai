@@ -186,7 +186,7 @@ export default function FormularioModificarPrioridad({
               type="button"
               onClick={confirmarModificacion}
               disabled={enviando}
-              className="pz-btn pz-btn--solid flex-1"
+              className="pz-btn pz-btn--verde flex-1"
             >
               {enviando ? "Guardando…" : "Confirmar"}
             </button>
@@ -194,7 +194,7 @@ export default function FormularioModificarPrioridad({
               type="button"
               onClick={() => setConfirmando(false)}
               disabled={enviando}
-              className="pz-btn pz-btn--ghost"
+              className="pz-btn pz-btn--claro"
             >
               Cancelar
             </button>
@@ -204,7 +204,7 @@ export default function FormularioModificarPrioridad({
         <button
           type="submit"
           disabled={!hayCambio}
-          className="pz-btn pz-btn--solid pz-btn--block"
+          className="pz-btn pz-btn--verde pz-btn--block"
         >
           Confirmar cambio
         </button>

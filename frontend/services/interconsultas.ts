@@ -125,31 +125,7 @@ export async function priorizarInterconsulta(id: string): Promise<Interconsulta>
   return actualizada;
 }
 
-/** Ejecuta el modelo para un lote de interconsultas pendientes. */
-export async function priorizarInterconsultasPendientes(
-  limit: number = 25
-): Promise<PriorizarResponse> {
-  const respuesta = await fetch(
-    `${API_BASE}/api/interconsultas/priorizar-pendientes?limit=${limit}`,
-    {
-      method: "POST",
-    }
-  );
-
-  if (!respuesta.ok) {
-    const error = await respuesta.json().catch(() => null);
-    throw new Error(
-      obtenerMensajeError(
-        error?.detail,
-        "No se pudo priorizar el lote de interconsultas"
-      )
-    );
-  }
-
-  return (await respuesta.json()) as PriorizarResponse;
-}
-
-/** Construye el resumen clinico con los campos reales que trae la interconsulta. */
+/** Construye un resumen clinico con los campos reales disponibles de la IC. */
 export async function obtenerResumenClinico(
   pacienteId: string
 ): Promise<ResumenClinicoPaciente | null> {

@@ -4,7 +4,7 @@
  */
 
 /** Roles de usuario definidos en el sistema */
-export type RolUsuario =
+type RolUsuario =
   | "medico_especialista"
   | "medico_general"
   | "enfermera"

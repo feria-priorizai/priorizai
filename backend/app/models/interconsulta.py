@@ -1,14 +1,11 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import uuid4
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-
-
-def utc_now() -> datetime:
-    return datetime.now(UTC)
+from app.core.tiempo import utc_now
 
 
 class Interconsulta(Base):

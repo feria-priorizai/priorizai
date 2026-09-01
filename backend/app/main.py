@@ -16,7 +16,11 @@ from app.core.database import SessionLocal, engine
 from app.models import Base, Interconsulta
 from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
 from app.services.ner import get_extractor_ner
-from app.services.priorizador import aplicar_resultado, get_priorizador
+from app.services.priorizador import (
+    aplicar_resultado,
+    get_priorizador,
+    tiene_informacion_clinica,
+)
 
 UPLOAD_FILE = File(...)
 
@@ -356,7 +360,7 @@ def _priorizar_interconsultas_insertadas(session: Session, ids: list[str]) -> in
     validas = [
         interconsulta
         for interconsulta in interconsultas
-        if _tiene_informacion_clinica(interconsulta)
+        if tiene_informacion_clinica(interconsulta)
     ]
 
     for interconsulta in validas:
@@ -407,16 +411,6 @@ def _extraer_entidades(interconsultas: list[Interconsulta]) -> int:
             interconsulta.entidades = None
             interconsulta.entidades_error = f"No se pudo extraer entidades: {exc}"
     return procesadas
-
-
-def _tiene_informacion_clinica(interconsulta: Interconsulta) -> bool:
-    campos = [
-        interconsulta.historia_clinica,
-        interconsulta.fundamentos_diagnostico,
-        interconsulta.examenes_complementarios,
-        interconsulta.motivo_interconsulta,
-    ]
-    return any(bool(campo and campo.strip()) for campo in campos)
 
 
 def _estado_priorizacion(total: int, priorizadas: int) -> str:

@@ -28,7 +28,21 @@ pipeline {
 
         stage('Pytest') {
             steps {
-                sh 'docker run --rm priorizai-backend pytest'
+                sh '''
+                    set +e
+                    docker run --name priorizai-cov-${BUILD_NUMBER} \
+                        priorizai-backend \
+                        pytest --cov-report=xml:coverage.xml
+                    status=$?
+                    docker cp priorizai-cov-${BUILD_NUMBER}:/app/coverage.xml coverage.xml || true
+                    docker rm -f priorizai-cov-${BUILD_NUMBER} >/dev/null 2>&1 || true
+                    exit $status
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'coverage.xml', allowEmptyArchive: true
+                }
             }
         }
 

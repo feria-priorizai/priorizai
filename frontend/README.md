@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend — PriorizAI
 
-## Getting Started
+Interfaz web en Next.js (App Router) para revisar y priorizar interconsultas.
+Consume la API de FastAPI que vive en [`../backend`](../backend).
 
-First, run the development server:
+## Correr el proyecto
+
+Lo normal es levantar todo el stack desde la raiz del repo, que ademas arranca
+Postgres y el backend:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker compose up
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La UI queda en http://localhost:3000 y la API en http://localhost:8000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Para trabajar solo en el frontend, con el backend ya corriendo aparte:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev
+```
 
-## Learn More
+## Variables de entorno
 
-To learn more about Next.js, take a look at the following resources:
+| Variable | Default | Para que sirve |
+| --- | --- | --- |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Base de la API que consumen los servicios de `services/` |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Comandos
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run dev     # servidor de desarrollo
+npm run build   # build de produccion
+npm run lint    # eslint
+```
 
-## Deploy on Vercel
+No hay tests todavia: falta instalar un runner y cubrir la logica de
+`services/interconsultas.ts` (ver `docs/revision-tecnica.md`, punto 2.g).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Estructura
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Carpeta | Contenido |
+| --- | --- |
+| `app/` | Rutas del App Router (`dashboard`, `interconsultas`, `configuracion`) |
+| `components/` | Componentes de UI, agrupados por seccion |
+| `services/` | Llamadas a la API y mapeo de las respuestas al modelo del front |
+| `types/` | Tipos compartidos del dominio |
+| `hooks/`, `context/` | Estado de configuracion de campos import/export |
+| `utils/` | Utilidades, entre ellas la exportacion a varios formatos |
+| `data/` | Datos simulados que todavia no tienen backend |

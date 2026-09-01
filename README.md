@@ -66,6 +66,21 @@ Si falla Black, aplicar el formato con:
 docker compose exec backend black .
 ```
 
+`pytest` mide cobertura en cada corrida y falla si baja del 82 %. Para una corrida
+parcial (un archivo, o un `-k`) hay que desactivar el umbral, porque si no la
+cobertura del subconjunto lo hace fallar aunque los tests pasen:
+
+```bash
+docker compose exec backend pytest tests/test_priorizador.py --cov-fail-under=0
+```
+
+Si el stack venia levantado de antes de que se agregara `pytest-cov`, `pytest`
+corta con `unrecognized arguments: --cov`. Se arregla reconstruyendo la imagen:
+
+```bash
+docker compose up --build -d backend
+```
+
 Validar el frontend:
 
 ```bash

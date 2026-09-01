@@ -1,15 +1,19 @@
+"""Ingesta correcta de CSV y XLSX.
+
+Usa una sesion falsa en vez de SQLite porque lo que se verifica es el INSERT que
+arma `_guardar_interconsultas`: los parametros exactos con los que cada fila del
+archivo llega a la base.
+"""
+
 from io import BytesIO
 from typing import cast
 
+import pytest
 from fastapi.testclient import TestClient
 from openpyxl import Workbook
 
 import app.main as main_module
-from app.main import app
 from app.models.interconsulta import Interconsulta
-from app.schemas.priorizacion import ProbabilidadesPrioridad, ResultadoPriorizacion
-
-client = TestClient(app)
 
 HEADER = (
     "ESPEC_ORIGEN,EDAD,SEXO,ESPEC_DESTINO,PRIORIDAD,HISTORIA_CLINICA,"
@@ -68,39 +72,18 @@ class DummyScalarResult:
         return self.interconsultas
 
 
-class DummyPriorizador:
-    def predecir(
-        self,
-        interconsultas: list[Interconsulta],
-    ) -> list[ResultadoPriorizacion]:
-        return [
-            ResultadoPriorizacion(
-                id=interconsulta.id,
-                prioridad="alta",
-                confianza=90.0,
-                probabilidades=ProbabilidadesPrioridad(
-                    baja=3.0,
-                    media=7.0,
-                    alta=90.0,
-                ),
-            )
-            for interconsulta in interconsultas
-        ]
-
-
-def setup_function() -> None:
-    main_module.app.dependency_overrides = {}
-
-
-def usar_session_dummy(monkeypatch) -> DummySession:
+@pytest.fixture
+def session_dummy(
+    priorizador_fake: object,
+    monkeypatch: pytest.MonkeyPatch,
+) -> DummySession:
     session = DummySession()
     monkeypatch.setattr(main_module, "SessionLocal", lambda: session)
-    monkeypatch.setattr(main_module, "get_priorizador", lambda: DummyPriorizador())
+    monkeypatch.setattr(main_module, "get_priorizador", lambda: priorizador_fake)
     return session
 
 
-def test_upload_csv_success(monkeypatch) -> None:
-    session = usar_session_dummy(monkeypatch)
+def test_upload_csv_success(client: TestClient, session_dummy: DummySession) -> None:
     csv_content = (
         HEADER
         + "MEDICINA GENERAL,46,FEMENINO,RESPIRATORIO ADULTO,ALTA,"
@@ -120,8 +103,8 @@ def test_upload_csv_success(monkeypatch) -> None:
     assert body["prioritization_status"] == "completed"
     assert body["file_type"] == "csv"
     assert len(body["ids"]) == 1
-    assert len(session.executed) == 1
-    params = session.executed[0][1]
+    assert len(session_dummy.executed) == 1
+    params = session_dummy.executed[0][1]
     assert params is not None
     assert params["espec_origen"] == "MEDICINA GENERAL"
     assert params["edad"] == 46
@@ -131,8 +114,10 @@ def test_upload_csv_success(monkeypatch) -> None:
     assert params["motivo_interconsulta"] == "CONTROL DE ESPECIALIDAD"
 
 
-def test_upload_csv_success_with_semicolon_delimiter(monkeypatch) -> None:
-    session = usar_session_dummy(monkeypatch)
+def test_upload_csv_success_with_semicolon_delimiter(
+    client: TestClient,
+    session_dummy: DummySession,
+) -> None:
     csv_content = (
         HEADER.replace(",", ";")
         + "MEDICINA GENERAL;46;FEMENINO;RESPIRATORIO ADULTO;ALTA;"
@@ -147,16 +132,17 @@ def test_upload_csv_success_with_semicolon_delimiter(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json()["inserted"] == 1
     assert response.json()["prioritized"] == 1
-    params = session.executed[0][1]
+    params = session_dummy.executed[0][1]
     assert params is not None
     assert params["edad"] == 46
     assert params["historia_clinica"] == "CANCER PULMONAR"
     assert params["fundamentos_diagnostico"] == "Paciente estable"
 
 
-def test_upload_xlsx_success_with_commas_and_newlines(monkeypatch) -> None:
-    session = usar_session_dummy(monkeypatch)
-
+def test_upload_xlsx_success_with_commas_and_newlines(
+    client: TestClient,
+    session_dummy: DummySession,
+) -> None:
     workbook = Workbook()
     sheet = workbook.active
     sheet.append(HEADER.strip().split(","))
@@ -191,8 +177,8 @@ def test_upload_xlsx_success_with_commas_and_newlines(monkeypatch) -> None:
     assert response.json()["file_type"] == "xlsx"
     assert response.json()["prioritized"] == 1
     assert response.json()["prioritization_status"] == "completed"
-    assert len(session.executed) == 1
-    params = session.executed[0][1]
+    assert len(session_dummy.executed) == 1
+    params = session_dummy.executed[0][1]
     assert params is not None
     historia = cast(str, params["historia_clinica"])
     fundamentos = cast(str, params["fundamentos_diagnostico"])
@@ -201,12 +187,15 @@ def test_upload_xlsx_success_with_commas_and_newlines(monkeypatch) -> None:
     assert "apoyo frente a regulacion" in fundamentos
 
 
-def test_upload_csv_quoted_newline_field(monkeypatch) -> None:
-    session = usar_session_dummy(monkeypatch)
+def test_upload_csv_quoted_newline_field(
+    client: TestClient,
+    session_dummy: DummySession,
+) -> None:
     csv_content = (
         HEADER
         + "MEDICINA GENERAL,46,FEMENINO,RESPIRATORIO ADULTO,ALTA,ESTADO GENERAL,"
-        + '"Paciente con antecedentes respiratorios.\nSe evalua evolucion posterior.",,CONTROL DE ESPECIALIDAD\n'
+        + '"Paciente con antecedentes respiratorios.\n'
+        + 'Se evalua evolucion posterior.",,CONTROL DE ESPECIALIDAD\n'
     )
 
     response = client.post(
@@ -215,15 +204,17 @@ def test_upload_csv_quoted_newline_field(monkeypatch) -> None:
     )
 
     assert response.status_code == 200
-    params = session.executed[0][1]
+    params = session_dummy.executed[0][1]
     assert params is not None
     fundamentos = cast(str, params["fundamentos_diagnostico"])
     assert "Paciente con antecedentes respiratorios." in fundamentos
     assert "Se evalua evolucion posterior." in fundamentos
 
 
-def test_upload_csv_rejects_unescaped_extra_columns(monkeypatch) -> None:
-    session = usar_session_dummy(monkeypatch)
+def test_upload_csv_rejects_unescaped_extra_columns(
+    client: TestClient,
+    session_dummy: DummySession,
+) -> None:
     csv_content = (
         HEADER
         + "MEDICINA GENERAL,71,MASCULINO,OTORRINOLARINGOLOGIA,MEDIA,"
@@ -237,10 +228,10 @@ def test_upload_csv_rejects_unescaped_extra_columns(monkeypatch) -> None:
 
     assert response.status_code == 400
     assert "Fila CSV 2 invalida" in response.json()["detail"]
-    assert session.executed == []
+    assert session_dummy.executed == []
 
 
-def test_upload_csv_rejects_wrong_extension() -> None:
+def test_upload_csv_rejects_wrong_extension(client: TestClient) -> None:
     csv_content = (
         HEADER
         + "MEDICINA GENERAL,46,FEMENINO,RESPIRATORIO ADULTO,ALTA,"
@@ -256,8 +247,10 @@ def test_upload_csv_rejects_wrong_extension() -> None:
     assert response.json()["detail"] == "El archivo debe ser CSV o XLSX valido"
 
 
-def test_upload_file_empty_edad_returns_error(monkeypatch) -> None:
-    session = usar_session_dummy(monkeypatch)
+def test_upload_file_empty_edad_returns_error(
+    client: TestClient,
+    session_dummy: DummySession,
+) -> None:
     csv_content = (
         HEADER
         + "MEDICINA GENERAL,46,FEMENINO,RESPIRATORIO ADULTO,ALTA,"
@@ -279,4 +272,4 @@ def test_upload_file_empty_edad_returns_error(monkeypatch) -> None:
     assert body["rejected_count"] == 1
     assert body["rejected"][0]["fila"] == 3
     assert body["rejected"][0]["campos_faltantes"] == ["EDAD"]
-    assert len(session.executed) == 1  # Solo se inserto la fila valida
+    assert len(session_dummy.executed) == 1  # Solo se inserto la fila valida

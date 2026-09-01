@@ -21,6 +21,7 @@ from app.services.priorizador import (
     PriorizadorRigoBerta,
     aplicar_resultado,
     get_priorizador,
+    tiene_informacion_clinica,
 )
 
 router = APIRouter(prefix="/api/interconsultas", tags=["interconsultas"])
@@ -294,7 +295,7 @@ def _validar_interconsultas_para_prediccion(
     invalidas = [
         interconsulta.id
         for interconsulta in interconsultas
-        if not _tiene_informacion_clinica(interconsulta)
+        if not tiene_informacion_clinica(interconsulta)
     ]
     if invalidas:
         raise HTTPException(
@@ -307,16 +308,6 @@ def _validar_interconsultas_para_prediccion(
                 "interconsultas_invalidas": invalidas,
             },
         )
-
-
-def _tiene_informacion_clinica(interconsulta: Interconsulta) -> bool:
-    campos = [
-        interconsulta.historia_clinica,
-        interconsulta.fundamentos_diagnostico,
-        interconsulta.examenes_complementarios,
-        interconsulta.motivo_interconsulta,
-    ]
-    return any(bool(campo and campo.strip()) for campo in campos)
 
 
 def _condicion_con_informacion_clinica():

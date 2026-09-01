@@ -52,6 +52,21 @@ def aplicar_resultado(
         interconsulta.prioridad_actual = resultado.prioridad
 
 
+def tiene_informacion_clinica(interconsulta: Interconsulta) -> bool:
+    """Si los cuatro campos de texto estan vacios no hay nada que predecir.
+
+    Definicion unica: la ingesta (`main`) y los endpoints de priorizacion
+    comparten este criterio, para que no puedan divergir.
+    """
+    campos = [
+        interconsulta.historia_clinica,
+        interconsulta.fundamentos_diagnostico,
+        interconsulta.examenes_complementarios,
+        interconsulta.motivo_interconsulta,
+    ]
+    return any(bool(campo and campo.strip()) for campo in campos)
+
+
 def construir_texto(interconsulta: Interconsulta) -> str:
     partes = [
         interconsulta.espec_origen,

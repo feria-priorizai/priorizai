@@ -45,13 +45,24 @@ jobs:
 
       - name: Pytest
         run: |
+          mkdir -p coverage
           docker run --rm --network host \
             -e DATABASE_HOST=localhost \
             -e DATABASE_PORT=5432 \
             -e DATABASE_NAME=priorizai_db \
             -e DATABASE_USER=priorizai_user \
             -e DATABASE_PASSWORD=priorizai_password \
-            priorizai-backend pytest
+            -v "${{ github.workspace }}/coverage:/app/coverage" \
+            priorizai-backend \
+            pytest --cov-report=xml:coverage/coverage.xml
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage/coverage.xml
+          if-no-files-found: warn
 
       - name: Build frontend image
         run: docker build -t priorizai-frontend ./frontend

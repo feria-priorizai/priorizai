@@ -22,4 +22,15 @@ show_error_codes = true
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 pythonpath = ["."]
-addopts = "-ra"
+addopts = "-ra --cov=app --cov-report=term-missing --cov-fail-under=82"
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

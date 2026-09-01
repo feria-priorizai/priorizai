@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useInterconsultas } from "@/hooks/useInterconsultas";
+import type { FiltrosInterconsulta } from "@/hooks/useInterconsultas";
 import FiltrosInterconsultas from "@/components/interconsultas/FiltrosInterconsultas";
 import ColaInterconsultas from "@/components/interconsultas/ColaInterconsultas";
 import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
@@ -24,17 +25,13 @@ export default function InterconsultasPage() {
 
   const [modoDescargaMultiple, setModoDescargaMultiple] = useState(false);
   const [seleccionadas, setSeleccionadas] = useState<Set<string>>(new Set());
-  const [filtrosPrevios, setFiltrosPrevios] = useState<{ estado: string; prioridad: string; busqueda: string } | null>(null);
+  const [filtrosPrevios, setFiltrosPrevios] = useState<FiltrosInterconsulta | null>(null);
   const [formatoDescarga, setFormatoDescarga] = useState<"json" | "csv" | "xlsx">("csv");
 
   // Cuando se activa el modo descarga múltiple, bloquear filtro a "revisada"
   // y guardar los filtros previos para restaurarlos al cancelar
   const activarDescargaMultiple = useCallback(() => {
-    setFiltrosPrevios({
-      estado: filtros.estado,
-      prioridad: filtros.prioridad,
-      busqueda: filtros.busqueda,
-    });
+    setFiltrosPrevios(filtros);
     actualizarFiltros({ estado: "revisada" });
     setModoDescargaMultiple(true);
     setSeleccionadas(new Set());
@@ -44,11 +41,7 @@ export default function InterconsultasPage() {
     setModoDescargaMultiple(false);
     setSeleccionadas(new Set());
     if (filtrosPrevios) {
-      actualizarFiltros({
-        estado: filtrosPrevios.estado as typeof filtros.estado,
-        prioridad: filtrosPrevios.prioridad as typeof filtros.prioridad,
-        busqueda: filtrosPrevios.busqueda,
-      });
+      actualizarFiltros(filtrosPrevios);
       setFiltrosPrevios(null);
     }
   }, [filtrosPrevios, actualizarFiltros]);

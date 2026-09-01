@@ -88,7 +88,7 @@ export default function ResumenClinico({
   const campos = resumen.camposInterconsulta;
 
   return (
-    <ContenedorResumen titulo="Resumen clinico disponible">
+    <Contenedor>
       <div className="border-b border-[var(--border-light)] px-5 py-3">
         <p className="text-sm text-[var(--text-secondary)]">
           Resumen construido con los antecedentes disponibles en la

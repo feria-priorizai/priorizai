@@ -15,6 +15,7 @@ from app.core.config import settings
 from app.core.database import SessionLocal, engine
 from app.models import Base, Interconsulta
 from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
+from app.services.ner import get_extractor_ner
 from app.services.priorizador import aplicar_resultado, get_priorizador
 
 UPLOAD_FILE = File(...)
@@ -323,6 +324,8 @@ COLUMNAS_NUEVAS = {
     "bandera_roja": "BOOLEAN DEFAULT false NOT NULL",
     "terminos_bandera_roja": "TEXT",
     "prioridad_forzada_por_regla": "BOOLEAN DEFAULT false NOT NULL",
+    "entidades": "JSON",
+    "entidades_error": "TEXT",
 }
 
 
@@ -359,6 +362,8 @@ def _priorizar_interconsultas_insertadas(session: Session, ids: list[str]) -> in
     for interconsulta in validas:
         aplicar_banderas_a_interconsulta(interconsulta, ya_modificada_por_medico=False)
 
+    _extraer_entidades(validas)
+
     try:
         resultados = get_priorizador().predecir(validas)
     except Exception as exc:
@@ -373,6 +378,35 @@ def _priorizar_interconsultas_insertadas(session: Session, ids: list[str]) -> in
         aplicar_resultado(por_id[resultado.id], resultado)
 
     return len(resultados)
+
+
+def _extraer_entidades(interconsultas: list[Interconsulta]) -> int:
+    """Corre el NER sobre los campos clinicos y guarda las entidades.
+
+    Un fallo del modelo no debe tumbar la carga: se registra en
+    entidades_error y la interconsulta se guarda igual, como con el
+    priorizador.
+    """
+    if not interconsultas:
+        return 0
+
+    try:
+        extractor = get_extractor_ner()
+    except Exception as exc:
+        for interconsulta in interconsultas:
+            interconsulta.entidades_error = f"No se pudo cargar el modelo NER: {exc}"
+        return 0
+
+    procesadas = 0
+    for interconsulta in interconsultas:
+        try:
+            interconsulta.entidades = extractor.extraer_de_interconsulta(interconsulta)
+            interconsulta.entidades_error = None
+            procesadas += 1
+        except Exception as exc:
+            interconsulta.entidades = None
+            interconsulta.entidades_error = f"No se pudo extraer entidades: {exc}"
+    return procesadas
 
 
 def _tiene_informacion_clinica(interconsulta: Interconsulta) -> bool:

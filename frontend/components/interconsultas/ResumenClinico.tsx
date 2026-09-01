@@ -3,19 +3,28 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { ResumenClinicoPaciente } from "@/types/paciente";
+import type { EntidadClinica, EntidadesPorCampo } from "@/types/interconsulta";
 import { obtenerResumenClinico } from "@/services/interconsultas";
+import TextoConEntidades from "./TextoConEntidades";
+import { CLASES_ENTIDAD, ORDEN_CLASES } from "./entidadesEstilos";
 
 interface ResumenClinicoProps {
   pacienteId: string;
+  /** Entidades detectadas por el NER, para resaltarlas en el texto. */
+  entidades?: EntidadesPorCampo | null;
 }
 
 interface SeccionClinicaProps {
   titulo: string;
   contenido?: string;
   textoVacio: string;
+  entidades?: EntidadClinica[];
 }
 
-export default function ResumenClinico({ pacienteId }: ResumenClinicoProps) {
+export default function ResumenClinico({
+  pacienteId,
+  entidades,
+}: ResumenClinicoProps) {
   const [resultado, setResultado] = useState<{
     pacienteId: string;
     resumen: ResumenClinicoPaciente | null;
@@ -83,6 +92,7 @@ export default function ResumenClinico({ pacienteId }: ResumenClinicoProps) {
           Resumen construido con los antecedentes disponibles en la
           interconsulta. No reemplaza el expediente clinico completo.
         </p>
+        <LeyendaEntidades entidades={entidades} />
       </div>
 
       <div className="grid grid-cols-1 gap-0 divide-y divide-[var(--border-light)]">
@@ -90,21 +100,25 @@ export default function ResumenClinico({ pacienteId }: ResumenClinicoProps) {
           titulo="Historia clinica"
           contenido={campos.historiaClinica}
           textoVacio="Sin historia clinica registrada."
+          entidades={entidades?.historia_clinica}
         />
         <SeccionClinica
           titulo="Fundamentos diagnosticos"
           contenido={campos.fundamentosDiagnostico}
           textoVacio="Sin fundamentos diagnosticos registrados."
+          entidades={entidades?.fundamentos_diagnostico}
         />
         <SeccionClinica
           titulo="Examenes complementarios"
           contenido={campos.examenesComplementarios}
           textoVacio="Sin examenes complementarios registrados."
+          entidades={entidades?.examenes_complementarios}
         />
         <SeccionClinica
           titulo="Motivo de interconsulta"
           contenido={campos.motivoInterconsulta}
           textoVacio="Sin motivo de interconsulta registrado."
+          entidades={entidades?.motivo_interconsulta}
         />
       </div>
     </ContenedorResumen>
@@ -140,10 +154,46 @@ function EstadoVacio({ texto }: { texto: string }) {
   );
 }
 
+function LeyendaEntidades({
+  entidades,
+}: {
+  entidades?: EntidadesPorCampo | null;
+}) {
+  const presentes = new Set(
+    Object.values(entidades ?? {})
+      .flat()
+      .map((entidad) => entidad?.clase)
+      .filter(Boolean),
+  );
+  const clases = ORDEN_CLASES.filter((clase) => presentes.has(clase));
+
+  if (clases.length === 0) {
+    return null;
+  }
+
+  return (
+    <ul className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+      {clases.map((clase) => (
+        <li
+          key={clase}
+          className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]"
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${CLASES_ENTIDAD[clase].punto}`}
+            aria-hidden
+          />
+          {CLASES_ENTIDAD[clase].plural}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function SeccionClinica({
   titulo,
   contenido,
   textoVacio,
+  entidades,
 }: SeccionClinicaProps) {
   const texto = contenido?.trim();
 
@@ -154,7 +204,7 @@ function SeccionClinica({
       </h4>
       {texto ? (
         <p className="whitespace-pre-wrap rounded-lg bg-[var(--background)] p-3 text-sm leading-relaxed text-[var(--text-primary)]">
-          {texto}
+          <TextoConEntidades texto={texto} entidades={entidades} />
         </p>
       ) : (
         <p className="text-sm text-[var(--text-muted)]">{textoVacio}</p>

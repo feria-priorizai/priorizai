@@ -19,6 +19,19 @@ class Settings:
     model_max_length: int = int(os.getenv("MODEL_MAX_LENGTH", "512"))
     model_batch_size: int = int(os.getenv("MODEL_BATCH_SIZE", "16"))
 
+    # NER de entidades clinicas. Symptom queda fuera por defecto: su F1 es
+    # 0.51 contra 0.73-0.88 de las demas clases sobre interconsultas reales.
+    ner_model_path: str = os.getenv("NER_MODEL_PATH", "/models/NER/modelo")
+    ner_umbral: float = float(os.getenv("NER_UMBRAL", "0.5"))
+    ner_max_length: int = int(os.getenv("NER_MAX_LENGTH", "256"))
+    ner_clases: tuple[str, ...] = tuple(
+        clase.strip()
+        for clase in os.getenv("NER_CLASES", "Disease,Medication,Abbreviation").split(
+            ","
+        )
+        if clase.strip()
+    )
+
     @property
     def database_url(self) -> str:
         return (

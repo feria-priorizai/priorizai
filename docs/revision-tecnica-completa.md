@@ -2,9 +2,15 @@
 
 **Fecha:** 2026-08-31 · **Rama base:** `develop` (`792c592`) · **Revisado desde:** `hotfix/resumen-clinico-jsx` (`1b086be`)
 
+> **Estado al 2026-08-31.** Corregidos en `fix/bugs-revision-tecnica`: **B1**, **B2**,
+> **B3**, **B4** y **A4** (mitigado), cada uno con test de regresión. **T1** y **T3**
+> se cierran al mergear `feat/testing-fixes`, ya rebasada sobre `develop`. El bug de
+> la página de detalle que motivó esta revisión va en `hotfix/resumen-clinico-jsx`.
+> El resto sigue abierto.
+
 Revisión de todo el repositorio: backend, frontend, tests, CI y empaquetado.
-Cada hallazgo está anotado con `archivo:línea`. **Nada de esto se corrigió** —
-salvo lo que ya iba en el hotfix, que se indica donde corresponde.
+Cada hallazgo está anotado con `archivo:línea` y describe el estado **en el
+momento de la revisión**; lo corregido después se indica en la nota de arriba.
 
 ---
 

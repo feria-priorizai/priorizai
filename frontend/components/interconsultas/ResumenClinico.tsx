@@ -143,14 +143,6 @@ function Contenedor({ children }: { children: ReactNode }) {
   );
 }
 
-function EstadoVacio({ texto }: { texto: string }) {
-  return (
-    <div className="px-5 py-8 text-center text-sm text-[var(--text-muted)]">
-      {texto}
-    </div>
-  );
-}
-
 function LeyendaEntidades({
   entidades,
 }: {

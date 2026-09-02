@@ -11,7 +11,8 @@ import ColaInterconsultas from "@/components/interconsultas/ColaInterconsultas";
 import EstadoVista from "@/components/ui/EstadoVista";
 
 export default function DashboardPage() {
-  const { interconsultas, cargando, error } = useInterconsultas();
+  const { interconsultas, cargando, error, totalInterconsultas } =
+    useInterconsultas();
 
   if (cargando) {
     return <EstadoVista tipo="cargando" texto="Cargando interconsultas…" />;
@@ -23,7 +24,10 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <ResumenEstadisticas interconsultas={interconsultas} />
+      <ResumenEstadisticas
+        interconsultas={interconsultas}
+        total={totalInterconsultas}
+      />
       {/* La descarga multiple vive en el listado, no en el panel. */}
       <ColaInterconsultas
         interconsultas={interconsultas}

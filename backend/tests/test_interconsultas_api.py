@@ -281,3 +281,42 @@ def test_listado_rechaza_un_limit_desmedido(client: TestClient) -> None:
         client.get("/api/interconsultas", params={"limit": 999999}).status_code == 422
     )
     assert client.get("/api/interconsultas", params={"limit": 0}).status_code == 422
+
+
+def test_motivo_demasiado_corto_devuelve_422(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """El minimo vivia solo en el formulario del frontend: por la API entraba un
+    motivo de un caracter, y el motivo es toda la auditoria de HdU02."""
+    guardar_interconsulta(id="ic-motivo-corto")
+
+    response = client.patch(
+        "/api/interconsultas/ic-motivo-corto/prioridad",
+        json={
+            "prioridad": "alta",
+            "motivo": "corto",
+            "medico_responsable": "Dra. Perez",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "al menos 10" in response.json()["detail"]
+
+
+def test_motivo_en_el_limite_se_acepta(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    guardar_interconsulta(id="ic-motivo-limite")
+
+    response = client.patch(
+        "/api/interconsultas/ic-motivo-limite/prioridad",
+        json={
+            "prioridad": "alta",
+            "motivo": "10 chars!!",
+            "medico_responsable": "Dra. Perez",
+        },
+    )
+
+    assert response.status_code == 200

@@ -1,8 +1,9 @@
 "use client";
 
 import type { Interconsulta } from "@/types";
-import type { ConfiguracionCampos, DefinicionCampo } from "@/types/campos";
-import { TODOS_LOS_CAMPOS, getCampoPorClave } from "@/types/campos";
+import * as XLSX from "xlsx";
+import type { ConfiguracionCampos } from "@/types/campos";
+import { getCampoPorClave } from "@/types/campos";
 
 /**
  * Utilidades de exportación dinámicas basadas en configuración.
@@ -104,9 +105,27 @@ export function generarDatosCSV(
 }
 
 /**
+ * Neutraliza la inyección de fórmulas: Excel y LibreOffice ejecutan cualquier
+ * celda que empiece con = + - @ (o tab/retorno). El texto clínico viene de un
+ * archivo externo, así que es una fuente que la aplicación no controla.
+ */
+function neutralizarFormula(valor: string): string {
+  return /^[=+\-@\t\r]/.test(valor) ? `'${valor}` : valor;
+}
+
+/** Escapa una celda para CSV: comillas dobladas y fórmulas neutralizadas. */
+function escaparCSV(valor: string): string {
+  return `"${neutralizarFormula(valor).replace(/"/g, '""')}"`;
+}
+
+/**
  * Descarga un archivo (genérico)
  */
-function descargarArchivo(contenido: string, nombreArchivo: string, mimeType: string) {
+function descargarArchivo(
+  contenido: BlobPart,
+  nombreArchivo: string,
+  mimeType: string,
+) {
   const blob = new Blob([contenido], { type: `${mimeType};charset=utf-8;` });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -145,22 +164,14 @@ export function descargarCSV(
   nombreBase: string = "interconsulta"
 ) {
   const { headers, fila } = generarDatosCSV(interconsulta, config);
-
-  // Escapar comillas y envolver en comillas
-  const escapar = (val: string) => `"${val.replace(/"/g, '""')}"`;
-
-  const lineas = [
-    headers.map(escapar).join(","),
-    fila.map(escapar).join(","),
-  ];
-
-  const contenido = lineas.join("\n");
+  const contenido = componerCSV(headers, [fila]);
   descargarArchivo(contenido, `${nombreBase}-${interconsulta.id}.csv`, "text/csv");
 }
 
 /**
- * Exporta a XLSX (MVP: CSV con extensión .xlsx)
- * Para XLSX real con múltiples hojas, usar librería 'xlsx'
+ * Exporta a XLSX. Antes escribía un CSV con extensión .xlsx y el MIME de
+ * Excel: el usuario elegía "XLSX" y recibía un archivo que Excel abría con
+ * advertencia de formato corrupto.
  */
 export function descargarXLSX(
   interconsulta: Interconsulta,
@@ -168,16 +179,7 @@ export function descargarXLSX(
   nombreBase: string = "interconsulta"
 ) {
   const { headers, fila } = generarDatosCSV(interconsulta, config);
-
-  const escapar = (val: string) => `"${val.replace(/"/g, '""')}"`;
-
-  const lineas = [
-    headers.map(escapar).join(","),
-    fila.map(escapar).join(","),
-  ];
-
-  const contenido = lineas.join("\n");
-  descargarArchivo(contenido, `${nombreBase}-${interconsulta.id}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  descargarLibroXLSX(headers, [fila], `${nombreBase}-${interconsulta.id}.xlsx`);
 }
 
 /**
@@ -239,21 +241,11 @@ export function descargarCSVMultiple(
   // Headers basados en la primera interconsulta
   const { headers } = generarDatosCSV(interconsultas[0], config);
   const filas: string[][] = interconsultas.map((ic) => generarDatosCSV(ic, config).fila);
-
-  const escapar = (val: string) => `"${val.replace(/"/g, '""')}"`;
-
-  const lineas = [
-    headers.map(escapar).join(","),
-    ...filas.map((fila) => fila.map(escapar).join(",")),
-  ];
-
-  const contenido = lineas.join("\n");
+  const contenido = componerCSV(headers, filas);
   descargarArchivo(contenido, `${nombreBase}-${generarNombreArchivo()}.csv`, "text/csv");
 }
 
-/**
- * Exporta múltiples interconsultas a XLSX (MVP: CSV con extensión .xlsx)
- */
+/** Exporta múltiples interconsultas a un XLSX real de una hoja. */
 export function descargarXLSXMultiple(
   interconsultas: Interconsulta[],
   config: ConfiguracionCampos,
@@ -263,20 +255,7 @@ export function descargarXLSXMultiple(
 
   const { headers } = generarDatosCSV(interconsultas[0], config);
   const filas: string[][] = interconsultas.map((ic) => generarDatosCSV(ic, config).fila);
-
-  const escapar = (val: string) => `"${val.replace(/"/g, '""')}"`;
-
-  const lineas = [
-    headers.map(escapar).join(","),
-    ...filas.map((fila) => fila.map(escapar).join(",")),
-  ];
-
-  const contenido = lineas.join("\n");
-  descargarArchivo(
-    contenido,
-    `${nombreBase}-${generarNombreArchivo()}.xlsx`,
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-  );
+  descargarLibroXLSX(headers, filas, `${nombreBase}-${generarNombreArchivo()}.xlsx`);
 }
 
 /**
@@ -295,4 +274,36 @@ export function exportarInterconsultas(
     case "xlsx":
       return descargarXLSXMultiple(interconsultas, config);
   }
+}
+
+/**
+ * Arma el CSV completo. BOM y CRLF para que Excel en español no rompa las
+ * tildes ni junte todo en una sola línea.
+ */
+function componerCSV(headers: string[], filas: string[][]): string {
+  const lineas = [
+    headers.map(escaparCSV).join(","),
+    ...filas.map((fila) => fila.map(escaparCSV).join(",")),
+  ];
+  return `\ufeff${lineas.join("\r\n")}\r\n`;
+}
+
+/** Escribe un .xlsx de verdad (una hoja) y lo descarga. */
+function descargarLibroXLSX(
+  headers: string[],
+  filas: string[][],
+  nombreArchivo: string,
+) {
+  const hoja = XLSX.utils.aoa_to_sheet([
+    headers,
+    ...filas.map((fila) => fila.map(neutralizarFormula)),
+  ]);
+  const libro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(libro, hoja, "Interconsultas");
+  const bytes = XLSX.write(libro, { bookType: "xlsx", type: "array" });
+  descargarArchivo(
+    bytes,
+    nombreArchivo,
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
 }

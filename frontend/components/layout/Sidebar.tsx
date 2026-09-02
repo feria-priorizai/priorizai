@@ -11,6 +11,7 @@ import {
   reevaluarBanderasRojas,
   subirCsvInterconsultas,
 } from "@/services/interconsultas";
+import { useConfiguracionImport } from "@/hooks/useConfiguracionCampos";
 
 interface ItemNavegacion {
   nombre: string;
@@ -32,6 +33,7 @@ const itemsNavegacion: ItemNavegacion[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { camposObligatorios } = useConfiguracionImport();
   const [colapsado, setColapsado] = useState(false);
   const [notificacion, setNotificacion] = useState<Notificacion | null>(null);
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
@@ -62,7 +64,10 @@ export default function Sidebar() {
     setNotificacion(null);
 
     try {
-      const resultado = await subirCsvInterconsultas(archivo);
+      const resultado = await subirCsvInterconsultas(
+        archivo,
+        camposObligatorios,
+      );
       const total = resultado.stored ?? resultado.inserted;
       const priorizadas = resultado.prioritized ?? 0;
       const rechazadas = resultado.rejected_count ?? 0;

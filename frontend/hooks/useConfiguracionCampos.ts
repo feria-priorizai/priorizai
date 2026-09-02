@@ -1,7 +1,7 @@
 "use client";
 
 import { useConfiguracion } from "@/context/ConfiguracionContext";
-import type { ConfiguracionCampos, PerfilConfiguracion, DefinicionCampo, GrupoCampo } from "@/types/campos";
+import type { DefinicionCampo, GrupoCampo } from "@/types/campos";
 import { DEFAULT_CONFIG, TODOS_LOS_CAMPOS, mergeConfigPerfil } from "@/types/campos";
 
 /**

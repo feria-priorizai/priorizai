@@ -146,6 +146,11 @@ class ExtractorEntidades:
         except (TypeError, ValueError):
             tokenizer = AutoTokenizer.from_pretrained(ruta)
 
+        # `max_length` era configuracion muerta: el pipeline de
+        # token-classification no acepta `truncation` ni `max_length` como
+        # argumentos, hay que dejarselo dicho al tokenizador.
+        tokenizer.model_max_length = self.config.max_length
+
         modelo = AutoModelForTokenClassification.from_pretrained(ruta)
         modelo.eval()
 

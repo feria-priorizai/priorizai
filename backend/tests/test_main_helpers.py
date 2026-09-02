@@ -141,7 +141,7 @@ def test_texto_o_none(entrada: object, esperado: str | None) -> None:
         (3, 0, "skipped"),
         (3, 1, "partial"),
         (3, 2, "partial"),
-        (0, 0, "completed"),
+        (0, 0, "skipped"),
     ],
 )
 def test_estado_priorizacion(total: int, priorizadas: int, esperado: str) -> None:
@@ -212,7 +212,6 @@ def test_tiene_informacion_clinica_tolera_none() -> None:
         ("53", 53),
         ("53.0", 53),
         ("53,0", 53),
-        (" 4 6 ", 46),
         ("4,5", 4),
         ("0", 0),
         (0, 0),
@@ -235,7 +234,18 @@ def test_parsear_edad_no_borra_el_separador_decimal() -> None:
 
 @pytest.mark.parametrize(
     "entrada",
-    [None, "", "   ", "cuarenta y seis", "1.2.3", "12,5,3", "abc", "-"],
+    [
+        None,
+        "",
+        "   ",
+        "cuarenta y seis",
+        "1.2.3",
+        "12,5,3",
+        "abc",
+        "-",
+        # Un espacio en medio es un error de tipeo, no una edad de 46.
+        "4 6",
+    ],
 )
 def test_parsear_edad_devuelve_none_si_no_es_un_numero(entrada: object) -> None:
     assert _parsear_edad(entrada) is None

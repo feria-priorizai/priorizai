@@ -6,12 +6,15 @@ import TarjetaEstadistica from "@/components/ui/TarjetaEstadistica";
 
 interface ResumenEstadisticasProps {
   interconsultas: Interconsulta[];
+  /** Total en el servidor. Puede ser mayor que lo cargado. */
+  total?: number;
 }
 
 export default function ResumenEstadisticas({
   interconsultas,
+  total: totalServidor,
 }: ResumenEstadisticasProps) {
-  const total = interconsultas.length;
+  const total = totalServidor ?? interconsultas.length;
   const pendientes = interconsultas.filter((ic) => ic.estado === "pendiente").length;
   const revisadas = interconsultas.filter((ic) => ic.estado === "revisada").length;
   const prioridadAlta = interconsultas.filter(

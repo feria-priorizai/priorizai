@@ -1,5 +1,6 @@
 from app.models.interconsulta import Interconsulta
 from app.services.banderas_rojas import (
+    _buscar_todas,
     aplicar_banderas_a_interconsulta,
     detectar_banderas,
     detectar_banderas_multicampo,
@@ -243,3 +244,14 @@ def test_reevaluar_mantiene_el_forzado_si_el_termino_sigue_estando() -> None:
 
     assert interconsulta.prioridad_forzada_por_regla is True
     assert interconsulta.prioridad_actual == "alta"
+
+
+def test_buscar_una_secuencia_vacia_no_encuentra_nada() -> None:
+    assert _buscar_todas(["dolor", "toracico"], ()) == []
+
+
+def test_un_termino_no_se_cuenta_dos_veces_por_sinonimo_solapado() -> None:
+    """ "sepsis" y "sepsis grave" empiezan en el mismo token: es una deteccion."""
+    detecciones = detectar_banderas("Paciente cursa sepsis grave desde ayer")
+
+    assert [d.termino_id for d in detecciones] == ["sepsis"]

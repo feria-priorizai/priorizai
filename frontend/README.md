@@ -36,7 +36,7 @@ npm run lint    # eslint
 ```
 
 No hay tests todavia: falta instalar un runner y cubrir la logica de
-`services/interconsultas.ts` (ver `docs/revision-tecnica.md`, punto 2.g).
+`services/interconsultas.ts`, que es donde vive el mapeo de la API.
 
 ## Estructura
 

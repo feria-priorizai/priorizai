@@ -1,10 +1,13 @@
 import csv
 import io
 import math
+from collections.abc import AsyncIterator, Iterable, Sequence
+from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from openpyxl import load_workbook
 from sqlalchemy import inspect, select, text
@@ -24,6 +27,7 @@ from app.services.priorizador import (
 )
 
 UPLOAD_FILE = File(...)
+CAMPOS_OBLIGATORIOS_FORM = Form(None)
 
 COLUMNAS_ESPERADAS = [
     "ESPEC_ORIGEN",
@@ -56,9 +60,30 @@ COLUMNAS_OBLIGATORIAS_POR_FILA = [
     "MOTIVO_INTERCONSULTA",
 ]
 
-app = FastAPI()
+# EDAD no se puede volver opcional desde la configuracion: la columna es NOT
+# NULL y, a diferencia de los campos de texto, no tiene un vacio que guardar.
+COLUMNAS_SIEMPRE_OBLIGATORIAS = ["EDAD"]
 
-Base.metadata.create_all(bind=engine)
+# Lo unico que la configuracion puede marcar como obligatorio. Las claves de la
+# pestana de configuracion incluyen campos que no vienen en el archivo
+# (PRIORIDAD_ACTUAL, ID, ESTADO...); esas se ignoran en vez de rechazarse.
+COLUMNAS_CONFIGURABLES = frozenset(COLUMNAS_ESPERADAS)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Toda la conversacion con la base ocurre aca, no al importar el modulo.
+
+    Con `create_all` y `_asegurar_columnas_interconsultas()` a nivel de modulo,
+    `import app.main` abria conexion: los tests no corrian sin Postgres y la CI
+    levantaba un servicio entero solo para poder importar la app."""
+    settings.verificar_credenciales()
+    Base.metadata.create_all(bind=engine)
+    _asegurar_columnas_interconsultas()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -84,7 +109,13 @@ def health() -> dict[str, str]:
 
 
 @app.post("/upload-csv")
-async def upload_csv(file: UploadFile = UPLOAD_FILE) -> dict[str, object]:
+async def upload_csv(
+    file: UploadFile = UPLOAD_FILE,
+    campos_obligatorios: str | None = CAMPOS_OBLIGATORIOS_FORM,
+) -> dict[str, object]:
+    """`campos_obligatorios` viene de la pestana de configuracion, separado por
+    comas. Sin el se usan los de fabrica: antes la configuracion no salia del
+    navegador y la pestana no tenia ningun efecto sobre la carga."""
     filename = (file.filename or "").lower()
     es_csv = filename.endswith(".csv")
     es_xlsx = filename.endswith(".xlsx")
@@ -102,7 +133,9 @@ async def upload_csv(file: UploadFile = UPLOAD_FILE) -> dict[str, object]:
         filas = _leer_csv(contenido)
         tipo_archivo = "csv"
 
-    resultado_validacion = _validar_filas(filas)
+    resultado_validacion = _validar_filas(
+        filas, _resolver_obligatorias(campos_obligatorios)
+    )
     guardado = _guardar_interconsultas(
         resultado_validacion["filas_validas"], tipo_archivo
     )
@@ -113,7 +146,23 @@ async def upload_csv(file: UploadFile = UPLOAD_FILE) -> dict[str, object]:
     }
 
 
-def _leer_csv(contenido: bytes) -> list[dict[str, str]]:
+@dataclass(frozen=True)
+class FilaLeida:
+    """Una fila del archivo con su numero real de linea.
+
+    El numero se arrastra desde la lectura porque las filas en blanco y las mal
+    formadas no llegan a la validacion: numerarlas alli corria el indice y el
+    modal de errores senalaba una fila distinta a la del archivo.
+    """
+
+    numero: int
+    datos: dict[str, str] = field(default_factory=dict)
+    # Problema estructural (columnas de mas o de menos). La fila se rechaza sin
+    # detener el resto del archivo.
+    error: str | None = None
+
+
+def _leer_csv(contenido: bytes) -> list[FilaLeida]:
     try:
         texto = contenido.decode("utf-8-sig")
     except UnicodeDecodeError:
@@ -140,24 +189,29 @@ def _leer_csv(contenido: bytes) -> list[dict[str, str]]:
 
     header = [_normalizar_valor(cell) for cell in reader_rows[0]]
     filas = []
-    for idx, row in enumerate(reader_rows[1:], start=2):
-        row = [_normalizar_valor(cell) for cell in row]
-        if not row or all(not cell for cell in row):
+    for numero, row in enumerate(reader_rows[1:], start=2):
+        valores = [_normalizar_valor(cell) for cell in row]
+        if not valores or all(not cell for cell in valores):
             continue
-        if len(row) != len(header):
-            sample = " | ".join(row[:6])
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Fila CSV {idx} invalida: se esperaban {len(header)} columnas "
-                    f"y llegaron {len(row)}. Sample: {sample}"
-                ),
+        if len(valores) != len(header):
+            filas.append(
+                FilaLeida(
+                    numero=numero,
+                    datos=dict(zip(header, valores, strict=False)),
+                    error=(
+                        f"Se esperaban {len(header)} columnas y "
+                        f"llegaron {len(valores)}"
+                    ),
+                )
             )
-        filas.append(dict(zip(header, row, strict=True)))
+            continue
+        filas.append(
+            FilaLeida(numero=numero, datos=dict(zip(header, valores, strict=True)))
+        )
     return filas
 
 
-def _leer_xlsx(contenido: bytes) -> list[dict[str, str]]:
+def _leer_xlsx(contenido: bytes) -> list[FilaLeida]:
     try:
         workbook = load_workbook(io.BytesIO(contenido), read_only=True, data_only=True)
     except Exception as error:
@@ -173,24 +227,53 @@ def _leer_xlsx(contenido: bytes) -> list[dict[str, str]]:
 
     header = [_normalizar_valor(cell) for cell in rows[0]]
     filas = []
-    for idx, row in enumerate(rows[1:], start=2):
+    for numero, row in enumerate(rows[1:], start=2):
         valores = [_normalizar_valor(cell) for cell in row[: len(header)]]
         if not valores or all(not cell for cell in valores):
             continue
         extra = row[len(header) :]
         if any(_normalizar_valor(cell) for cell in extra):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Fila XLSX {idx} invalida: contiene columnas extra con datos",
+            filas.append(
+                FilaLeida(
+                    numero=numero,
+                    datos=dict(zip(header, valores, strict=False)),
+                    error="Contiene columnas extra con datos",
+                )
             )
-        filas.append(dict(zip(header, valores, strict=True)))
+            continue
+        filas.append(
+            FilaLeida(numero=numero, datos=dict(zip(header, valores, strict=True)))
+        )
     return filas
 
 
-def _validar_filas(filas: list[dict[str, str]]) -> dict[str, list]:
+def _resolver_obligatorias(campos: str | None) -> list[str]:
+    """Campos que deben venir con valor, segun la configuracion del cliente.
+
+    Las claves que no son columnas del archivo (PRIORIDAD_ACTUAL, ID, ESTADO...)
+    se ignoran: la pestana de configuracion las ofrece para exportar.
     """
-    Valida filas y separa válidas de inválidas.
-    Retorna: { "filas_validas": [...], "rejected": [{"fila": int, "campos_faltantes": [], "datos_raw": {...}}] }
+    if campos is None:
+        return list(COLUMNAS_OBLIGATORIAS_POR_FILA)
+
+    pedidos = [
+        _normalizar_encabezado(campo) for campo in campos.split(",") if campo.strip()
+    ]
+    elegidos = [campo for campo in pedidos if campo in COLUMNAS_CONFIGURABLES]
+    for campo in COLUMNAS_SIEMPRE_OBLIGATORIAS:
+        if campo not in elegidos:
+            elegidos.append(campo)
+    return elegidos
+
+
+def _validar_filas(
+    filas: Sequence[FilaLeida],
+    obligatorias: Iterable[str] | None = None,
+) -> dict[str, list]:
+    """Separa las filas utilizables de las rechazadas.
+
+    Ninguna fila mala detiene el archivo: se junta el motivo de cada una en
+    `rejected` para que el cliente pueda mostrarlas.
     """
     if not filas:
         raise HTTPException(
@@ -198,62 +281,69 @@ def _validar_filas(filas: list[dict[str, str]]) -> dict[str, list]:
             detail="El archivo no contiene filas de datos",
         )
 
-    encabezados = [_normalizar_encabezado(h) for h in filas[0]]
-    faltantes_enc = [h for h in COLUMNAS_ESPERADAS if h not in encabezados]
+    requeridas = (
+        list(COLUMNAS_OBLIGATORIAS_POR_FILA)
+        if obligatorias is None
+        else list(obligatorias)
+    )
+
+    encabezados = [_normalizar_encabezado(h) for h in filas[0].datos]
+    faltantes_enc = [h for h in requeridas if h not in encabezados]
     if faltantes_enc:
+        unidos = ", ".join(faltantes_enc)
         raise HTTPException(
             status_code=400,
-            detail=f"Faltan encabezados obligatorios: {', '.join(faltantes_enc)}",
+            detail=f"Faltan encabezados obligatorios: {unidos}",
         )
 
     filas_validas: list[dict[str, object]] = []
     rejected: list[dict[str, object]] = []
 
-    for idx, fila in enumerate(filas, start=2):
+    for fila in filas:
         datos: dict[str, object] = {
             _normalizar_encabezado(clave): _normalizar_valor(valor)
-            for clave, valor in fila.items()
+            for clave, valor in fila.datos.items()
             if clave is not None
         }
-        # Validar campos obligatorios por fila
-        faltantes = [
-            campo
-            for campo in COLUMNAS_OBLIGATORIAS_POR_FILA
-            if not str(datos.get(campo, "")).strip()
-        ]
-        if faltantes:
-            rejected.append(
-                {
-                    "fila": idx,
-                    "campos_faltantes": faltantes,
-                    "datos_raw": datos,
-                }
-            )
+
+        if fila.error is not None:
+            _rechazar(rejected, fila.numero, fila.error, datos)
             continue
 
-        # Validar EDAD numérica
+        faltantes = [
+            campo for campo in requeridas if not str(datos.get(campo, "")).strip()
+        ]
+        if faltantes:
+            _rechazar(rejected, fila.numero, faltantes, datos)
+            continue
+
         edad = _parsear_edad(datos.get("EDAD"))
         if edad is None:
-            motivo_edad = "EDAD (formato inválido)"
-        elif not 0 <= edad <= EDAD_MAXIMA:
-            motivo_edad = "EDAD (fuera de rango)"
-        else:
-            motivo_edad = None
-
-        if motivo_edad is not None:
-            rejected.append(
-                {
-                    "fila": idx,
-                    "campos_faltantes": [motivo_edad],
-                    "datos_raw": datos,
-                }
-            )
+            _rechazar(rejected, fila.numero, "EDAD (formato inválido)", datos)
+            continue
+        if not 0 <= edad <= settings.edad_maxima:
+            _rechazar(rejected, fila.numero, "EDAD (fuera de rango)", datos)
             continue
         datos["EDAD"] = edad
 
         filas_validas.append(datos)
 
     return {"filas_validas": filas_validas, "rejected": rejected}
+
+
+def _rechazar(
+    rejected: list[dict[str, object]],
+    numero: int,
+    motivo: str | list[str],
+    datos: dict[str, object],
+) -> None:
+    rejected.append(
+        {
+            "fila": numero,
+            "campos_faltantes": [motivo] if isinstance(motivo, str) else motivo,
+            "datos_raw": datos,
+        }
+    )
 
 
 def _guardar_interconsultas(
@@ -422,6 +512,9 @@ def _extraer_entidades(interconsultas: list[Interconsulta]) -> int:
 
 
 def _estado_priorizacion(total: int, priorizadas: int) -> str:
+    if total == 0:
+        # Todas las filas se rechazaron: no hubo priorizacion que completar.
+        return "skipped"
     if priorizadas == total:
         return "completed"
     if priorizadas == 0:
@@ -461,9 +554,6 @@ def _parsear_fecha_emision(valor: object) -> datetime | None:
     return None
 
 
-EDAD_MAXIMA = 130
-
-
 def _parsear_edad(valor: object) -> int | None:
     """Anios cumplidos a partir de la celda del archivo.
 
@@ -473,13 +563,16 @@ def _parsear_edad(valor: object) -> int | None:
     miles: en una edad no tiene sentido. Los decimales se truncan, que es la
     convencion clinica (4,5 anios son 4 anios cumplidos).
 
+    Los espacios internos no se ignoran: "4 6" es mas probablemente un error
+    de tipeo que una edad de 46 anios.
+
     Devuelve None si el valor no es un numero; el rango lo valida la llamante,
     para poder distinguir 'no es un numero' de 'no es una edad posible'.
     """
     if valor is None:
         return None
 
-    texto = str(valor).strip().replace(" ", "")
+    texto = str(valor).strip()
     if not texto:
         return None
 
@@ -503,6 +596,3 @@ def _normalizar_valor(valor: object) -> str:
     if isinstance(valor, float) and valor.is_integer():
         valor = int(valor)
     return str(valor).replace("\ufeff", "").replace("\xa0", " ").strip()
-
-
-_asegurar_columnas_interconsultas()

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { MouseEvent } from "react";
+import { useId, type MouseEvent } from "react";
 import type { Interconsulta, NivelPrioridad } from "@/types";
 import BadgeEstado from "@/components/ui/BadgeEstado";
 import {
@@ -65,6 +65,7 @@ export default function ColaInterconsultas({
   mostrarBotonDescargaMultiple = true,
 }: ColaInterconsultasProps) {
   const router = useRouter();
+  const idBase = useId();
 
   const todasSeleccionadas =
     interconsultas.length > 0 &&
@@ -103,7 +104,7 @@ export default function ColaInterconsultas({
       <div className="pz-panel__head flex flex-wrap items-start justify-between gap-3">
         <div>
           <span className="pz-eyebrow">Lista de espera</span>
-          <h3 className="pz-panel__title">{titulo}</h3>
+          <h2 className="pz-panel__title">{titulo}</h2>
           <p className="pz-panel__sub">{subtitulo}</p>
         </div>
 
@@ -136,14 +137,14 @@ export default function ColaInterconsultas({
                 type="button"
                 onClick={onDescargarSeleccion}
                 disabled={seleccionadas.size === 0}
-                className="pz-btn pz-btn--solid pz-btn--mini"
+                className="pz-btn pz-btn--azul pz-btn--mini"
               >
                 Descargar ({seleccionadas.size})
               </button>
               <button
                 type="button"
                 onClick={onCancelarDescargaMultiple}
-                className="pz-btn pz-btn--ghost pz-btn--mini"
+                className="pz-btn pz-btn--claro pz-btn--mini"
               >
                 Cancelar
               </button>
@@ -152,7 +153,7 @@ export default function ColaInterconsultas({
             <button
               type="button"
               onClick={onActivarDescargaMultiple}
-              className="pz-btn pz-btn--ghost pz-btn--mini"
+              className="pz-btn pz-btn--morado pz-btn--mini"
             >
               Descargar múltiples
             </button>
@@ -166,17 +167,20 @@ export default function ColaInterconsultas({
         </div>
       ) : (
         porGrupo.map((grupo) => (
-          <section key={grupo.clave}>
-            <div
-              className={`pz-grupo pz-grupo--${
-                grupo.clave === "sin" || grupo.clave === "invalida"
-                  ? "sin"
-                  : grupo.clave
-              }`}
-            >
-              <span className="pz-grupo__barra" aria-hidden="true" />
-              <span className="pz-grupo__t">{grupo.titulo}</span>
-              <span className="pz-grupo__n">· {grupo.items.length}</span>
+          <section
+            key={grupo.clave}
+            aria-labelledby={`${idBase}-${grupo.clave}`}
+            className={`pz-zona pz-zona--${
+              grupo.clave === "sin" || grupo.clave === "invalida"
+                ? "sin"
+                : grupo.clave
+            }`}
+          >
+            <div className="pz-grupo">
+              <h3 id={`${idBase}-${grupo.clave}`} className="pz-grupo__t">
+                {grupo.titulo}
+              </h3>
+              <span className="pz-grupo__n">{grupo.items.length}</span>
               <span className="pz-grupo__regla" aria-hidden="true" />
             </div>
 
@@ -199,7 +203,8 @@ export default function ColaInterconsultas({
                 <div className="pz-fila-cola__id">
                   <Link
                     href={`/interconsultas/${ic.id}`}
-                    className="pz-mono text-[.74rem] font-semibold tracking-[.04em] text-[var(--pz-blue-deep)]"
+                    className="pz-mono font-bold tracking-[.04em] text-[var(--pz-blue-deep)]"
+                    style={{ fontSize: "var(--fs-sm)" }}
                   >
                     {ic.id.slice(0, 8).toUpperCase()}
                   </Link>

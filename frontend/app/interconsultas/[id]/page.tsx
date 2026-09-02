@@ -57,7 +57,7 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
           tipo="error"
           texto={error ?? "Interconsulta no encontrada"}
         />
-        <Link href="/interconsultas" className="pz-btn pz-btn--ghost">
+        <Link href="/interconsultas" className="pz-btn pz-btn--azul">
           Volver al listado
         </Link>
       </div>
@@ -104,10 +104,7 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
       <div className="col-12 col-lg-7 col-xl-8">
         <div className="flex flex-col gap-4">
           <DetalleInterconsulta interconsulta={interconsulta} />
-          <ResumenClinico
-            pacienteId={interconsulta.pacienteId}
-            entidades={interconsulta.entidades}
-          />
+          <ResumenClinico interconsulta={interconsulta} />
           <TablaEntidades
             entidades={interconsulta.entidades}
             error={interconsulta.entidadesError}

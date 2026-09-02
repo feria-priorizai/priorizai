@@ -32,11 +32,7 @@ export default function InterconsultasPage() {
   // Cuando se activa el modo descarga múltiple, bloquear filtro a "revisada"
   // y guardar los filtros previos para restaurarlos al cancelar
   const activarDescargaMultiple = useCallback(() => {
-    setFiltrosPrevios({
-      estado: filtros.estado,
-      prioridad: filtros.prioridad,
-      busqueda: filtros.busqueda,
-    });
+    setFiltrosPrevios(filtros);
     actualizarFiltros({ estado: "revisada" });
     setModoDescargaMultiple(true);
     setSeleccionadas(new Set());

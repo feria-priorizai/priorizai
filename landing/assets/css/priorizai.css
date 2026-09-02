@@ -66,7 +66,11 @@ body {
   color: var(--pz-ink-2);
   background-color: var(--pz-paper);
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  /* clip, no hidden: "hidden" en un eje hace que el otro compute "auto" y
+     convierte al body en contenedor de scroll. Bootstrap ScrollSpy lo tomaba
+     entonces como su raiz y scrolleaba un elemento que no se mueve, dejando
+     los enlaces del menu sin efecto. "clip" recorta igual, sin ese efecto. */
+  overflow-x: clip;
 }
 
 /* Retícula de plano: fina + gruesa */
@@ -674,8 +678,11 @@ a { text-underline-offset: .22em; }
   color: #fff; margin: 0; line-height: 1.28; letter-spacing: -.015em;
 }
 .pz-adv__claim svg { width: 22px; height: 22px; stroke: #fff; fill: none; stroke-width: 1.6; margin-bottom: .9rem; display: block; }
+/* Cae desde el eje del icono, no desde el centro de la tarjeta: el icono, el
+   titulo y la consecuencia comparten la misma columna izquierda. */
 .pz-adv__link {
-  height: 26px; width: 1px; background: var(--pz-ink-3); margin: 0 auto;
+  height: 26px; width: 1px; background: var(--pz-ink-3);
+  margin-left: calc(1.4rem + 11px);
   position: relative;
 }
 .pz-adv__link::after {
@@ -691,7 +698,8 @@ a { text-underline-offset: .22em; }
   font-size: .93rem;
   flex: 1;
 }
-.pz-adv:hover .pz-adv__claim { background: var(--pz-green-ink); }
+.pz-adv__claim:hover  { background: var(--pz-green-ink); }
+.pz-adv__conseq:hover { background: var(--pz-purple-ink); }
 .pz-adv__claim, .pz-adv__conseq { transition: background-color .25s ease; }
 
 /* ---------- 14. Acordeón ---------- */

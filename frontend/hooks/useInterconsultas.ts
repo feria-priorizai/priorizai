@@ -202,11 +202,14 @@ export function useInterconsultas(): UseInterconsultasReturn {
     );
   });
 
-  const actualizarFiltros = (nuevosFiltros: Partial<FiltrosInterconsulta>) => {
-    setFiltros((prev) => ({ ...prev, ...nuevosFiltros }));
-  };
+  const actualizarFiltros = useCallback(
+    (nuevosFiltros: Partial<FiltrosInterconsulta>) => {
+      setFiltros((prev) => ({ ...prev, ...nuevosFiltros }));
+    },
+    [],
+  );
 
-  const limpiarFiltros = () => setFiltros(filtrosIniciales);
+  const limpiarFiltros = useCallback(() => setFiltros(filtrosIniciales), []);
 
   const hayFiltrosActivos =
     filtros.prioridad !== "todas" ||

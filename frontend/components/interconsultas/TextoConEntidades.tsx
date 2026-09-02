@@ -44,7 +44,8 @@ export default function TextoConEntidades({
     partes.push(
       <mark
         key={`${indice}-${inicio}`}
-        className={`rounded px-0.5 ${estilo?.marca ?? "bg-[var(--surface-hover)]"}`}
+        className={`px-0.5 ${estilo?.marca ?? "bg-[var(--pz-paper-2)]"}`}
+        style={{ borderRadius: "2px" }}
         title={`${entidad.clase} · ${Math.round(entidad.score * 100)}%`}
       >
         {texto.slice(inicio, fin)}

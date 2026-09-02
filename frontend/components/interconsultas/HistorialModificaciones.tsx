@@ -14,7 +14,7 @@ export default function HistorialModificaciones({
       <div className="pz-panel">
         <div className="pz-panel__head">
           <span className="pz-eyebrow pz-eyebrow--muted">Trazabilidad</span>
-          <h3 className="pz-panel__title">Historial de modificaciones</h3>
+          <h2 className="pz-panel__title">Historial de modificaciones</h2>
         </div>
         <div className="px-5 py-8 text-center">
           <span className="pz-label">
@@ -33,7 +33,7 @@ export default function HistorialModificaciones({
     <div className="pz-panel">
       <div className="pz-panel__head">
         <span className="pz-eyebrow pz-eyebrow--muted">Trazabilidad</span>
-        <h3 className="pz-panel__title">Historial de modificaciones</h3>
+        <h2 className="pz-panel__title">Historial de modificaciones</h2>
         <p className="pz-panel__sub">
           {ordenadas.length} registrada{ordenadas.length !== 1 ? "s" : ""} · más
           recientes primero

@@ -22,9 +22,9 @@ export default function DetalleInterconsulta({
         <span className="pz-eyebrow">
           {ic.centroOrigen} → {ic.especialidad}
         </span>
-        <h3 className="pz-panel__title text-[1.15rem] leading-snug">
+        <h2 className="pz-panel__title text-[1.15rem] leading-snug">
           {ic.diagnostico}
-        </h3>
+        </h2>
         <p className="pz-panel__sub">
           Folio {ic.id.slice(0, 8).toUpperCase()} · {ic.pacienteEdad} años
         </p>
@@ -93,24 +93,14 @@ export default function DetalleInterconsulta({
 function Dato({
   etiqueta,
   children,
-  destacado = false,
 }: {
   etiqueta: string;
   children: ReactNode;
-  destacado?: boolean;
 }) {
   return (
     <div className="mb-3.5 last:mb-0">
       <span className="pz-label">{etiqueta}</span>
-      <p
-        className={`mt-1 text-[.9rem] ${
-          destacado
-            ? "font-semibold text-[var(--pz-ink)]"
-            : "text-[var(--pz-ink-2)]"
-        }`}
-      >
-        {children}
-      </p>
+      <p className="mt-1 text-[.9rem] text-[var(--pz-ink-2)]">{children}</p>
     </div>
   );
 }

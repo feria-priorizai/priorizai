@@ -1,78 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import type { ResumenClinicoPaciente } from "@/types/paciente";
-import type { EntidadClinica, EntidadesPorCampo } from "@/types/interconsulta";
-import { obtenerResumenClinico } from "@/services/interconsultas";
+import type { EntidadClinica, EntidadesPorCampo, Interconsulta } from "@/types/interconsulta";
 import TextoConEntidades from "./TextoConEntidades";
 import { CLASES_ENTIDAD, ORDEN_CLASES } from "./entidadesEstilos";
 
 interface ResumenClinicoProps {
-  pacienteId: string;
-  /** Entidades detectadas por el NER, para resaltarlas en el texto. */
-  entidades?: EntidadesPorCampo | null;
+  /** La interconsulta ya cargada por la pagina: trae los cuatro campos
+   *  clinicos, asi que no hay que volver a pedirla al backend. */
+  interconsulta: Interconsulta;
 }
 
 interface SeccionClinicaProps {
   titulo: string;
-  contenido?: string;
+  contenido?: string | null;
   textoVacio: string;
   entidades?: EntidadClinica[];
 }
 
+/**
+ * Antecedentes clinicos de la interconsulta, con las entidades del NER
+ * resaltadas sobre el texto.
+ */
 export default function ResumenClinico({
-  pacienteId,
-  entidades,
+  interconsulta: ic,
 }: ResumenClinicoProps) {
-  const [resultado, setResultado] = useState<{
-    pacienteId: string;
-    resumen: ResumenClinicoPaciente | null;
-  } | null>(null);
+  const entidades = ic.entidades;
 
-  useEffect(() => {
-    let activo = true;
-
-    obtenerResumenClinico(pacienteId).then((data) => {
-      if (activo) {
-        setResultado({ pacienteId, resumen: data });
-      }
-    });
-
-    return () => {
-      activo = false;
-    };
-  }, [pacienteId]);
-
-  const cargando = resultado?.pacienteId !== pacienteId;
-  const resumen = resultado?.resumen ?? null;
-
-  if (cargando) {
+  // Misma regla que usa el backend para decidir si la IC es priorizable: si no
+  // hay ningun antecedente utilizable, tampoco hay resumen que mostrar.
+  if (ic.esValidaParaPriorizacion === false) {
     return (
-      <Contenedor>
-        <div className="px-5 py-8 text-center">
-          <span className="pz-label">Cargando antecedentes clínicos…</span>
-        </div>
-      </Contenedor>
-    );
-  }
-
-  if (!resumen) {
-    return (
-      <Contenedor>
-        <div className="px-5 py-8 text-center">
-          <span className="pz-label">
-            No se encontró información clínica para esta interconsulta
-          </span>
-        </div>
-      </Contenedor>
-    );
-  }
-
-  if (!resumen.informacionSuficiente || !resumen.camposInterconsulta) {
-    return (
-      <Contenedor>
-        <div className="px-5 py-8 text-center">
+      <Contenedor entidades={entidades}>
+        <div className="px-[1.15rem] py-8 text-center">
           <span className="pz-eyebrow" style={{ color: "var(--pz-media)" }}>
             Información insuficiente
           </span>
@@ -85,58 +45,53 @@ export default function ResumenClinico({
     );
   }
 
-  const campos = resumen.camposInterconsulta;
-
   return (
-    <Contenedor>
-      <div className="border-b border-[var(--border-light)] px-5 py-3">
-        <p className="text-sm text-[var(--text-secondary)]">
-          Resumen construido con los antecedentes disponibles en la
-          interconsulta. No reemplaza el expediente clinico completo.
-        </p>
-        <LeyendaEntidades entidades={entidades} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-0 divide-y divide-[var(--border-light)]">
-        <SeccionClinica
-          titulo="Historia clínica"
-          contenido={campos.historiaClinica}
-          textoVacio="Sin historia clinica registrada."
-          entidades={entidades?.historia_clinica}
-        />
-        <SeccionClinica
-          titulo="Fundamentos diagnósticos"
-          contenido={campos.fundamentosDiagnostico}
-          textoVacio="Sin fundamentos diagnosticos registrados."
-          entidades={entidades?.fundamentos_diagnostico}
-        />
-        <SeccionClinica
-          titulo="Exámenes complementarios"
-          contenido={campos.examenesComplementarios}
-          textoVacio="Sin examenes complementarios registrados."
-          entidades={entidades?.examenes_complementarios}
-        />
-        <SeccionClinica
-          titulo="Motivo de interconsulta"
-          contenido={campos.motivoInterconsulta}
-          textoVacio="Sin motivo de interconsulta registrado."
-          entidades={entidades?.motivo_interconsulta}
-        />
-      </div>
+    <Contenedor entidades={entidades}>
+      <SeccionClinica
+        titulo="Historia clínica"
+        contenido={ic.historiaClinica}
+        textoVacio="Sin historia clínica registrada."
+        entidades={entidades?.historia_clinica}
+      />
+      <SeccionClinica
+        titulo="Fundamentos diagnósticos"
+        contenido={ic.fundamentosDiagnostico}
+        textoVacio="Sin fundamentos diagnósticos registrados."
+        entidades={entidades?.fundamentos_diagnostico}
+      />
+      <SeccionClinica
+        titulo="Exámenes complementarios"
+        contenido={ic.examenesComplementarios}
+        textoVacio="Sin exámenes complementarios registrados."
+        entidades={entidades?.examenes_complementarios}
+      />
+      <SeccionClinica
+        titulo="Motivo de interconsulta"
+        contenido={ic.motivoInterconsulta}
+        textoVacio="Sin motivo de interconsulta registrado."
+        entidades={entidades?.motivo_interconsulta}
+      />
     </Contenedor>
   );
 }
 
-function Contenedor({ children }: { children: ReactNode }) {
+function Contenedor({
+  children,
+  entidades,
+}: {
+  children: ReactNode;
+  entidades?: EntidadesPorCampo | null;
+}) {
   return (
     <div className="pz-panel">
       <div className="pz-panel__head">
         <span className="pz-eyebrow pz-eyebrow--green">Antecedentes</span>
-        <h3 className="pz-panel__title">Resumen clínico</h3>
+        <h2 className="pz-panel__title">Resumen clínico</h2>
         <p className="pz-panel__sub">
           Construido con los campos de la interconsulta. No reemplaza el
           expediente clínico completo.
         </p>
+        <LeyendaEntidades entidades={entidades} />
       </div>
       {children}
     </div>
@@ -161,17 +116,14 @@ function LeyendaEntidades({
   }
 
   return (
-    <ul className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+    <ul className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
       {clases.map((clase) => (
-        <li
-          key={clase}
-          className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]"
-        >
+        <li key={clase} className="flex items-center gap-1.5">
           <span
-            className={`h-2 w-2 rounded-full ${CLASES_ENTIDAD[clase].punto}`}
-            aria-hidden
+            className={`h-2 w-2 flex-none ${CLASES_ENTIDAD[clase].punto}`}
+            aria-hidden="true"
           />
-          {CLASES_ENTIDAD[clase].plural}
+          <span className="pz-label">{CLASES_ENTIDAD[clase].plural}</span>
         </li>
       ))}
     </ul>
@@ -193,7 +145,13 @@ function SeccionClinica({
     >
       <span className="pz-label">{titulo}</span>
       {texto ? (
-        <p className="whitespace-pre-wrap rounded-lg bg-[var(--background)] p-3 text-sm leading-relaxed text-[var(--text-primary)]">
+        <p
+          className="mt-2 p-3 text-[.9rem] leading-relaxed whitespace-pre-wrap text-[var(--pz-ink)]"
+          style={{
+            background: "var(--pz-paper-2)",
+            borderLeft: "2px solid var(--pz-line-2)",
+          }}
+        >
           <TextoConEntidades texto={texto} entidades={entidades} />
         </p>
       ) : (

@@ -77,10 +77,6 @@ export const DEFAULT_CONFIG: ConfiguracionCampos = {
 };
 
 // Utilidades
-export function getCamposPorGrupo(grupo: GrupoCampo): DefinicionCampo[] {
-  return TODOS_LOS_CAMPOS.filter(c => c.grupo === grupo);
-}
-
 export function getCampoPorClave(clave: string): DefinicionCampo | undefined {
   return TODOS_LOS_CAMPOS.find(c => c.clave === clave);
 }

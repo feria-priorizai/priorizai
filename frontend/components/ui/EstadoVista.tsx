@@ -10,7 +10,11 @@ interface EstadoVistaProps {
 
 export default function EstadoVista({ tipo, texto }: EstadoVistaProps) {
   return (
-    <div className="flex h-64 flex-col items-center justify-center gap-3">
+    <div
+      role={tipo === "error" ? "alert" : "status"}
+      aria-live={tipo === "error" ? "assertive" : "polite"}
+      className="flex h-64 flex-col items-center justify-center gap-3"
+    >
       <span
         className={`pz-eyebrow ${tipo === "error" ? "pz-eyebrow--alta" : "pz-eyebrow--muted"}`}
       >

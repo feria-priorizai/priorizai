@@ -31,71 +31,72 @@ export default function TablaEntidades({
   );
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
-      <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
-        <h3 className="text-base font-semibold text-[var(--text-primary)]">
-          Entidades clinicas detectadas
-        </h3>
-        {total > 0 && (
-          <span className="text-sm text-[var(--text-muted)]">
-            {total} {total === 1 ? "termino" : "terminos"}
-          </span>
-        )}
+    <div className="pz-panel">
+      <div className="pz-panel__head">
+        <span className="pz-eyebrow pz-eyebrow--purple">Extracción</span>
+        <h2 className="pz-panel__title">Entidades clínicas detectadas</h2>
+        <p className="pz-panel__sub">
+          {total > 0
+            ? `${total} ${total === 1 ? "término" : "términos"} en el texto de la interconsulta`
+            : "Términos reconocidos en el texto de la interconsulta"}
+        </p>
       </div>
 
       {error ? (
-        <p className="px-5 py-6 text-sm text-[var(--prioridad-media)]">
+        <p className="px-[1.15rem] py-6 text-[.88rem] text-[var(--pz-media)]">
           No se pudieron extraer entidades: {error}
         </p>
       ) : clasesConDatos.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-[var(--text-muted)]">
-          No se detectaron entidades clinicas en esta interconsulta.
-        </p>
+        <div className="px-[1.15rem] py-8 text-center">
+          <span className="pz-label">
+            No se detectaron entidades clínicas en esta interconsulta
+          </span>
+        </div>
       ) : (
         <>
-          <div className="divide-y divide-[var(--border-light)]">
-            {clasesConDatos.map((clase) => {
-              const estilo = CLASES_ENTIDAD[clase];
-              const terminos = agrupadas[clase] ?? [];
+          {clasesConDatos.map((clase) => {
+            const estilo = CLASES_ENTIDAD[clase];
+            const terminos = agrupadas[clase] ?? [];
 
-              return (
-                <section
-                  key={clase}
-                  className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:gap-4"
-                >
-                  <div className="flex shrink-0 items-center gap-2 sm:w-40 sm:pt-1">
-                    <span
-                      className={`h-2.5 w-2.5 rounded-full ${estilo.punto}`}
-                      aria-hidden
-                    />
-                    <h4 className="text-sm font-semibold text-[var(--text-primary)]">
-                      {estilo.plural}
-                    </h4>
-                    <span className="text-xs text-[var(--text-muted)]">
-                      ({terminos.length})
-                    </span>
-                  </div>
+            return (
+              <section
+                key={clase}
+                className="flex flex-col gap-2 px-[1.15rem] py-4 sm:flex-row sm:gap-4"
+                style={{ borderTop: "1px solid var(--pz-line)" }}
+              >
+                <div className="flex shrink-0 items-center gap-2 sm:w-40 sm:pt-0.5">
+                  <span
+                    className={`h-2 w-2 flex-none ${estilo.punto}`}
+                    aria-hidden="true"
+                  />
+                  <span className="pz-label">
+                    {estilo.plural} · {terminos.length}
+                  </span>
+                </div>
 
-                  <ul className="flex flex-wrap gap-1.5">
-                    {terminos.map((termino) => (
-                      <li key={`${clase}-${termino}`}>
-                        <span
-                          className={`inline-block rounded-md border px-2 py-0.5 text-sm ${estilo.chip}`}
-                        >
-                          {termino}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              );
-            })}
-          </div>
+                <ul className="flex flex-wrap gap-1.5">
+                  {terminos.map((termino) => (
+                    <li key={`${clase}-${termino}`}>
+                      <span
+                        className={`inline-block border px-2 py-0.5 text-[.82rem] ${estilo.chip}`}
+                        style={{ borderRadius: "2px" }}
+                      >
+                        {termino}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
 
-          <p className="border-t border-[var(--border-light)] px-5 py-3 text-xs text-[var(--text-muted)]">
-            Extraidas automaticamente del texto de la interconsulta. El modelo
-            no interpreta negaciones: &quot;sin dolor toracico&quot; se detecta
-            igual que &quot;dolor toracico&quot;.
+          <p
+            className="px-[1.15rem] py-3 text-[.78rem] text-[var(--pz-ink-3)]"
+            style={{ borderTop: "1px solid var(--pz-line)" }}
+          >
+            Extraídas automáticamente del texto de la interconsulta. El modelo
+            no interpreta negaciones: &quot;sin dolor torácico&quot; se detecta
+            igual que &quot;dolor torácico&quot;.
           </p>
         </>
       )}

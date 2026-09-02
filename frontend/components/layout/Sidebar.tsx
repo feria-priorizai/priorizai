@@ -213,6 +213,7 @@ export default function Sidebar() {
               <Link
                 href={item.ruta}
                 title={colapsado ? item.nombre : undefined}
+                aria-current={esRutaActiva(item.ruta) ? "page" : undefined}
                 className={`pz-navlink ${colapsado ? "pz-navlink--icono" : ""} ${
                   esRutaActiva(item.ruta) ? "is-active" : ""
                 }`}
@@ -288,15 +289,19 @@ export default function Sidebar() {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p
-                  className="pz-mono text-[.62rem] font-semibold tracking-[.12em] uppercase"
+                  className="pz-mono font-bold tracking-[.1em] uppercase"
                   style={{
+                    fontSize: "var(--fs-micro)",
                     color:
                       notificacion.tipo === "success" ? "#5FE3BC" : "#FF9E9E",
                   }}
                 >
                   {notificacion.titulo}
                 </p>
-                <p className="mt-1.5 text-[.76rem] leading-relaxed break-words text-[rgba(226,236,248,.7)]">
+                <p
+                  className="mt-1.5 leading-relaxed break-words text-[rgba(226,236,248,.78)]"
+                  style={{ fontSize: "var(--fs-sm)" }}
+                >
                   {notificacion.detalle}
                 </p>
               </div>
@@ -321,11 +326,13 @@ export default function Sidebar() {
         style={{ borderTop: "1px solid var(--pz-night-line)" }}
       >
         <div
-          className="pz-mono flex h-8 w-8 flex-none items-center justify-center text-[.64rem] font-semibold"
+          className="pz-mono flex h-11 w-11 flex-none items-center justify-center font-bold"
           style={{
             background: "var(--pz-green)",
-            color: "#05231B",
-            borderRadius: "2px",
+            color: "#04241B",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "var(--fs-sm)",
+            letterSpacing: ".04em",
           }}
           title={colapsado ? usuarioActual.nombre : undefined}
         >
@@ -333,10 +340,22 @@ export default function Sidebar() {
         </div>
         {!colapsado && (
           <div className="min-w-0">
-            <p className="truncate text-[.82rem] font-medium text-white">
+            <p
+              className="mb-0 truncate font-semibold text-white"
+              style={{ fontSize: "var(--fs-base)" }}
+            >
               {usuarioActual.nombre}
             </p>
-            <p className="pz-label truncate">{usuarioActual.especialidad}</p>
+            <p
+              className="pz-mono mb-0 truncate uppercase"
+              style={{
+                fontSize: "var(--fs-micro)",
+                color: "rgba(226,236,248,.62)",
+                letterSpacing: ".1em",
+              }}
+            >
+              {usuarioActual.especialidad}
+            </p>
           </div>
         )}
       </div>

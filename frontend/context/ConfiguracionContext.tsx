@@ -114,9 +114,13 @@ export function ConfiguracionProvider({ children }: { children: ReactNode }) {
     }
   }, [config, leido]);
 
-  // Permisos: ambos roles pueden ver, solo admin puede editar
-  const puedeVer = usuario?.rol === "admin" || usuario?.rol === "medico";
-  const puedeEditar = usuario?.rol === "admin" || usuario?.rol === "medico";
+  // Permisos: hoy los dos roles pueden ver y editar. Cuando exista login
+  // habrá que decidir si la configuración de campos es solo de admin; el
+  // comentario anterior decía eso pero el código nunca lo hizo.
+  const esUsuarioConocido =
+    usuario?.rol === "admin" || usuario?.rol === "medico";
+  const puedeVer = esUsuarioConocido;
+  const puedeEditar = esUsuarioConocido;
 
   const actualizarConfigImport = useCallback((campos: string[]) => {
     setConfig(prev => ({ ...prev, camposObligatoriosImport: campos }));

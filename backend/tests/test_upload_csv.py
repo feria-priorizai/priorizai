@@ -211,10 +211,11 @@ def test_upload_csv_quoted_newline_field(
     assert "Se evalua evolucion posterior." in fundamentos
 
 
-def test_upload_csv_rejects_unescaped_extra_columns(
+def test_upload_csv_rechaza_solo_la_fila_con_columnas_de_mas(
     client: TestClient,
     session_dummy: DummySession,
 ) -> None:
+    """Una coma de mas en una fila no puede tumbar el archivo entero."""
     csv_content = (
         HEADER
         + "MEDICINA GENERAL,71,MASCULINO,OTORRINOLARINGOLOGIA,MEDIA,"
@@ -226,8 +227,13 @@ def test_upload_csv_rejects_unescaped_extra_columns(
         files={"file": ("test.csv", csv_content, "text/csv")},
     )
 
-    assert response.status_code == 400
-    assert "Fila CSV 2 invalida" in response.json()["detail"]
+    assert response.status_code == 200
+    body = response.json()
+    assert body["rejected_count"] == 1
+    assert body["rejected"][0]["fila"] == 2
+    assert "Se esperaban 9 columnas y llegaron 10" in (
+        body["rejected"][0]["campos_faltantes"][0]
+    )
     assert session_dummy.executed == []
 
 

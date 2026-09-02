@@ -25,7 +25,8 @@ export default function InterconsultasPage() {
 
   const [modoDescargaMultiple, setModoDescargaMultiple] = useState(false);
   const [seleccionadas, setSeleccionadas] = useState<Set<string>>(new Set());
-  const [filtrosPrevios, setFiltrosPrevios] = useState<FiltrosInterconsulta | null>(null);
+  const [filtrosPrevios, setFiltrosPrevios] =
+    useState<FiltrosInterconsulta | null>(null);
   const [formatoDescarga, setFormatoDescarga] = useState<"json" | "csv" | "xlsx">("csv");
 
   // Cuando se activa el modo descarga múltiple, bloquear filtro a "revisada"

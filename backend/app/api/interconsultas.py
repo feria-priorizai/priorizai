@@ -28,6 +28,11 @@ router = APIRouter(prefix="/api/interconsultas", tags=["interconsultas"])
 
 # Tope de filas por pagina. Sin tope, un `?limit=999999` trae la tabla entera.
 LIMITE_LISTADO = 100
+
+# El motivo es el unico registro de por que un medico cambio una prioridad
+# clinica (HdU02). La regla vivia solo en el formulario del frontend, asi que
+# por la API entraba un motivo de un caracter.
+MOTIVO_MINIMO = 10
 DbSession = Depends(get_db)
 PriorizadorDependency = Depends(get_priorizador)
 
@@ -116,6 +121,14 @@ def modificar_prioridad_interconsulta(
         raise HTTPException(
             status_code=422,
             detail="El motivo de modificacion es obligatorio",
+        )
+    if len(motivo) < MOTIVO_MINIMO:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "El motivo de modificacion debe tener al menos "
+                f"{MOTIVO_MINIMO} caracteres"
+            ),
         )
     if not medico_responsable:
         raise HTTPException(

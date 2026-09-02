@@ -12,7 +12,8 @@ import EstadoVista from "@/components/ui/EstadoVista";
 import { usuarioActual } from "@/data/sesion";
 
 export default function DashboardPage() {
-  const { interconsultas, cargando, error } = useInterconsultas();
+  const { interconsultas, cargando, error, totalInterconsultas } =
+    useInterconsultas();
 
   if (cargando) {
     return <EstadoVista tipo="cargando" texto="Cargando interconsultas…" />;
@@ -42,7 +43,10 @@ export default function DashboardPage() {
         </p>
       </header>
 
-      <ResumenEstadisticas interconsultas={interconsultas} />
+      <ResumenEstadisticas
+        interconsultas={interconsultas}
+        total={totalInterconsultas}
+      />
 
       {/* La descarga multiple vive en el listado, no en el panel. */}
       <ColaInterconsultas

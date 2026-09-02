@@ -12,21 +12,8 @@ on:
 jobs:
   backend-quality:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: priorizai_user
-          POSTGRES_PASSWORD: priorizai_password
-          POSTGRES_DB: priorizai_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U priorizai_user -d priorizai_db"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-
+    # Sin servicio de base: los tests usan SQLite en memoria y, desde que el
+    # I/O de arranque vive en el lifespan, importar la app ya no abre conexion.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,12 +33,7 @@ jobs:
       - name: Pytest
         run: |
           mkdir -p coverage
-          docker run --rm --network host \
-            -e DATABASE_HOST=localhost \
-            -e DATABASE_PORT=5432 \
-            -e DATABASE_NAME=priorizai_db \
-            -e DATABASE_USER=priorizai_user \
-            -e DATABASE_PASSWORD=priorizai_password \
+          docker run --rm \
             -v "${{ github.workspace }}/coverage:/app/coverage" \
             priorizai-backend \
             pytest --cov-report=xml:coverage/coverage.xml

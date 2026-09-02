@@ -438,3 +438,79 @@ def test_el_fallback_avisa_por_log_que_esta_suponiendo_el_orden(
         assert priorizador._resolver_labels() == ["baja", "media", "alta"]
 
     assert "MODEL_LABELS" in caplog.text
+
+
+# --------------------------------------------------------------------------
+# _predecir_textos: batching y softmax
+# --------------------------------------------------------------------------
+
+
+class TokenizadorFalso:
+    """Devuelve el propio lote; lo unico que importa es cuantos textos entraron."""
+
+    def __init__(self) -> None:
+        self.lotes: list[list[str]] = []
+
+    def __call__(self, batch: list[str], **_: Any) -> Any:
+        self.lotes.append(list(batch))
+        return self
+
+    def to(self, _device: Any) -> Any:
+        return self
+
+    def keys(self) -> Any:
+        return {"textos": None}.keys()
+
+    def __getitem__(self, clave: str) -> Any:
+        return self.lotes[-1]
+
+
+class ModeloConLogits:
+    """Un logit distinto por texto, para poder afirmar el orden de la salida."""
+
+    def __init__(self, logits_por_texto: list[list[float]]) -> None:
+        self.logits_por_texto = logits_por_texto
+        self.consumidos = 0
+
+    def __call__(self, **kwargs: Any) -> Any:
+        import torch
+
+        cantidad = len(kwargs["textos"])
+        trozo = self.logits_por_texto[self.consumidos : self.consumidos + cantidad]
+        self.consumidos += cantidad
+
+        class Salida:
+            logits = torch.tensor(trozo)
+
+        return Salida()
+
+
+def test_predecir_textos_respeta_el_tamano_de_lote() -> None:
+    priorizador = PriorizadorRigoBerta(
+        ModeloConfiguracion(path="/models", max_length=512, batch_size=2),
+    )
+    tokenizador = TokenizadorFalso()
+    priorizador._tokenizer = tokenizador
+    priorizador._model = ModeloConLogits([[0.0, 0.0, 1.0]] * 5)
+    priorizador._device = "cpu"
+
+    probs = priorizador._predecir_textos([f"texto {i}" for i in range(5)])
+
+    assert [len(lote) for lote in tokenizador.lotes] == [2, 2, 1]
+    assert probs.shape == (5, 3)
+
+
+def test_predecir_textos_devuelve_probabilidades_que_suman_uno() -> None:
+    priorizador = PriorizadorRigoBerta(
+        ModeloConfiguracion(path="/models", max_length=512, batch_size=16),
+    )
+    priorizador._tokenizer = TokenizadorFalso()
+    priorizador._model = ModeloConLogits([[2.0, 1.0, 0.0], [0.0, 0.0, 5.0]])
+    priorizador._device = "cpu"
+
+    probs = priorizador._predecir_textos(["a", "b"])
+
+    assert probs[0].sum().item() == pytest.approx(1.0)
+    # El softmax conserva el orden: el logit mas alto sigue siendo el mayor.
+    assert probs[0].argmax().item() == 0
+    assert probs[1].argmax().item() == 2

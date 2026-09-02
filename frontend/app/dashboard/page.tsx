@@ -35,7 +35,7 @@ export default function DashboardPage() {
           Bienvenido a tus interconsultas
         </h2>
         <p className="mb-0" style={{ fontSize: "var(--fs-md)", color: "var(--pz-ink-2)" }}>
-          {usuarioActual.nombre.split(" ").slice(0, 2).join(" ")}, hoy tenés{" "}
+          {usuarioActual.nombre.split(" ").slice(0, 2).join(" ")}, hoy tienes{" "}
           <strong style={{ color: "var(--pz-ink)" }}>
             {pendientes} {pendientes === 1 ? "interconsulta" : "interconsultas"}
           </strong>{" "}

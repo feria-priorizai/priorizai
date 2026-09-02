@@ -96,7 +96,7 @@ export default function MatrizCampos() {
           <span className="pz-eyebrow">Campos</span>
           <h2 className="pz-panel__title">Importación y exportación</h2>
           <p className="pz-panel__sub">
-            Elegí qué campos exige el archivo de entrada y cuáles viajan en las
+            Elige qué campos exige el archivo de entrada y cuáles viajan en las
             descargas JSON, CSV y XLSX.
           </p>
         </div>

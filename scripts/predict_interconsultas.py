@@ -44,7 +44,7 @@ OUTPUT_PATH = PROJECT_ROOT / "data" / "predicciones_ic_historicas.csv"
 
 # Columnas del CSV que se concatenan (en este orden) para formar el texto de
 # entrada del modelo. Son las columnas del dataset de interconsultas.
-# Si tu modelo fue fine-tuneado SOLO con las columnas de texto largo, podés
+# Si tu modelo fue fine-tuneado SOLO con las columnas de texto largo, puedes
 # acotar esta lista (o pasar --text-columns en la línea de comandos).
 TEXT_COLUMNS = [
     "ESPEC_ORIGEN",
@@ -57,12 +57,12 @@ TEXT_COLUMNS = [
     "MOTIVO_INTERCONSULTA",
 ]
 
-# Orden canónico de las clases que querés en la salida.
+# Orden canónico de las clases que quieres en la salida.
 PRIORITY_ORDER = ["baja", "media", "alta"]
 
 # Fallback de mapeo índice -> clase, SOLO usado si el config.json del modelo no
 # trae un id2label con nombres reconocibles (p. ej. trae "LABEL_0", "LABEL_1"...).
-# TODO: si tu modelo tiene labels genéricos, ajustá este orden al que usaste al
+# TODO: si tu modelo tiene labels genéricos, ajusta este orden al que usaste al
 # entrenar. Ejemplo: si entrenaste con 0=baja, 1=media, 2=alta, dejalo así.
 FALLBACK_ID2LABEL = {0: "baja", 1: "media", 2: "alta"}
 
@@ -142,12 +142,12 @@ def resolve_label_names(config, num_labels: int) -> list[str]:
     print(
         "[aviso] El config.json del modelo no tiene nombres de clase reconocibles "
         f"(id2label={raw}). Usando FALLBACK_ID2LABEL={FALLBACK_ID2LABEL}.\n"
-        "        >>> Verificá que ese orden coincida con cómo entrenaste el modelo. <<<"
+        "        >>> Verifica que ese orden coincida con cómo entrenaste el modelo. <<<"
     )
     if num_labels != len(FALLBACK_ID2LABEL):
         sys.exit(
             f"[error] El modelo tiene {num_labels} clases pero FALLBACK_ID2LABEL "
-            f"define {len(FALLBACK_ID2LABEL)}. Ajustá FALLBACK_ID2LABEL."
+            f"define {len(FALLBACK_ID2LABEL)}. Ajusta FALLBACK_ID2LABEL."
         )
     return [_normalize(FALLBACK_ID2LABEL[i]) for i in range(num_labels)]
 

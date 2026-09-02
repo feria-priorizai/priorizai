@@ -41,13 +41,24 @@ cp .env.example .env
 | `POSTGRES_PORT` | `5432` | Puerto publicado de PostgreSQL |
 | `BACKEND_PORT` | `8000` | Puerto publicado del backend |
 | `CORS_ORIGINS` | `http://localhost:3000` | Orígenes autorizados, separados por coma |
+| `MODEL_SERVICE_URL` | *(vacía)* | URL del servicio de modelos externo. Vacía, los modelos corren dentro del backend |
+| `MODEL_SERVICE_TIMEOUT` | `300` | Segundos de espera por respuesta del servicio |
+| `MODEL_SERVICE_API_KEY` | *(vacía)* | Clave que exige el servicio. Es un secreto: solo en el `.env` local |
 
 El backend acepta además `MODEL_PATH`, `NER_MODEL_PATH` y `MODEL_LABELS`, que
-`docker-compose.yml` ya define apuntando a la carpeta `models/`.
+`docker-compose.yml` ya define apuntando a la carpeta `models/`. Solo se usan
+cuando `MODEL_SERVICE_URL` está vacía.
 
 ## Modelos
 
-La carpeta `models/` no está versionada. Se espera esta disposición:
+Hay dos formas de ejecutarlos, y se eligen con una sola variable:
+`MODEL_SERVICE_URL`.
+
+### Modelos dentro del backend (por defecto)
+
+Con `MODEL_SERVICE_URL` vacía, el backend carga los modelos en su propio
+proceso. Esta es la ruta que necesita la carpeta `models/`, que no está
+versionada. Se espera esta disposición:
 
 ```
 models/
@@ -59,6 +70,34 @@ Sin esos artefactos la aplicación levanta igual: la ingesta guarda las
 interconsultas y registra en `motivo_sin_prioridad` que el modelo no se pudo
 ejecutar. La interfaz las muestra como pendientes de priorizar, sin asignarles
 un nivel.
+
+### Servicio de modelos externo
+
+Poniendo una URL en `MODEL_SERVICE_URL`, el backend pide las predicciones por
+HTTP a un servicio aparte que tiene los pesos. Así no hace falta descargar
+`models/` ni tener torch en la máquina, y una sola copia de los modelos sirve a
+todos los backends.
+
+El servicio expone `POST /priorizar` y `POST /extraer-entidades`, vive fuera de
+este repositorio y se despliega en Cloud Run escalando a cero. Por eso la
+primera petición después de un rato inactivo tiene que esperar a que arranque
+una instancia y cargue 2,7 GB de pesos, y eso son minutos: `MODEL_SERVICE_TIMEOUT`
+está en 300 segundos por esa razón, y las siguientes responden de inmediato.
+
+Si el servicio no contesta, la ingesta no se pierde: guarda las interconsultas y
+deja el motivo en `motivo_sin_prioridad`, igual que cuando falta el modelo local.
+
+La URL del despliegue no está en el repositorio, pero eso no es lo que lo
+protege: una URL es una dirección, no una credencial. El control es
+`MODEL_SERVICE_API_KEY`, una clave compartida que el servicio exige en la
+cabecera `X-API-Key`. Si el servicio está abierto, dejarla vacía.
+
+Una clave compartida no distingue quién llama y hay que rotarla en los dos lados
+si se filtra. Alcanza para que un tercero no gaste el servicio ni le mande
+textos, pero antes de recibir datos de pacientes reales corresponde
+autenticación de verdad.
+
+### Orden de las clases
 
 El modelo de priorización se distribuye con etiquetas genéricas
 (`LABEL_0`, `LABEL_1`, `LABEL_2`). El backend resuelve el orden real con la

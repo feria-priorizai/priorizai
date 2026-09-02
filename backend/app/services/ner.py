@@ -247,5 +247,16 @@ extractor = ExtractorEntidades(
 )
 
 
-def get_extractor_ner() -> ExtractorEntidades:
+def get_extractor_ner() -> Any:
+    """El modelo local, o el cliente HTTP si hay MODEL_SERVICE_URL.
+
+    Los dos exponen extraer_de_interconsulta(ic) -> dict[campo, entidades].
+    """
+    from app.services.cliente_modelos import (
+        get_extractor_remoto,
+        usar_servicio_remoto,
+    )
+
+    if usar_servicio_remoto():
+        return get_extractor_remoto()
     return extractor

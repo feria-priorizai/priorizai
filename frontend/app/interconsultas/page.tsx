@@ -114,7 +114,7 @@ export default function InterconsultasPage() {
           ? `Descarga múltiple · ${seleccionadas.size} de ${interconsultas.length} seleccionadas · solo revisadas`
           : `Mostrando ${interconsultas.length} de ${totalInterconsultas} interconsulta${totalInterconsultas !== 1 ? "s" : ""}`}
         {listadoTruncado &&
-          " · la lista supera lo que se puede mostrar de una vez; usá los filtros para acotarla"}
+          " · la lista supera lo que se puede mostrar de una vez; usa los filtros para acotarla"}
       </p>
     </div>
   );

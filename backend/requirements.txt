@@ -1,0 +1,31 @@
+# Solo dependencias directas. Las transitivas las resuelve pip: fijarlas aca
+# (un `pip freeze` volcado) clavaba versiones que nadie eligio y complicaba
+# cualquier actualizacion.
+
+# --- Web ---
+fastapi==0.136.3
+uvicorn==0.48.0
+python-multipart==0.0.6
+
+# --- Datos ---
+SQLAlchemy==2.0.50
+psycopg2-binary==2.9.12
+pydantic==2.13.4
+
+# --- Archivos de entrada / catalogo ---
+openpyxl==3.1.5
+PyYAML==6.0.3
+
+# --- ML / inferencia (modelo RigoBERTa) ---
+torch==2.10.0
+transformers==5.0.0
+protobuf>=5.29.0,<7
+sentencepiece>=0.2.0,<0.3
+
+# --- Calidad y tests ---
+pytest==9.0.3
+pytest-cov==7.1.0
+httpx==0.28.1
+black==26.5.1
+ruff==0.15.15
+mypy==2.1.0

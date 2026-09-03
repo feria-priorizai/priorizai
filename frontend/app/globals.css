@@ -1,0 +1,886 @@
+/* El reboot de Bootstrap pisaba el preflight de Tailwind (subrayado en los <a>,
+   padding-left en los <ul>) porque el CSS sin capa siempre le gana al CSS en
+   capas, sin importar el orden. Declarar "bootstrap" antes que las capas de
+   Tailwind invierte esa precedencia. Las reglas .pz-* siguen sin capa, asi que
+   mandan sobre ambas. */
+@layer bootstrap;
+@import "bootstrap/dist/css/bootstrap.min.css" layer(bootstrap);
+@import "tailwindcss";
+
+/* ============================================================
+   Sistema de diseno PriorizAI — aplicacion
+   ============================================================
+   La app ya no imita un plano sobre papel: eso la dejaba blanca
+   sobre blanca, con hilos de 1px y todo al mismo peso. Ahora es
+   una mesa de trabajo con profundidad — lienzo azul, tarjetas
+   blancas elevadas encima — donde el color solo significa una
+   cosa: urgencia clinica.
+   La paleta de marca no cambia; cambia como se usa.
+   ============================================================ */
+
+:root {
+  /* ---------- Marca ---------- */
+  --pz-green:      #09BC8A;
+  --pz-green-ink:  #04704F;
+  --pz-blue:       #4F86C6;
+  --pz-blue-deep:  #003D96;
+  --pz-purple:     #744FC6;
+  --pz-purple-ink: #472A8C;
+
+  /* ---------- Lienzo y superficies ----------
+     El lienzo es azul, no blanco: contra el, una tarjeta blanca se
+     lee como un objeto y no como un hueco. */
+  --pz-canvas:     #C6D7F0;
+  --pz-canvas-2:   #B4C9E8;
+  --pz-paper:      #FFFFFF;
+  --pz-paper-2:    #EDF2FB;
+  --pz-paper-3:    #DEE8F8;
+
+  /* ---------- Tinta ----------
+     Rampa mas oscura que la anterior: el gris medio de antes
+     (#74839A) no llegaba a 4.5:1 sobre blanco. */
+  --pz-ink:        #071426;
+  --pz-ink-2:      #2E3F58;
+  --pz-ink-3:      #55688A;
+  --pz-line:       #C8D6EA;
+  --pz-line-2:     #A7BEDC;
+
+  /* ---------- Nocturno (sidebar) ---------- */
+  --pz-night:      #061225;
+  --pz-night-2:    #0C2143;
+  --pz-night-line: rgba(126,168,224,.22);
+
+  /* ---------- Triage ----------
+     Saturados a proposito: son la unica informacion de la interfaz
+     que debe leerse desde lejos. */
+  --pz-alta:        #B01D1D;
+  --pz-alta-fuerte: #8E1414;
+  --pz-media:       #8A5200;
+  --pz-media-fuerte:#6B3F00;
+  --pz-alta-bg:     #FBE4E4;
+  --pz-media-bg:    #FCEFD6;
+  --pz-baja-bg:     #D8F5EB;
+
+  /* Fondos de grupo de la cola: cada prioridad, su propio bloque. */
+  --pz-zona-alta:   #F7DADA;
+  --pz-zona-media:  #FAE8CA;
+  --pz-zona-baja:   #CFF1E4;
+  --pz-zona-sin:    #DFE7F5;
+
+  /* ---------- Reticula ---------- */
+  --pz-grid: 32px;
+
+  /* ---------- Tipografia ----------
+     Escala completa, un escalon mas grande que la anterior en todos
+     los niveles. El texto clinico es lo que se lee durante horas. */
+  --pz-display: var(--font-display), "Helvetica Neue", Arial, sans-serif;
+  --pz-body:    var(--font-body), "Helvetica Neue", Arial, sans-serif;
+  --pz-mono:    var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --fs-micro:  .78rem;   /* etiquetas mono            (antes .64) */
+  --fs-chip:   .72rem;   /* chips                     (antes .58) */
+  --fs-sm:     .95rem;   /* metadatos                 (antes .82) */
+  --fs-base:  1.05rem;   /* texto corrido y clinico   (antes .90) */
+  --fs-md:    1.15rem;
+  --fs-lg:    1.32rem;   /* titulo de panel           (antes 1.00) */
+  --fs-xl:    1.9rem;    /* titulo de vista           (antes 1.35) */
+
+  /* ---------- Remapeo de tokens historicos ---------- */
+  --background: var(--pz-canvas);
+  --foreground: var(--pz-ink);
+  --surface: var(--pz-paper);
+  --surface-hover: var(--pz-paper-2);
+  --border: var(--pz-line);
+  --border-light: var(--pz-paper-2);
+
+  --primary: var(--pz-blue-deep);
+  --primary-light: #DCE8FC;
+  --primary-dark: var(--pz-purple-ink);
+
+  --prioridad-alta: var(--pz-alta);
+  --prioridad-alta-bg: var(--pz-alta-bg);
+  --prioridad-media: var(--pz-media);
+  --prioridad-media-bg: var(--pz-media-bg);
+  --prioridad-baja: var(--pz-green-ink);
+  --prioridad-baja-bg: var(--pz-baja-bg);
+
+  --text-primary: var(--pz-ink);
+  --text-secondary: var(--pz-ink-2);
+  --text-muted: var(--pz-ink-3);
+
+  --font-sans: var(--pz-body);
+
+  /* ---------- Elevacion ----------
+     Sombra difusa en vez de la sombra dura desplazada: las tarjetas
+     flotan sobre el lienzo en lugar de estar calcadas sobre el. */
+  --shadow-sm: 0 1px 2px rgba(7,20,38,.07), 0 2px 8px rgba(7,20,38,.06);
+  --shadow-md: 0 2px 5px rgba(7,20,38,.08), 0 10px 24px rgba(7,20,38,.10);
+  --shadow-lg: 0 6px 12px rgba(7,20,38,.10), 0 20px 48px rgba(7,20,38,.14);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* ---------- Overrides de Bootstrap ---------- */
+  --bs-body-font-family: var(--pz-body);
+  --bs-body-font-size: var(--fs-base);
+  --bs-body-color: var(--pz-ink-2);
+  --bs-body-bg: var(--pz-canvas);
+  --bs-primary: var(--pz-blue-deep);
+  --bs-primary-rgb: 0, 61, 150;
+  --bs-border-color: var(--pz-line);
+  --bs-border-radius: var(--radius-sm);
+  --bs-border-radius-sm: 4px;
+  --bs-border-radius-lg: var(--radius-md);
+  --bs-link-color: var(--pz-blue-deep);
+  --bs-link-hover-color: var(--pz-purple-ink);
+  --bs-emphasis-color: var(--pz-ink);
+  --bs-heading-color: var(--pz-ink);
+  --bs-focus-ring-color: rgba(0, 61, 150, .3);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --font-sans: var(--pz-body);
+  --font-mono: var(--pz-mono);
+}
+
+/* La grilla de Bootstrap quedaba sin canaletas: el preflight de Tailwind pone
+   margin:0 y padding:0 en todos los elementos y, al estar en una capa que le
+   gana a "bootstrap", .row perdia su margen negativo y .row > * su padding. Las
+   columnas terminaban pegadas sin importar el g-* que se usara. Se reponen aqui,
+   sin capa, que es lo unico que manda sobre las dos. */
+.row {
+  margin-top: calc(-1 * var(--bs-gutter-y));
+  margin-right: calc(-.5 * var(--bs-gutter-x));
+  margin-left: calc(-.5 * var(--bs-gutter-x));
+}
+.row > * {
+  margin-top: var(--bs-gutter-y);
+  padding-right: calc(var(--bs-gutter-x) * .5);
+  padding-left: calc(var(--bs-gutter-x) * .5);
+}
+
+/* ---------- Base ---------- */
+body {
+  background: var(--background);
+  color: var(--pz-ink-2);
+  font-family: var(--pz-body);
+  font-size: var(--fs-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: var(--pz-display);
+  font-variation-settings: "wdth" 94;
+  color: var(--pz-ink);
+  letter-spacing: -.022em;
+  line-height: 1.12;
+  font-weight: 700;
+}
+
+::selection { background: var(--pz-blue-deep); color: #fff; }
+
+:focus-visible {
+  outline: 3px solid var(--pz-blue-deep);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   Estructura
+   ============================================================ */
+
+/* Etiqueta mono con regla previa. Encabeza tarjetas y secciones. */
+.pz-eyebrow {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--pz-blue-deep);
+  display: inline-flex;
+  align-items: center;
+  gap: .6rem;
+}
+.pz-eyebrow::before {
+  content: "";
+  width: 1.5rem;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+  flex: none;
+}
+.pz-eyebrow--green  { color: var(--pz-green-ink); }
+.pz-eyebrow--purple { color: var(--pz-purple-ink); }
+.pz-eyebrow--alta   { color: var(--pz-alta); }
+.pz-eyebrow--muted  { color: var(--pz-ink-3); }
+
+/* Lienzo del area de contenido. La reticula queda de la identidad
+   anterior, pero apenas insinuada: ahora el fondo tiene color propio. */
+.pz-blueprint {
+  background-color: var(--pz-canvas);
+  background-image:
+    linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px);
+  background-size: var(--pz-grid) var(--pz-grid);
+  background-position: -1px -1px;
+}
+
+/* Panel: la unidad base de contenido, elevada sobre el lienzo. */
+.pz-panel {
+  background: var(--pz-paper);
+  border: 1px solid var(--pz-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.pz-panel__head {
+  padding: 1.15rem 1.4rem;
+  border-bottom: 2px solid var(--pz-line);
+  background: linear-gradient(180deg, var(--pz-paper) 0%, var(--pz-paper-2) 100%);
+}
+.pz-panel__title {
+  font-family: var(--pz-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--pz-ink);
+  letter-spacing: -.02em;
+  margin: .5rem 0 0;
+}
+.pz-panel__sub {
+  font-size: var(--fs-sm);
+  color: var(--pz-ink-2);
+  margin: .35rem 0 0;
+}
+.pz-panel__body { padding: 1.4rem; }
+
+/* Numeral de dato. */
+.pz-num {
+  font-family: var(--pz-display);
+  font-variation-settings: "wdth" 88;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -.035em;
+  color: var(--pz-ink);
+  display: block;
+}
+.pz-num--lg { font-size: clamp(2.4rem, 4.2vw, 3.1rem); }
+
+.pz-label {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--pz-ink-3);
+  display: block;
+}
+
+/* ---------- Riel de cifras ----------
+   Cada indicador ocupa exactamente el mismo ancho, para que el
+   tamano de la cifra sea lo unico que los diferencie. */
+.pz-rail { display: grid; gap: 1rem; }
+@media (min-width: 576px) { .pz-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 992px) { .pz-rail { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+.pz-rail__item {
+  background: var(--pz-paper);
+  border: 1px solid var(--pz-line);
+  border-top: 5px solid var(--pz-acento, var(--pz-ink-3));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 1.15rem 1.25rem 1.3rem;
+  min-width: 0;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.pz-rail__item:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+
+/* Icono y titulo en la misma linea, arriba; la cifra manda debajo. */
+.pz-rail__cabecera {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin-bottom: .9rem;
+  min-width: 0;
+}
+.pz-rail__icono {
+  width: 2.1rem; height: 2.1rem;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--pz-acento-bg, var(--pz-paper-2));
+  color: var(--pz-acento, var(--pz-ink-2));
+}
+.pz-rail__t {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--pz-ink-2);
+  min-width: 0;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Chips ---------- */
+.pz-chip {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-chip);
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: .3rem .6rem;
+  border-radius: 999px;
+  display: inline-block;
+  vertical-align: middle;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.pz-chip--alta    { background: var(--pz-alta-bg);  color: var(--pz-alta-fuerte);  border-color: rgba(176,29,29,.3); }
+.pz-chip--media   { background: var(--pz-media-bg); color: var(--pz-media-fuerte); border-color: rgba(138,82,0,.3); }
+.pz-chip--baja    { background: var(--pz-baja-bg);  color: var(--pz-green-ink);    border-color: rgba(4,112,79,.3); }
+.pz-chip--neutral { background: var(--pz-paper-3);  color: var(--pz-ink-2);        border-color: var(--pz-line-2); }
+.pz-chip--ink     { background: var(--pz-ink);      color: #fff; }
+.pz-chip--flag    { background: var(--pz-alta);     color: #fff; }
+
+/* ============================================================
+   Botones — el color dice que clase de accion es
+   verde: confirma · azul: navega · morado: IA · rojo: urgente
+   ============================================================ */
+.pz-btn {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  padding: .78rem 1.2rem;
+  border: 2px solid transparent;
+  transition: transform .16s ease, box-shadow .16s ease,
+              background-color .16s ease, border-color .16s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.pz-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.pz-btn:active:not(:disabled) { transform: translateY(0); box-shadow: var(--shadow-sm); }
+.pz-btn:disabled {
+  cursor: not-allowed;
+  box-shadow: none;
+  background: var(--pz-paper-3);
+  color: var(--pz-ink-3);
+  border-color: var(--pz-line-2);
+  opacity: .75;
+}
+
+.pz-btn--verde  { background: var(--pz-green-ink);  color: #fff; }
+.pz-btn--verde:hover:not(:disabled)  { background: #035C41; }
+.pz-btn--azul   { background: var(--pz-blue-deep);  color: #fff; }
+.pz-btn--azul:hover:not(:disabled)   { background: #002F76; }
+.pz-btn--morado { background: var(--pz-purple-ink); color: #fff; }
+.pz-btn--morado:hover:not(:disabled) { background: #38206F; }
+.pz-btn--rojo   { background: var(--pz-alta);       color: #fff; }
+.pz-btn--rojo:hover:not(:disabled)   { background: var(--pz-alta-fuerte); }
+.pz-btn--claro  { background: var(--pz-paper); color: var(--pz-ink); border-color: var(--pz-line-2); }
+.pz-btn--claro:hover:not(:disabled)  { background: var(--pz-paper-2); border-color: var(--pz-blue-deep); color: var(--pz-blue-deep); }
+
+/* Nombres anteriores, mapeados a la nueva escala de color. */
+.pz-btn--solid  { background: var(--pz-green-ink); color: #fff; }
+.pz-btn--solid:hover:not(:disabled)  { background: #035C41; }
+.pz-btn--ghost  { background: var(--pz-paper); color: var(--pz-ink); border-color: var(--pz-line-2); }
+.pz-btn--ghost:hover:not(:disabled)  { background: var(--pz-paper-2); border-color: var(--pz-blue-deep); color: var(--pz-blue-deep); }
+.pz-btn--danger { background: var(--pz-alta); color: #fff; }
+.pz-btn--danger:hover:not(:disabled) { background: var(--pz-alta-fuerte); }
+
+.pz-btn--block { width: 100%; }
+.pz-btn--mini  { padding: .55rem .9rem; font-size: var(--fs-chip); }
+.pz-btn--lg    { padding: .95rem 1.5rem; font-size: var(--fs-sm); }
+
+/* ---------- Formularios ---------- */
+.pz-form .form-control,
+.pz-form .form-select {
+  border-radius: var(--radius-sm);
+  /* Grosor explicito: el preflight de Tailwind pone border-width:0 en todo y,
+     al estar Bootstrap en una capa inferior, su .form-control ya no lo repone. */
+  border: 2px solid var(--pz-line-2);
+  /* background-color, no la abreviada: "background" borraria el background-image
+     con el que Bootstrap dibuja la flecha de los .form-select. */
+  background-color: var(--pz-paper);
+  padding: .72rem .9rem;
+  font-size: var(--fs-base);
+  color: var(--pz-ink);
+}
+.pz-form .form-control:focus,
+.pz-form .form-select:focus {
+  border-color: var(--pz-blue-deep);
+  box-shadow: 0 0 0 4px rgba(0,61,150,.16);
+}
+.pz-form .form-control[aria-invalid="true"] { border-color: var(--pz-alta); }
+.pz-form .form-control::placeholder { color: var(--pz-ink-3); }
+.pz-form .form-label {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--pz-ink-2);
+  margin-bottom: .45rem;
+}
+
+/* Casillas e interruptores: Bootstrap quedo en una capa inferior, asi que el
+   grosor del borde y el color de marcado se declaran aqui o el preflight los
+   anula. */
+.form-check-input {
+  border: 2px solid var(--pz-line-2);
+  background-color: var(--pz-paper);
+  cursor: pointer;
+}
+.form-check-input:checked {
+  background-color: var(--pz-green-ink);
+  border-color: var(--pz-green-ink);
+}
+.form-check-input:focus {
+  border-color: var(--pz-blue-deep);
+  box-shadow: 0 0 0 4px rgba(0,61,150,.16);
+}
+.form-check-input:disabled { cursor: not-allowed; opacity: .5; }
+
+/* Interruptor grande: es el control que mas se toca en configuracion. */
+.form-switch .form-check-input { width: 3rem; height: 1.6rem; border-radius: 999px; }
+.form-switch--import .form-check-input:checked { background-color: var(--pz-blue-deep); border-color: var(--pz-blue-deep); }
+.form-switch--export .form-check-input:checked { background-color: var(--pz-purple-ink); border-color: var(--pz-purple-ink); }
+
+/* ---------- Modal ---------- */
+.pz-modal-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(7, 20, 38, .55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.pz-modal {
+  width: min(760px, 100%);
+  max-height: 82vh;
+  overflow-y: auto;
+  background: var(--pz-paper);
+  border: 1px solid var(--pz-line-2);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ---------- Tablas ---------- */
+.pz-table { --bs-table-bg: transparent; margin-bottom: 0; }
+.pz-table > thead th {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--pz-ink-2);
+  border-bottom: 2px solid var(--pz-line-2);
+  padding: .9rem 1rem;
+  vertical-align: bottom;
+  background: transparent;
+}
+.pz-table > thead th:first-child { white-space: nowrap; }
+.pz-table > tbody td {
+  border-bottom: 1px solid var(--pz-line);
+  padding: .85rem 1rem;
+  vertical-align: middle;
+  color: var(--pz-ink-2);
+  font-size: var(--fs-base);
+  background: transparent;
+}
+.pz-table > tbody tr { transition: background-color .15s ease; }
+.pz-table > tbody tr:hover { background: var(--pz-paper-2); }
+.pz-mono-cell {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  color: var(--pz-ink-3);
+  letter-spacing: .04em;
+}
+
+/* ---------- Sidebar ---------- */
+.pz-sidebar {
+  background: linear-gradient(180deg, var(--pz-night) 0%, var(--pz-night-2) 100%);
+  position: relative;
+  width: 17.5rem;
+  transition: width .24s cubic-bezier(.2,.7,.3,1);
+  box-shadow: 4px 0 24px rgba(7,20,38,.25);
+  z-index: 20;
+}
+.pz-sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--pz-night-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--pz-night-line) 1px, transparent 1px);
+  background-size: var(--pz-grid) var(--pz-grid);
+  mask-image: radial-gradient(120% 60% at 50% 0%, #000 20%, transparent 80%);
+  -webkit-mask-image: radial-gradient(120% 60% at 50% 0%, #000 20%, transparent 80%);
+  pointer-events: none;
+}
+.pz-sidebar > * { position: relative; z-index: 1; }
+.pz-sidebar--colapsado { width: 5rem; }
+@media (prefers-reduced-motion: reduce) {
+  .pz-sidebar { transition: none; }
+}
+
+.pz-toggle {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(126,168,224,.35);
+  border-radius: var(--radius-sm);
+  color: rgba(226,236,248,.85);
+  background: transparent;
+  transition: color .2s ease, border-color .2s ease, background-color .2s ease;
+}
+.pz-toggle:hover {
+  color: #05231B;
+  border-color: var(--pz-green);
+  background: var(--pz-green);
+}
+
+/* Dentro del sidebar los botones usan relleno y borde: la sombra difusa se
+   pierde contra el fondo nocturno. */
+.pz-btn--nav {
+  background: rgba(255,255,255,.09);
+  color: #E9F1FB;
+  border-color: rgba(126,168,224,.35);
+  box-shadow: none;
+  padding: .72rem .85rem;
+}
+.pz-btn--nav:hover:not(:disabled) {
+  background: var(--pz-green);
+  color: #05231B;
+  border-color: var(--pz-green);
+  transform: none;
+  box-shadow: none;
+}
+.pz-btn--nav:disabled { background: rgba(255,255,255,.05); color: rgba(226,236,248,.45); border-color: rgba(126,168,224,.2); }
+.pz-btn--nav.pz-btn--icono { padding: .72rem 0; }
+
+.pz-navlink {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: rgba(226,236,248,.78);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: .72rem .85rem;
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  transition: color .2s ease, border-color .2s ease, background-color .2s ease;
+}
+.pz-navlink:hover { color: #fff; background: rgba(255,255,255,.08); border-color: rgba(126,168,224,.35); }
+.pz-navlink.is-active {
+  background: var(--pz-green);
+  color: #04241B;
+  border-color: var(--pz-green);
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(9,188,138,.35);
+}
+.pz-navlink--icono { justify-content: center; padding-inline: 0; }
+
+.pz-nav-group {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-chip);
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: rgba(226,236,248,.5);
+  display: block;
+  padding: 0 .85rem .7rem;
+}
+
+/* ============================================================
+   Cola de espera — el elemento con mas peso de la interfaz
+   ============================================================
+   Cada prioridad es una zona de color completa, no una fila con un
+   borde de color: alta, media y baja se distinguen por el fondo del
+   bloque entero. Dentro no hay lineas; las interconsultas son
+   fichas blancas sueltas sobre la zona. */
+.pz-zona { padding: 0 0 .8rem; background: var(--pz-zona, var(--pz-paper-2)); }
+.pz-zona--alta  { --pz-zona: var(--pz-zona-alta);  --pz-zona-tinta: var(--pz-alta-fuerte); }
+.pz-zona--media { --pz-zona: var(--pz-zona-media); --pz-zona-tinta: var(--pz-media-fuerte); }
+.pz-zona--baja  { --pz-zona: var(--pz-zona-baja);  --pz-zona-tinta: var(--pz-green-ink); }
+.pz-zona--sin   { --pz-zona: var(--pz-zona-sin);   --pz-zona-tinta: var(--pz-ink-2); }
+
+.pz-grupo {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  padding: 1rem 1.4rem .85rem;
+}
+.pz-grupo__barra { display: none; }
+.pz-grupo__t {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--pz-zona-tinta, var(--pz-ink));
+  flex: none;
+  margin: 0;
+}
+.pz-grupo__n {
+  font-family: var(--pz-display);
+  font-variation-settings: "wdth" 88;
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -.03em;
+  color: var(--pz-zona-tinta, var(--pz-ink));
+  flex: none;
+}
+.pz-grupo__regla { flex: 1; }
+
+/* Ficha de interconsulta: sin bordes ni separadores, solo el aire de
+   la zona alrededor. */
+.pz-fila-cola {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.1rem;
+  margin: 0 .9rem .5rem;
+  padding: .95rem 1.1rem;
+  background: rgba(255,255,255,.78);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.pz-fila-cola:last-child { margin-bottom: 0; }
+.pz-fila-cola:hover,
+.pz-fila-cola:focus-within {
+  background: var(--pz-paper);
+  box-shadow: var(--shadow-md);
+  transform: translateX(3px);
+}
+.pz-fila-cola:hover .pz-fila-cola__dx,
+.pz-fila-cola:focus-within .pz-fila-cola__dx { text-decoration: underline; }
+.pz-fila-cola__id { width: 7.5rem; flex: none; }
+.pz-fila-cola__cuerpo { flex: 1; min-width: 0; }
+.pz-fila-cola__dx {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--pz-ink);
+  letter-spacing: -.015em;
+  line-height: 1.35;
+  display: block;
+}
+.pz-fila-cola__meta {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  color: var(--pz-ink-3);
+  letter-spacing: .02em;
+  margin-top: .35rem;
+  display: block;
+}
+.pz-fila-cola__lado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .45rem;
+  flex: none;
+}
+@media (max-width: 767.98px) {
+  .pz-fila-cola { flex-wrap: wrap; }
+  .pz-fila-cola__lado { align-items: flex-start; flex-direction: row; }
+}
+
+/* ---------- Columna de decision ---------- */
+.pz-decision {
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+.pz-vigente {
+  font-family: var(--pz-display);
+  font-variation-settings: "wdth" 88;
+  font-size: clamp(2.8rem, 5.5vw, 3.6rem);
+  font-weight: 800;
+  line-height: .95;
+  letter-spacing: -.035em;
+  text-transform: uppercase;
+  display: block;
+}
+.pz-vigente--alta  { color: var(--pz-alta); }
+.pz-vigente--media { color: var(--pz-media); }
+.pz-vigente--baja  { color: var(--pz-green-ink); }
+.pz-vigente--ninguna { color: var(--pz-ink-3); font-size: 1.7rem; }
+
+/* Selector segmentado de prioridad. */
+.pz-seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 2px solid var(--pz-line-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.pz-seg__op {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: .75rem .3rem;
+  background: var(--pz-paper);
+  color: var(--pz-ink-2);
+  border: 0;
+  border-left: 2px solid var(--pz-line);
+  cursor: pointer;
+  transition: background-color .18s ease, color .18s ease;
+}
+.pz-seg__op:first-child { border-left: 0; }
+.pz-seg__op:hover:not(:disabled):not(.is-on) { background: var(--pz-paper-2); }
+.pz-seg__op:disabled { cursor: not-allowed; opacity: .5; }
+.pz-seg__op.is-on { color: #fff; }
+.pz-seg__op.is-on[data-nivel="alta"]  { background: var(--pz-alta); }
+.pz-seg__op.is-on[data-nivel="media"] { background: var(--pz-media); }
+.pz-seg__op.is-on[data-nivel="baja"]  { background: var(--pz-green-ink); }
+
+.pz-decision__seccion {
+  padding: 1.3rem 1.4rem;
+  border-top: 2px solid var(--pz-line);
+}
+
+/* Barra de acciones. */
+.pz-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .75rem 1.1rem;
+  padding: 1rem 1.3rem;
+  background: var(--pz-paper);
+  border: 1px solid var(--pz-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.pz-select--mini {
+  width: auto;
+  min-width: 6.2rem;
+  font-size: var(--fs-sm);
+  /* Holgura a la derecha para que la flecha no se monte sobre el texto. */
+  padding: .5rem 2.4rem .5rem .8rem;
+  background-position: right .75rem center;
+}
+
+/* ---------- Barras de probabilidad ---------- */
+.pz-meter {
+  height: 12px;
+  background: var(--pz-paper-3);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.pz-meter__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--pz-green-ink);
+  transition: width .8s cubic-bezier(.2,.75,.25,1);
+}
+.pz-meter__fill--alta  { background: var(--pz-alta); }
+.pz-meter__fill--media { background: var(--pz-media); }
+.pz-meter__fill--baja  { background: var(--pz-green-ink); }
+
+/* ============================================================
+   Configuracion
+   ============================================================ */
+
+/* Tarjeta por grupo de campos: las secciones se separan de verdad en
+   vez de ser franjas dentro de una misma tabla larga. */
+.pz-grupo-campos {
+  background: var(--pz-paper);
+  border: 1px solid var(--pz-line);
+  border-top: 5px solid var(--pz-acento, var(--pz-blue-deep));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.pz-grupo-campos__head {
+  display: flex;
+  align-items: center;
+  gap: .9rem;
+  padding: 1.2rem 1.3rem;
+  border-bottom: 2px solid var(--pz-line);
+}
+.pz-grupo-campos__icono {
+  width: 2.6rem; height: 2.6rem;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--pz-acento-bg, var(--pz-paper-2));
+  color: var(--pz-acento, var(--pz-blue-deep));
+}
+.pz-grupo-campos__t {
+  font-family: var(--pz-display);
+  font-size: var(--fs-md);
+  font-weight: 800;
+  color: var(--pz-ink);
+  letter-spacing: -.02em;
+  margin: 0;
+}
+
+/* Fila de campo: nombre a la izquierda, los dos interruptores a la derecha. */
+.pz-campo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .85rem 1.3rem;
+  border-top: 1px solid var(--pz-line);
+  transition: background-color .15s ease;
+}
+.pz-campo:hover { background: var(--pz-paper-2); }
+.pz-campo__nombre { flex: 1; min-width: 0; }
+.pz-campo__sw {
+  width: 4.5rem;
+  flex: none;
+  display: flex;
+  justify-content: center;
+}
+.pz-campo--off { opacity: .55; }
+
+/* ---------- Utilidades ---------- */
+.pz-mono { font-family: var(--pz-mono); }
+
+.custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--pz-line-2);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--pz-ink-3); background-clip: content-box; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pz-btn, .pz-meter__fill, .pz-navlink, .pz-rail__item,
+  .pz-table > tbody tr, .pz-fila-cola { transition: none; }
+  .pz-btn:hover:not(:disabled), .pz-rail__item:hover,
+  .pz-fila-cola:hover { transform: none; }
+}

@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+  push:
+    branches:
+      - develop
+
+jobs:
+  backend-quality:
+    runs-on: ubuntu-latest
+    # Sin servicio de base: los tests usan SQLite en memoria y, desde que el
+    # I/O de arranque vive en el lifespan, importar la app ya no abre conexion.
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t priorizai-backend ./backend
+
+      - name: Ruff
+        run: docker run --rm priorizai-backend ruff check .
+
+      - name: Black
+        run: docker run --rm priorizai-backend black --check .
+
+      - name: Mypy
+        run: docker run --rm priorizai-backend mypy .
+
+      - name: Pytest
+        run: |
+          mkdir -p coverage
+          docker run --rm \
+            -v "${{ github.workspace }}/coverage:/app/coverage" \
+            priorizai-backend \
+            pytest --cov-report=xml:coverage/coverage.xml
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage/coverage.xml
+          if-no-files-found: warn
+
+      - name: Build frontend image
+        run: docker build -t priorizai-frontend ./frontend
+
+      - name: Frontend lint
+        run: docker run --rm priorizai-frontend npm run lint
+
+      - name: Frontend build
+        run: docker run --rm priorizai-frontend npm run build

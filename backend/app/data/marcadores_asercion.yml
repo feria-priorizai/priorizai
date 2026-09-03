@@ -1,0 +1,72 @@
+# Marcadores de aserción para la capa de negación de RF7 (HU5-c4), adaptados de las
+# familias de NegEx-MES (MIT, PlanTL-GOB-ES) al español clínico. Ver
+# docs/RF7-banderas-rojas.md, D1-D3.
+#
+# El motor (backend/app/services/banderas_rojas.py) busca estas frases en una ventana
+# de tokens alrededor de cada término de alarma detectado. Es una semilla razonable,
+# no una lista exhaustiva: ampliar con casos reales a medida que se detecten.
+
+# Preceden al término y lo niegan: "sin dolor torácico", "niega hemorragia".
+negacion_previa:
+  - "sin"
+  - "no presenta"
+  - "no presentó"
+  - "no hay"
+  - "no evidencia"
+  - "no se evidencia"
+  - "no se observa"
+  - "niega"
+  - "se descarta"
+  - "descarta"
+  - "ausencia de"
+  - "sin evidencia de"
+
+# Siguen al término y lo niegan: "hemorragia digestiva descartada".
+negacion_posterior:
+  - "descartado"
+  - "descartada"
+  - "negativo"
+  - "negativa"
+  - "ausente"
+  - "no se confirma"
+
+# Ubican el término en el pasado, no en el cuadro actual: "antecedente de sepsis".
+historico:
+  - "antecedente de"
+  - "antecedentes de"
+  - "historia de"
+  - "historial de"
+  - "previo"
+  - "previa"
+  - "resuelto"
+  - "resuelta"
+  - "ya resuelto"
+  - "ya resuelta"
+
+# Plantean el término como posibilidad a evaluar, no como hallazgo actual.
+hipotetico:
+  - "en caso de"
+  - "ante sospecha de"
+  - "sospecha de"
+  - "para descartar"
+  - "a descartar"
+  - "riesgo de"
+  - "posible"
+  - "probable"
+
+# Frases que parecen negación pero no lo son: la incertidumbre clínica no descarta
+# el signo de alarma, así que SÍ disparan la bandera (D1: errar hacia la urgencia).
+pseudo_negacion:
+  - "no se puede descartar"
+  - "no se logra descartar"
+  - "no descarta"
+  - "sin embargo"
+
+# Cortan el alcance de un marcador de negación: lo que viene después ya no cuenta
+# como negado por un marcador que apareció antes del terminador.
+# Ej: "sin dolor torácico pero con signos de shock" -> shock NO queda negado.
+terminadores:
+  - "pero"
+  - "aunque"
+  - "salvo"
+  - "excepto"

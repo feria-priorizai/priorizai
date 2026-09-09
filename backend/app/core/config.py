@@ -47,6 +47,16 @@ class Settings:
     model_max_length: int = int(os.getenv("MODEL_MAX_LENGTH", "512"))
     model_batch_size: int = int(os.getenv("MODEL_BATCH_SIZE", "16"))
 
+    # Servicio de modelos externo. Vacio = cargar los modelos en este mismo
+    # proceso, como hasta ahora. Con URL, el backend deja de necesitar torch.
+    model_service_url: str = os.getenv("MODEL_SERVICE_URL", "").strip()
+    # Mayor que el arranque en frio del servicio: cargar los pesos puede
+    # tardar minutos y la primera carga tras un rato inactivo lo paga.
+    model_service_timeout: float = float(os.getenv("MODEL_SERVICE_TIMEOUT", "300"))
+    # Clave compartida que el servicio exige en la cabecera X-API-Key. Vacia =
+    # no se manda, para servicios abiertos o levantados en local.
+    model_service_api_key: str = os.getenv("MODEL_SERVICE_API_KEY", "").strip()
+
     # NER de entidades clinicas. Symptom queda fuera por defecto: su F1 es
     # 0.51 contra 0.73-0.88 de las demas clases sobre interconsultas reales.
     ner_model_path: str = os.getenv("NER_MODEL_PATH", "/models/NER/modelo")

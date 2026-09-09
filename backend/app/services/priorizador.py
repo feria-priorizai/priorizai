@@ -235,5 +235,18 @@ priorizador = PriorizadorRigoBerta(
 )
 
 
-def get_priorizador() -> PriorizadorRigoBerta:
+def get_priorizador() -> Any:
+    """El modelo local, o el cliente HTTP si hay MODEL_SERVICE_URL.
+
+    Los dos exponen predecir(list[Interconsulta]) -> list[ResultadoPriorizacion],
+    asi que quien llama no distingue uno de otro.
+    """
+    # Import diferido: cliente_modelos importa de este modulo y de ner.
+    from app.services.cliente_modelos import (
+        get_priorizador_remoto,
+        usar_servicio_remoto,
+    )
+
+    if usar_servicio_remoto():
+        return get_priorizador_remoto()
     return priorizador

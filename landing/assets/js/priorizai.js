@@ -246,7 +246,7 @@
         (d.get('mensaje') || '');
 
       window.location.href =
-        'mailto:contacto@priorizai.cl' +
+        'mailto:priorizai.fsw@gmail.com' +
         '?subject=' + encodeURIComponent('Solicitud de demo PriorizAI — ' + d.get('institucion')) +
         '&body=' + encodeURIComponent(cuerpo);
 

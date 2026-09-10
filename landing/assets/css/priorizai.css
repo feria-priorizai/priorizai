@@ -973,6 +973,18 @@ a { text-underline-offset: .22em; }
 .pz-contact__v { font-size: var(--fs-sm); color: var(--pz-ink); font-weight: 600; }
 .pz-contact__v a { color: var(--pz-blue-deep); text-decoration-color: var(--pz-line-2); }
 
+.pz-redes { display: flex; flex-wrap: wrap; gap: .5rem 1.4rem; }
+.pz-redes a {
+  display: inline-flex; align-items: center; gap: .45rem;
+  text-decoration: none;
+}
+.pz-redes a:hover { text-decoration: underline; }
+.pz-redes svg {
+  width: 1.15rem; height: 1.15rem; flex: none;
+  stroke: currentColor; fill: none; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
 /* ---------- 17. Footer ---------- */
 .pz-footer {
   background: linear-gradient(180deg, var(--pz-night) 0%, var(--pz-night-2) 100%);

@@ -21,15 +21,17 @@ landing/
     ├── js/priorizai.js         Navbar, revelado al scroll, contadores, formulario
     ├── vendor/                 Bootstrap 5.3.3 (CSS + bundle JS con Popper)
     └── img/
-        ├── imagotipo-color.svg           Lockup horizontal a color (navbar)
-        ├── imagotipo-blanco.svg          Lockup horizontal en blanco (footer)
-        ├── imagotipo-color-vertical.svg  Lockup apilado (manifiesto)
-        ├── isotipo-color.svg             Solo el isotipo (favicon)
-        ├── app-dashboard.png             Captura: dashboard
-        └── app-detalle.png               Captura: detalle de interconsulta
+        ├── imagotipo-color.svg            Lockup horizontal a color (navbar)
+        ├── imagotipo-blanco.svg           Lockup horizontal en blanco (footer)
+        ├── imagotipo-blanco-vertical.svg  Lockup apilado en blanco (manifiesto)
+        ├── imagotipo-color-vertical.svg   Lockup apilado a color (de reserva)
+        ├── isotipo-color.svg              Solo el isotipo (favicon)
+        ├── video-portada.jpg              Portada del video de YouTube
+        ├── app-dashboard.png              Captura: dashboard
+        └── app-detalle.png                Captura: detalle de interconsulta
 ```
 
-Los cuatro SVG vienen del kit de marca. El original de cada uno es un lienzo de
+Los cinco SVG vienen del kit de marca. El original de cada uno es un lienzo de
 600 × 600 con el dibujo centrado y mucho aire alrededor; puesto en un `<img>` con la
 altura fija, el logo quedaba diminuto. El `viewBox` está recortado a la caja real del
 trazo, así que `height: 34px; width: auto` da el tamaño que se espera.
@@ -116,6 +118,17 @@ Chile/OCDE) · `form-control`, `form-select`, `form-check` + validación
 
 ---
 
+## El video
+
+La sección `#video` monta una **fachada**: hasta que alguien pulsa, lo único que se
+carga es `video-portada.jpg`, servida desde el propio sitio. Recién al hacer clic
+`priorizai.js` inserta el `iframe` de `youtube-nocookie.com` con `autoplay=1`, así que la
+página no le pide nada a YouTube mientras nadie se lo pida. Sin JavaScript el mismo
+elemento es un enlace normal que abre el video en una pestaña nueva.
+
+Para cambiar el video basta reemplazar el `data-video` del enlace, su `href` y la
+portada, que sale de `https://i.ytimg.com/vi/<id>/maxresdefault.jpg`.
+
 ## Capturas del producto
 
 `app-dashboard.png` y `app-detalle.png` son capturas reales de la aplicación. Cuando la
@@ -132,13 +145,11 @@ confianza, que es justamente lo que la landing describe al lado de la captura.
 
 ## Qué falta conectar
 
-1. **Correo de contacto.** Está como marcador de posición `contacto@priorizai.cl` en
-   tres lugares: `index.html` (sección contacto y footer) y `assets/js/priorizai.js`.
-   Reemplázalo por el real.
-2. **Formulario.** Hoy valida en el cliente y arma un `mailto:` con los datos.
-   Para un envío real, sustituye ese bloque de `priorizai.js` por un `fetch`
-   al endpoint que corresponda (Formspree, una función serverless, tu backend).
-3. **Analítica y OG image.** `og:image` apunta a la captura del dashboard;
+1. **Formulario.** Hoy valida en el cliente y arma un `mailto:` a
+   `priorizai.fsw@gmail.com` con los datos. Para un envío real, sustituye ese bloque de
+   `priorizai.js` por un `fetch` al endpoint que corresponda (Formspree, una función
+   serverless, tu backend).
+2. **Analítica y OG image.** `og:image` apunta a la captura del dashboard;
    si quieres una imagen social propia, reemplázala por una de 1200 × 630.
 
 ## Contenido: de dónde sale cada cifra

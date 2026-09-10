@@ -28,6 +28,25 @@
     });
   });
 
+  /* ---- Video: el iframe se inserta recien al hacer clic ----
+     Mientras nadie lo pida, la pagina no le pide nada a YouTube. Sin JS el
+     enlace queda como estaba y abre el video en una pestaña nueva. */
+  var video = document.getElementById('pzVideo');
+  if (video) {
+    video.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      var marco = document.createElement('iframe');
+      marco.className = 'pz-video__marco';
+      marco.src = 'https://www.youtube-nocookie.com/embed/' + video.dataset.video +
+                  '?autoplay=1&rel=0&modestbranding=1';
+      marco.title = 'PriorizAI · Agilizando la lista de espera con IA';
+      marco.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; ' +
+                    'gyroscope; picture-in-picture; web-share';
+      marco.setAttribute('allowfullscreen', '');
+      video.replaceWith(marco);
+    });
+  }
+
   /* ---- Panel de triage: recorridos medidos, no fijos ----
      La tarjeta "Alta" tiene que quedar exactamente donde estaba la primera,
      así que el desplazamiento sale de las alturas reales de las filas (que
@@ -210,7 +229,7 @@
 
       if (!form.checkValidity()) {
         msg.textContent = 'Revisa los campos marcados.';
-        msg.style.color = '#C22B2B';
+        msg.style.color = 'var(--pz-alta)';
         var bad = form.querySelector(':invalid');
         if (bad) bad.focus();
         return;
@@ -227,7 +246,7 @@
         (d.get('mensaje') || '');
 
       window.location.href =
-        'mailto:contacto@priorizai.cl' +
+        'mailto:priorizai.fsw@gmail.com' +
         '?subject=' + encodeURIComponent('Solicitud de demo PriorizAI — ' + d.get('institucion')) +
         '&body=' + encodeURIComponent(cuerpo);
 

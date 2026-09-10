@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PriorizAI — Software de priorización médica</title>
-<meta name="description" content="PriorizAI ordena las interconsultas de la lista de espera por prioridad clínica, con NLP entrenado sobre interconsultas reales. Ejecutable de forma local, con datos anonimizados y reentrenamiento propio.">
+<meta name="description" content="PriorizAI sugiere una prioridad clínica —alta, media o baja— para cada interconsulta, con su nivel de confianza y su explicación. El médico decide. Se instala dentro del hospital, sin salida a internet.">
 <meta name="theme-color" content="#C6D7F0">
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="PriorizAI — Software de priorización médica">
-<meta property="og:description" content="Ordena la lista de espera por prioridad clínica. NLP entrenado con interconsultas priorizadas, ejecutable dentro del hospital.">
+<meta property="og:description" content="Sugiere una prioridad clínica para cada interconsulta y muestra su nivel de confianza. El médico decide. Se ejecuta dentro del hospital.">
 <meta property="og:image" content="assets/img/app-dashboard.png">
 <meta property="og:locale" content="es_CL">
 
@@ -83,9 +83,9 @@
         </div>
 
         <div class="pz-hero__meta pz-reveal" style="--d:300ms">
-          <span><strong>NLP</strong> sobre interconsultas reales</span>
-          <span><strong>On-premise</strong> dentro del hospital</span>
-          <span><strong>Datos anonimizados</strong></span>
+          <span><strong>NLP</strong> sobre el texto clínico</span>
+          <span><strong>On-premise</strong> sin salida a internet</span>
+          <span><strong>El texto clínico</strong> se descarta al exportar</span>
         </div>
       </div>
 
@@ -120,7 +120,7 @@
               <span class="pz-ic__conf"><span class="pz-ic__pct">80.9%</span><span class="pz-ic__lab">Confianza</span></span>
             </div>
           </div>
-          <p class="pz-note mt-3 mb-0">Datos ilustrativos. En operación, las interconsultas viajan anonimizadas.</p>
+          <p class="pz-note mt-3 mb-0">Casos sintéticos. En operación ninguna interconsulta sale del hospital.</p>
         </div>
       </div>
 
@@ -183,7 +183,7 @@
     <div class="row g-5 align-items-end mb-5">
       <div class="col-lg-7">
         <p class="pz-eyebrow">El cuello de botella</p>
-        <h2 class="pz-h2">Ocho meses de espera<br>para una hora que dura quince minutos.</h2>
+        <h2 class="pz-h2">Ocho meses de espera<br>por una decisión que toma quince minutos.</h2>
       </div>
       <div class="col-lg-5">
         <p class="pz-lead mb-0">
@@ -405,7 +405,7 @@
           </p>
           <div class="pz-engine__tags">
             <span class="pz-tag">Texto libre</span>
-            <span class="pz-tag">Anonimizado</span>
+            <span class="pz-tag">Corpus autorizado</span>
           </div>
         </div>
       </div>
@@ -415,13 +415,13 @@
           <span class="pz-engine__k">B / PROCESO</span>
           <div class="pz-engine__t">NLP + entrenamiento</div>
           <p class="pz-engine__d">
-            Procesamiento de lenguaje natural sobre el texto clínico y un
-            clasificador entrenado y validado de forma cruzada sobre ese corpus.
+            RigoBERTa afinado sobre ese corpus y evaluado contra su conjunto de
+            prueba antes de que una sugerencia llegue a una pantalla clínica.
           </p>
           <div class="pz-engine__tags">
             <span class="pz-tag">NLP</span>
-            <span class="pz-tag">Clasificación</span>
-            <span class="pz-tag">Validación cruzada</span>
+            <span class="pz-tag">RigoBERTa</span>
+            <span class="pz-tag">Macro F1 ≥ 0,7</span>
           </div>
         </div>
       </div>
@@ -432,11 +432,13 @@
           <div class="pz-engine__t">Priorizador automático</div>
           <p class="pz-engine__d">
             Cada interconsulta recibe una prioridad sugerida —alta, media o baja—
-            con la distribución de confianza detrás de la sugerencia.
+            con la distribución de confianza detrás de ella. Una capa determinista
+            de banderas rojas puede forzarla a alta.
           </p>
           <div class="pz-engine__tags">
             <span class="pz-tag">Alta / Media / Baja</span>
             <span class="pz-tag">% de confianza</span>
+            <span class="pz-tag">Banderas rojas</span>
           </div>
         </div>
       </div>
@@ -487,29 +489,29 @@
             <div class="pz-feat">
               <span class="pz-feat__n">01</span>
               <div>
-                <div class="pz-feat__t">El lote, en cuatro números</div>
-                <p class="pz-feat__d">Total, pendientes, revisadas y prioridad alta. Lo primero que necesita saber quien abre la bandeja en la mañana.</p>
+                <div class="pz-feat__t">El lote, en cinco números</div>
+                <p class="pz-feat__d">Total, pendientes, revisadas, prioridad alta y banderas rojas. Lo primero que necesita saber quien abre la bandeja en la mañana.</p>
               </div>
             </div>
             <div class="pz-feat">
               <span class="pz-feat__n">02</span>
               <div>
-                <div class="pz-feat__t">Orden por prioridad y fecha</div>
-                <p class="pz-feat__d">La tabla llega ordenada: primero lo urgente, y dentro de lo urgente, primero lo que lleva más tiempo esperando.</p>
+                <div class="pz-feat__t">Agrupadas por prioridad</div>
+                <p class="pz-feat__d">La lista llega en bloques de color: alta, media y baja. Dentro de cada bloque manda la fecha de emisión, así que primero va lo que lleva más tiempo esperando.</p>
               </div>
             </div>
             <div class="pz-feat">
               <span class="pz-feat__n">03</span>
               <div>
                 <div class="pz-feat__t">Confianza IA a la vista</div>
-                <p class="pz-feat__d">Cada fila muestra qué tan segura está la sugerencia. Las de confianza baja se revisan primero, no se ocultan.</p>
+                <p class="pz-feat__d">Cada fila muestra qué tan segura está la sugerencia. Bajo el umbral definido queda marcada como revisión obligatoria y no puede exportarse sin revisar.</p>
               </div>
             </div>
             <div class="pz-feat">
               <span class="pz-feat__n">04</span>
               <div>
                 <div class="pz-feat__t">Carga por archivo</div>
-                <p class="pz-feat__d">Se alimenta con un archivo de interconsultas: no exige reemplazar el sistema de registro del hospital.</p>
+                <p class="pz-feat__d">Se alimenta con el archivo CSV o XLSX que ya exporta el sistema hospitalario: no exige reemplazar el registro clínico.</p>
               </div>
             </div>
           </div>
@@ -531,28 +533,28 @@
               <span class="pz-feat__n">01</span>
               <div>
                 <div class="pz-feat__t">Resumen clínico armado</div>
-                <p class="pz-feat__d">Historia, fundamentos diagnósticos, exámenes y motivo, en un solo bloque legible. No reemplaza el expediente completo.</p>
+                <p class="pz-feat__d">Historia, fundamentos diagnósticos, exámenes y motivo, cada uno con su rótulo y separados de los datos administrativos. Los campos vacíos se indican como tales.</p>
               </div>
             </div>
             <div class="pz-feat">
               <span class="pz-feat__n">02</span>
               <div>
-                <div class="pz-feat__t">Distribución de confianza</div>
-                <p class="pz-feat__d">El modelo muestra su reparto entre baja, media y alta. Si duda, se nota; no entrega una sola etiqueta sin contexto.</p>
+                <div class="pz-feat__t">Confianza y banderas rojas</div>
+                <p class="pz-feat__d">El modelo reparte su confianza entre baja, media y alta: si duda, se nota. Y si un término de alarma aparece afirmado en el texto, una regla determinista fuerza la prioridad a alta y dice cuál lo activó.</p>
               </div>
             </div>
             <div class="pz-feat">
               <span class="pz-feat__n">03</span>
               <div>
                 <div class="pz-feat__t">La última palabra es clínica</div>
-                <p class="pz-feat__d">Modificar la prioridad exige escribir el criterio que justifica el cambio. Ese texto es, además, material de reentrenamiento.</p>
+                <p class="pz-feat__d">Modificar la prioridad exige escribir el criterio que la justifica. Ese motivo queda en el registro de auditoría, junto al usuario y la marca temporal.</p>
               </div>
             </div>
             <div class="pz-feat">
               <span class="pz-feat__n">04</span>
               <div>
-                <div class="pz-feat__t">Exportable en JSON</div>
-                <p class="pz-feat__d">La interconsulta priorizada sale en formato abierto para volver al sistema que la originó.</p>
+                <div class="pz-feat__t">Exportable y luego descartada</div>
+                <p class="pz-feat__d">La interconsulta revisada sale en el formato acordado con el hospital. Cerrada la sesión, el contenido clínico se elimina de la aplicación.</p>
               </div>
             </div>
           </div>
@@ -588,7 +590,7 @@
             <h3>Diseñado en torno a la seguridad de los datos</h3>
           </div>
           <div class="pz-adv__link" aria-hidden="true"></div>
-          <div class="pz-adv__conseq">Anonimizando datos y respetando las leyes vigentes del país.</div>
+          <div class="pz-adv__conseq">Bajo las leyes 19.628, 21.719 y 20.584 sobre datos personales y ficha clínica.</div>
         </div>
       </div>
 
@@ -599,18 +601,18 @@
             <h3>Ejecutable de forma local</h3>
           </div>
           <div class="pz-adv__link" aria-hidden="true"></div>
-          <div class="pz-adv__conseq">Compatible con la infraestructura hospitalaria existente.</div>
+          <div class="pz-adv__conseq">Instalación completa con Docker Compose en la red del hospital, sin salida a internet.</div>
         </div>
       </div>
 
       <div class="col-md-4">
         <div class="pz-adv pz-reveal" style="--d:200ms">
           <div class="pz-adv__claim">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/><path d="M12 8v4l2.5 1.5"/></svg>
-            <h3>Herramienta integrada de reentrenamiento</h3>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>
+            <h3>El texto clínico no queda almacenado</h3>
           </div>
           <div class="pz-adv__link" aria-hidden="true"></div>
-          <div class="pz-adv__conseq">Para aumentar la precisión con los datos propios de cada hospital.</div>
+          <div class="pz-adv__conseq">Exportado el lote se descarta; solo permanecen los metadatos de auditoría.</div>
         </div>
       </div>
     </div>
@@ -658,10 +660,11 @@
             </h3>
             <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#pzFaq">
               <div class="accordion-body">
-                Dentro del hospital. PriorizAI está pensado para ejecutarse de forma
-                local sobre la infraestructura existente, y las interconsultas se
-                procesan anonimizadas, respetando la legislación vigente en Chile
-                sobre datos personales y de salud.
+                Dentro del hospital. PriorizAI se instala en la red del establecimiento
+                con Docker Compose y no sale a internet: no hay servicios de nube ni
+                interfaces externas de inteligencia artificial. Exportado el lote, el
+                contenido clínico se elimina de la aplicación y solo permanecen los
+                metadatos de auditoría y las preferencias del usuario.
               </div>
             </div>
           </div>
@@ -674,12 +677,12 @@
             </h3>
             <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#pzFaq">
               <div class="accordion-body">
-                Es el riesgo principal del proyecto y está reconocido como tal. La
-                respuesta es metodológica: probar distintos modelos, iterar el
-                <em>fine-tuning</em> y medir con validación cruzada antes de que
-                cualquier sugerencia llegue a una pantalla clínica. La confianza por
-                caso se muestra siempre, precisamente para que un resultado débil se
-                vea como débil.
+                Es el riesgo principal del proyecto y está reconocido como tal. La meta
+                está escrita: Macro F1 igual o superior a 0,7 y una concordancia
+                sustancial con el criterio del especialista, medidas sobre el conjunto
+                de prueba antes de que cualquier sugerencia llegue a una pantalla
+                clínica. La confianza por caso se muestra siempre, precisamente para
+                que un resultado débil se vea como débil.
               </div>
             </div>
           </div>
@@ -692,11 +695,10 @@
             </h3>
             <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#pzFaq">
               <div class="accordion-body">
-                El segundo riesgo identificado. Se aborda ampliando la base de
-                hospitales colaboradores y con la herramienta integrada de
-                reentrenamiento: cada corrección clínica que hace un especialista
-                dentro de PriorizAI se convierte en un ejemplo nuevo para el modelo
-                de ese hospital.
+                El segundo riesgo identificado. Las alternativas legítimas están
+                definidas de antemano: el corpus histórico del hospital colaborador, un
+                corpus público en español clínico o casos sintéticos generados por el
+                equipo. Ningún corpus entra al proyecto sin origen autorizado.
               </div>
             </div>
           </div>
@@ -709,9 +711,25 @@
             </h3>
             <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#pzFaq">
               <div class="accordion-body">
-                No. La carga se hace por archivo y la salida se exporta en JSON, de
-                modo que PriorizAI se ubica al costado del flujo actual y no encima
-                de él. Es la vía más rápida para pilotear sin tocar sistemas críticos.
+                No. La carga se hace con el archivo que el sistema hospitalario ya
+                exporta y la salida vuelve en el formato acordado, de modo que PriorizAI
+                se ubica al costado del flujo actual y no encima de él. Es la vía más
+                rápida para pilotear sin tocar sistemas críticos.
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item">
+            <h3 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq6" aria-expanded="false" aria-controls="faq6">
+                ¿Se puede reentrenar el modelo con los datos del hospital?
+              </button>
+            </h3>
+            <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#pzFaq">
+              <div class="accordion-body">
+                Sí, pero no es una función de la aplicación. El reentrenamiento se presta
+                como servicio del equipo sobre la instalación del cliente. El software que
+                se entrega prioriza y registra decisiones; no entrena modelos.
               </div>
             </div>
           </div>
@@ -755,8 +773,8 @@
         <h2 class="pz-h2 mb-3">Probémoslo con las<br>interconsultas de tu servicio.</h2>
         <p class="pz-lead mb-4">
           Buscamos hospitales y servicios de salud dispuestos a evaluar el
-          priorizador sobre datos propios y anonimizados. Cuéntanos el contexto y
-          coordinamos una demo.
+          priorizador sobre sus propios datos, dentro de su red. Cuéntanos el
+          contexto y coordinamos una demo.
         </p>
 
         <form class="pz-form row g-3 needs-validation" novalidate id="pzForm">
@@ -822,7 +840,7 @@
           </div>
           <div class="pz-contact__item">
             <span class="pz-contact__k">Datos requeridos para un piloto</span>
-            <span class="pz-contact__v">Interconsultas anonimizadas con su prioridad ya asignada</span>
+            <span class="pz-contact__v">Un corpus histórico de interconsultas ya priorizadas, bajo protocolo aprobado por el comité ético</span>
           </div>
           <div class="pz-contact__item mb-0">
             <span class="pz-contact__k">Estado del proyecto</span>

@@ -453,7 +453,83 @@ a { text-underline-offset: .22em; }
   .pz-ic { transition: none; }
 }
 
-/* ---------- 6. Riel de cifras ---------- */
+/* ---------- 6. Video ---------- */
+/* Fachada: hasta que alguien pulsa, lo unico que se carga es una portada
+   local. El iframe de YouTube lo inserta priorizai.js recien al hacer clic. */
+.pz-video {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--pz-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  background: var(--pz-night);
+}
+.pz-video__portada,
+.pz-video__marco {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+}
+.pz-video__portada { text-decoration: none; }
+.pz-video__portada img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Vela apenas perceptible: la portada es clara y un velo fuerte la dejaba
+   gris, como si la imagen no hubiera cargado. El contraste del boton lo
+   pone el verde, no el oscurecimiento. */
+.pz-video__portada::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 18, 37, .07);
+  transition: background-color .2s ease;
+}
+.pz-video__portada:hover::after { background: rgba(6, 18, 37, 0); }
+
+.pz-video__play {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  width: 5rem; height: 5rem;
+  display: grid; place-items: center;
+  background: var(--pz-green-ink);
+  border-radius: var(--radius-lg);
+  color: #fff;
+  box-shadow: var(--shadow-lg);
+  transition: transform .18s ease, background-color .18s ease;
+}
+.pz-video__portada:hover .pz-video__play { background: #035C41; transform: translate(-50%, -50%) scale(1.06); }
+.pz-video__play svg { width: 2.1rem; height: 2.1rem; fill: currentColor; margin-left: .18rem; }
+
+.pz-video__pie {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 2;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .6rem 1rem;
+  padding: 1.6rem 1.2rem 1rem;
+  background: linear-gradient(180deg, rgba(6,18,37,0) 0%, rgba(6,18,37,.8) 70%);
+  font-family: var(--pz-mono);
+}
+.pz-video__t {
+  font-size: var(--fs-micro); font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase; color: #fff;
+}
+.pz-video__k {
+  font-size: var(--fs-chip);
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--pz-night-ink); white-space: nowrap;
+}
+@media (max-width: 575.98px) {
+  .pz-video__play { width: 3.8rem; height: 3.8rem; }
+  .pz-video__play svg { width: 1.6rem; height: 1.6rem; }
+  .pz-video__k { display: none; }
+}
+
+/* ---------- 7. Riel de cifras ---------- */
 /* Mismo componente que el resumen del dashboard: cada indicador
    ocupa el mismo ancho, con el filete y la cifra en su acento. */
 .pz-rail {
@@ -510,7 +586,7 @@ a { text-underline-offset: .22em; }
 }
 .pz-rail__n small { font-size: .4em; font-weight: 700; letter-spacing: -.01em; }
 
-/* ---------- 7. Problema ---------- */
+/* ---------- 8. Problema ---------- */
 .pz-slab {
   background: var(--pz-purple-ink);
   color: #fff;
@@ -578,7 +654,7 @@ a { text-underline-offset: .22em; }
   border-radius: 2px;
 }
 
-/* ---------- 8. Recorrido ---------- */
+/* ---------- 9. Recorrido ---------- */
 .pz-flow { position: relative; }
 .pz-flow__track {
   position: absolute; left: 0; right: 0; top: 26px; height: 2px;
@@ -613,7 +689,7 @@ a { text-underline-offset: .22em; }
 .pz-step--hot .pz-step__node { background: var(--pz-alta-bg); border-color: rgba(176,29,29,.3); color: var(--pz-alta); }
 .pz-step--hot .pz-step__k { color: var(--pz-alta); }
 
-/* ---------- 9. Manifiesto ---------- */
+/* ---------- 10. Manifiesto ---------- */
 .pz-manifest {
   background: var(--pz-purple-ink);
   color: #fff;
@@ -654,7 +730,7 @@ a { text-underline-offset: .22em; }
   position: relative; z-index: 1; display: block; margin-top: 1.5rem;
 }
 
-/* ---------- 10. Motor ---------- */
+/* ---------- 11. Motor ---------- */
 /* Tarjeta con filete de acento, como los grupos de configuracion. */
 .pz-engine {
   background: var(--pz-paper);
@@ -683,7 +759,7 @@ a { text-underline-offset: .22em; }
   border: 1px solid var(--pz-line-2); border-radius: 999px; padding: .25rem .6rem;
 }
 
-/* ---------- 11. Producto (nocturno) ---------- */
+/* ---------- 12. Producto (nocturno) ---------- */
 /* El mismo degradado del menu lateral de la aplicacion. */
 .pz-night {
   background: linear-gradient(180deg, var(--pz-night) 0%, var(--pz-night-2) 100%);
@@ -758,7 +834,7 @@ a { text-underline-offset: .22em; }
 .pz-feat__t { font-family: var(--pz-body); font-weight: 700; color: #fff; font-size: var(--fs-md); margin-bottom: .3rem; letter-spacing: -.015em; }
 .pz-feat__d { font-size: var(--fs-sm); margin: 0; color: var(--pz-night-ink-2); }
 
-/* ---------- 12. Ventajas ---------- */
+/* ---------- 13. Ventajas ---------- */
 .pz-adv { height: 100%; display: flex; flex-direction: column; }
 .pz-adv__claim {
   background: var(--pz-green-ink);
@@ -798,7 +874,7 @@ a { text-underline-offset: .22em; }
 .pz-adv__claim:hover  { background: #035C41; }
 .pz-adv__conseq:hover { background: #38206F; }
 
-/* ---------- 13. Acordeon ---------- */
+/* ---------- 14. Acordeon ---------- */
 .pz-acc {
   --bs-accordion-border-color: transparent;
   --bs-accordion-border-radius: var(--radius-md);
@@ -826,7 +902,7 @@ a { text-underline-offset: .22em; }
 .pz-acc .accordion-button:not(.collapsed)::after { content: "−"; color: var(--pz-blue-deep); }
 .pz-acc .accordion-body { padding: 0 3rem 1.6rem 1.4rem; color: var(--pz-ink-2); font-size: var(--fs-sm); }
 
-/* ---------- 14. Equipo ---------- */
+/* ---------- 15. Equipo ---------- */
 .pz-person {
   border-top: 1px solid var(--pz-line-2);
   padding: 1.1rem 0;
@@ -844,7 +920,7 @@ a { text-underline-offset: .22em; }
   color: var(--pz-ink); letter-spacing: -.02em;
 }
 
-/* ---------- 15. Contacto ---------- */
+/* ---------- 16. Contacto ---------- */
 .pz-contact { background: var(--pz-canvas-2); border-top: 2px solid var(--pz-line-2); }
 
 .pz-form .form-control,
@@ -897,7 +973,7 @@ a { text-underline-offset: .22em; }
 .pz-contact__v { font-size: var(--fs-sm); color: var(--pz-ink); font-weight: 600; }
 .pz-contact__v a { color: var(--pz-blue-deep); text-decoration-color: var(--pz-line-2); }
 
-/* ---------- 16. Footer ---------- */
+/* ---------- 17. Footer ---------- */
 .pz-footer {
   background: linear-gradient(180deg, var(--pz-night) 0%, var(--pz-night-2) 100%);
   color: var(--pz-night-ink-2);
@@ -912,7 +988,7 @@ a { text-underline-offset: .22em; }
   padding-top: 1.5rem; margin-top: 2.5rem;
 }
 
-/* ---------- 17. Revelado al hacer scroll ---------- */
+/* ---------- 18. Revelado al hacer scroll ---------- */
 .pz-reveal { opacity: 0; transform: translateY(18px); }
 .pz-reveal.is-in {
   opacity: 1; transform: none;
@@ -920,7 +996,7 @@ a { text-underline-offset: .22em; }
   transition-delay: var(--d, 0ms);
 }
 
-/* ---------- 18. Utilidades ---------- */
+/* ---------- 19. Utilidades ---------- */
 .pz-hr { border: 0; border-top: 1px solid var(--pz-line-2); margin: 0; }
 .pz-anchor { scroll-margin-top: 96px; }
 
@@ -930,5 +1006,7 @@ a { text-underline-offset: .22em; }
   .pz-nav .nav-link, .pz-night .nav-pills .nav-link { transition: none; }
   .pz-btn:hover, .pz-rail__item:hover, .pz-engine:hover,
   .pz-step:hover .pz-step__node { transform: none; }
+  .pz-video__play { transition: background-color .18s ease; }
+  .pz-video__portada:hover .pz-video__play { transform: translate(-50%, -50%); }
   .pz-person:hover { padding-left: 0; }
 }

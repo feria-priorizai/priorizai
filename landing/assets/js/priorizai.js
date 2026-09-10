@@ -28,6 +28,25 @@
     });
   });
 
+  /* ---- Video: el iframe se inserta recien al hacer clic ----
+     Mientras nadie lo pida, la pagina no le pide nada a YouTube. Sin JS el
+     enlace queda como estaba y abre el video en una pestaña nueva. */
+  var video = document.getElementById('pzVideo');
+  if (video) {
+    video.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      var marco = document.createElement('iframe');
+      marco.className = 'pz-video__marco';
+      marco.src = 'https://www.youtube-nocookie.com/embed/' + video.dataset.video +
+                  '?autoplay=1&rel=0&modestbranding=1';
+      marco.title = 'PriorizAI · Agilizando la lista de espera con IA';
+      marco.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; ' +
+                    'gyroscope; picture-in-picture; web-share';
+      marco.setAttribute('allowfullscreen', '');
+      video.replaceWith(marco);
+    });
+  }
+
   /* ---- Panel de triage: recorridos medidos, no fijos ----
      La tarjeta "Alta" tiene que quedar exactamente donde estaba la primera,
      así que el desplazamiento sale de las alturas reales de las filas (que

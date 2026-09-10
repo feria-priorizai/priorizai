@@ -704,14 +704,10 @@ a { text-underline-offset: .22em; }
     linear-gradient(90deg, rgba(255,255,255,.09) 1px, transparent 1px);
   background-size: var(--pz-grid) var(--pz-grid);
 }
-.pz-manifest__card {
-  background: var(--pz-paper);
-  border-radius: var(--radius-lg);
-  padding: clamp(1.8rem, 3.6vw, 2.8rem) clamp(2rem, 4vw, 3rem);
-  display: inline-block; position: relative; z-index: 1;
-  box-shadow: var(--shadow-lg);
-}
-.pz-manifest__card img { width: min(360px, 70vw); height: auto; display: block; }
+/* El imagotipo blanco va directo sobre el morado: la tarjeta blanca que lo
+   envolvia antes competia con el bloque en vez de dejarlo respirar. */
+.pz-manifest__marca { position: relative; z-index: 1; }
+.pz-manifest__marca img { width: min(330px, 68vw); height: auto; display: block; }
 .pz-manifest__q {
   font-family: var(--pz-display);
   font-variation-settings: "wdth" 92;

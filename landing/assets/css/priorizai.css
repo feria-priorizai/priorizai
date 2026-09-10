@@ -315,17 +315,17 @@ a { text-underline-offset: .22em; }
 .pz-h3 { font-size: var(--fs-h3); font-weight: 700; }
 
 /* ---------- 4. Navbar ---------- */
-/* Mismo tratamiento que el encabezado de la aplicacion: el lienzo
-   translucido con desenfoque y una linea de 2px al despegarse. */
+/* Papel translucido sobre el lienzo azul: la barra tiene que distinguirse
+   del fondo, asi que no comparte su color con el. Al despegarse se eleva. */
 .pz-nav {
-  background: rgba(198, 215, 240, .9);
+  background: rgba(255, 255, 255, .93);
   backdrop-filter: saturate(160%) blur(14px);
   -webkit-backdrop-filter: saturate(160%) blur(14px);
-  border-bottom: 2px solid transparent;
-  transition: border-color .25s ease;
+  border-bottom: 2px solid var(--pz-line-2);
+  transition: box-shadow .25s ease;
   padding-block: .7rem;
 }
-.pz-nav.is-stuck { border-bottom-color: var(--pz-line-2); }
+.pz-nav.is-stuck { box-shadow: var(--shadow-md); }
 .pz-nav .navbar-brand img { height: 34px; width: auto; display: block; }
 
 .pz-nav .nav-link {

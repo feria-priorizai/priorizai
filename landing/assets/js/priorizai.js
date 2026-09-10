@@ -210,7 +210,7 @@
 
       if (!form.checkValidity()) {
         msg.textContent = 'Revisa los campos marcados.';
-        msg.style.color = '#C22B2B';
+        msg.style.color = 'var(--pz-alta)';
         var bad = form.querySelector(':invalid');
         if (bad) bad.focus();
         return;

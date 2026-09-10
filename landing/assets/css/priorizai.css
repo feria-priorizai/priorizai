@@ -308,6 +308,14 @@ a { text-underline-offset: .22em; }
 .pz-note a { color: inherit; }
 
 /* Secciones */
+/* Una fila g-5 de Bootstrap tiene margenes de -24px, pero por debajo de 576px
+   el .container solo aporta 12px de relleno: la fila se salia 12px por cada
+   costado y el overflow-x:clip del body lo tapaba en vez de resolverlo. Se le
+   da al contenedor el relleno que la canaleta mas ancha necesita. */
+@media (max-width: 575.98px) {
+  .container { --bs-gutter-x: 3rem; }
+}
+
 .pz-section { padding: clamp(4.5rem, 9vw, 8rem) 0; position: relative; }
 .pz-section--tight { padding: clamp(3rem, 6vw, 5rem) 0; }
 

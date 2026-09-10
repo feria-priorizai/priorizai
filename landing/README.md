@@ -34,9 +34,8 @@ Es HTML estático, pero conviene servirla por HTTP para que las rutas relativas
 funcionen igual que en producción:
 
 ```bash
-cd priorizai-landing
-python3 -m http.server 8731
-# http://127.0.0.1:8731
+cd landing
+npx serve .
 ```
 
 Para publicarla basta subir la carpeta completa a cualquier hosting estático

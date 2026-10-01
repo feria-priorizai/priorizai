@@ -26,6 +26,9 @@ services:
       ADMIN_NOMBRE: ${ADMIN_NOMBRE:-Administrador}
       ADMIN_CORREO: ${ADMIN_CORREO:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      MODEL_SERVICE_URL: ${MODEL_SERVICE_URL:-}
+      MODEL_SERVICE_TIMEOUT: ${MODEL_SERVICE_TIMEOUT:-300}
+      MODEL_SERVICE_API_KEY: ${MODEL_SERVICE_API_KEY:-}
       MODEL_PATH: /workspace/models/priorizacion
       NER_MODEL_PATH: /workspace/models/NER/modelo
 

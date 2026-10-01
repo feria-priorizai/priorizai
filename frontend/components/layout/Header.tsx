@@ -7,25 +7,22 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { usuarioActual } from "@/data/sesion";
+import { ESTABLECIMIENTO } from "@/data/establecimiento";
 
 const titulosPorRuta: Record<string, { seccion: string; titulo: string }> = {
   "/dashboard": { seccion: "Panel", titulo: "Dashboard" },
   "/interconsultas": { seccion: "Lista de espera", titulo: "Interconsultas" },
   "/configuracion": { seccion: "Ajustes", titulo: "Configuración" },
+  "/usuarios": { seccion: "Administración", titulo: "Usuarios" },
+  "/cuenta": { seccion: "Sesión", titulo: "Mi cuenta" },
 };
 
-/** El logo del establecimiento se deja caer en public/img/. Mientras no esté,
- *  se muestra el emblema y el nombre, sin imagen rota. */
 const LOGO_ESTABLECIMIENTO = "/img/hospital-san-juan-de-dios.png";
 
 export default function Header() {
   const pathname = usePathname();
   const [hayLogo, setHayLogo] = useState(false);
 
-  // Se comprueba en memoria antes de montar el <img>: si el establecimiento
-  // todavia no subio su logo, se muestra el emblema y el nombre en vez de una
-  // imagen rota.
   useEffect(() => {
     const prueba = new Image();
     prueba.onload = () => setHayLogo(true);
@@ -64,7 +61,7 @@ export default function Header() {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={LOGO_ESTABLECIMIENTO}
-            alt={usuarioActual.centroSalud}
+            alt={ESTABLECIMIENTO}
             style={{ height: "56px", width: "auto", display: "block" }}
           />
         ) : (
@@ -89,7 +86,7 @@ export default function Header() {
                 className="mt-0.5 mb-0 font-semibold"
                 style={{ fontSize: "var(--fs-sm)", color: "var(--pz-ink)" }}
               >
-                {usuarioActual.centroSalud}
+                {ESTABLECIMIENTO}
               </p>
             </div>
           </>

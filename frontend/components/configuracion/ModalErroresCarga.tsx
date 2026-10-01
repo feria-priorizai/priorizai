@@ -37,8 +37,6 @@ export function ModalErroresCarga() {
   const { errores, limpiar } = useErroresCarga();
   const dialogoRef = useRef<HTMLDivElement | null>(null);
   const cerrarRef = useRef<HTMLButtonElement | null>(null);
-  // Para devolver el foco a donde estaba (el boton "Cargar archivo" del
-  // sidebar) cuando el modal se cierra.
   const focoPrevioRef = useRef<HTMLElement | null>(null);
 
   const abierto = Boolean(errores) && (errores?.rejected_count ?? 0) > 0;
@@ -97,7 +95,6 @@ export function ModalErroresCarga() {
   return (
     <div
       className="pz-modal-fondo"
-      // Clic fuera del panel: misma salida que Escape.
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) limpiar();
       }}

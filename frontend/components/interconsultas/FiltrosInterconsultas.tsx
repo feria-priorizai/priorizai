@@ -5,12 +5,9 @@ import type { FiltrosInterconsulta } from "@/hooks/useInterconsultas";
 interface FiltrosInterconsultasProps {
   filtros: FiltrosInterconsulta;
   onCambiarFiltros: (nuevosFiltros: Partial<FiltrosInterconsulta>) => void;
-  /** HU13: al preparar una descarga multiple los filtros se congelan en
-   * "revisadas", porque solo esas se pueden exportar. */
   deshabilitado?: boolean;
   hayFiltrosActivos?: boolean;
   onLimpiar?: () => void;
-  /** Para poder decir cuantas quedan fuera del filtro. */
   visibles?: number;
   total?: number;
 }
@@ -94,7 +91,6 @@ export default function FiltrosInterconsultas({
           </p>
         )}
 
-        {/* Sin este aviso, un filtro olvidado parece una lista vacia. */}
         {!deshabilitado && hayFiltrosActivos && (
           <div
             className="mt-3 flex flex-wrap items-center gap-3 px-3 py-2"

@@ -7,17 +7,23 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from openpyxl import load_workbook
 from sqlalchemy import inspect, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+from starlette.middleware.base import RequestResponseEndpoint
 
+from app.api.auth import UsuarioActual
+from app.api.auth import router as auth_router
 from app.api.interconsultas import router as interconsultas_router
+from app.api.usuarios import router as usuarios_router
 from app.core.config import settings
 from app.core.database import SessionLocal, engine
 from app.models import Base, Interconsulta
+from app.services.auth import asegurar_admin_inicial
 from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
 from app.services.ner import get_extractor_ner
 from app.services.priorizador import (
@@ -40,16 +46,8 @@ COLUMNAS_ESPERADAS = [
     "MOTIVO_INTERCONSULTA",
 ]
 
-# PRIORIDAD no es obligatoria: en produccion la interconsulta llega SIN priorizar
-# (ese es el producto). Solo la traen los archivos historicos, donde es la
-# etiqueta que asigno un especialista. Se guarda cuando viene, para poder
-# contrastar despues el modelo contra la prioridad real, pero no se exige ni se
-# muestra como si fuera la prioridad de la interconsulta.
 COLUMNA_PRIORIDAD_OPCIONAL = "PRIORIDAD"
 
-# Campos que DEBEN tener valor en CADA fila del archivo. Debe coincidir con
-# los campos marcados como obligatorios por defecto en la pestaña de
-# configuración (obligatorioPorDefecto: true).
 COLUMNAS_OBLIGATORIAS_POR_FILA = [
     "ESPEC_ORIGEN",
     "EDAD",
@@ -60,13 +58,8 @@ COLUMNAS_OBLIGATORIAS_POR_FILA = [
     "MOTIVO_INTERCONSULTA",
 ]
 
-# EDAD no se puede volver opcional desde la configuracion: la columna es NOT
-# NULL y, a diferencia de los campos de texto, no tiene un vacio que guardar.
 COLUMNAS_SIEMPRE_OBLIGATORIAS = ["EDAD"]
 
-# Lo unico que la configuracion puede marcar como obligatorio. Las claves de la
-# pestana de configuracion incluyen campos que no vienen en el archivo
-# (PRIORIDAD_ACTUAL, ID, ESTADO...); esas se ignoran en vez de rechazarse.
 COLUMNAS_CONFIGURABLES = frozenset(COLUMNAS_ESPERADAS)
 
 
@@ -80,6 +73,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     settings.verificar_credenciales()
     Base.metadata.create_all(bind=engine)
     _asegurar_columnas_interconsultas()
+    _crear_admin_inicial()
     yield
 
 
@@ -91,11 +85,54 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    # El listado publica el total real ahi; sin exponerla, el navegador la oculta.
     expose_headers=["X-Total-Count"],
 )
 
+METODOS_QUE_MODIFICAN = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+SEC_FETCH_SITE_PERMITIDOS = frozenset({"same-origin", "none"})
+
+CABECERAS_DE_SEGURIDAD = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "same-origin",
+}
+
+
+@app.middleware("http")
+async def proteger_peticiones(
+    request: Request, call_next: RequestResponseEndpoint
+) -> Response:
+    """Segunda barrera contra CSRF, ademas de la cookie SameSite=Lax.
+
+    Los navegadores declaran en Sec-Fetch-Site desde donde sale cada peticion,
+    y una pagina no puede falsificarla. Un formulario de otro sitio que intente
+    modificar datos con la sesion del usuario llega como "cross-site" o
+    "same-site" y se rechaza. Sin la cabecera (curl, scripts) no hay navegador
+    que engañar, asi que se deja pasar.
+    """
+    sitio = request.headers.get("sec-fetch-site")
+    if (
+        request.method in METODOS_QUE_MODIFICAN
+        and sitio is not None
+        and sitio not in SEC_FETCH_SITE_PERMITIDOS
+    ):
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Petición rechazada: no viene de la aplicación"},
+        )
+
+    response = await call_next(request)
+    for nombre, valor in CABECERAS_DE_SEGURIDAD.items():
+        response.headers.setdefault(nombre, valor)
+    if request.url.path.startswith("/api/"):
+        response.headers.setdefault("Cache-Control", "no-store")
+    return response
+
+
+app.include_router(auth_router)
 app.include_router(interconsultas_router)
+app.include_router(usuarios_router)
 
 
 @app.get("/")
@@ -108,7 +145,7 @@ def health() -> dict[str, str]:
     return {"status": "healthy"}
 
 
-@app.post("/upload-csv")
+@app.post("/upload-csv", dependencies=[UsuarioActual])
 async def upload_csv(
     file: UploadFile = UPLOAD_FILE,
     campos_obligatorios: str | None = CAMPOS_OBLIGATORIOS_FORM,
@@ -157,8 +194,6 @@ class FilaLeida:
 
     numero: int
     datos: dict[str, str] = field(default_factory=dict)
-    # Problema estructural (columnas de mas o de menos). La fila se rechaza sin
-    # detener el resto del archivo.
     error: str | None = None
 
 
@@ -449,6 +484,14 @@ def _asegurar_columnas_interconsultas() -> None:
             )
 
 
+def _crear_admin_inicial() -> None:
+    session = SessionLocal()
+    try:
+        asegurar_admin_inicial(session)
+    finally:
+        session.close()
+
+
 def _priorizar_interconsultas_insertadas(session: Session, ids: list[str]) -> int:
     interconsultas = list(
         session.scalars(
@@ -513,7 +556,6 @@ def _extraer_entidades(interconsultas: list[Interconsulta]) -> int:
 
 def _estado_priorizacion(total: int, priorizadas: int) -> str:
     if total == 0:
-        # Todas las filas se rechazaron: no hubo priorizacion que completar.
         return "skipped"
     if priorizadas == total:
         return "completed"

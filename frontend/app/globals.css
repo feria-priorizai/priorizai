@@ -515,6 +515,27 @@ h1, h2, h3, h4, h5 {
   letter-spacing: .04em;
 }
 
+/* ---------- Login ----------
+   El mismo fondo nocturno del sidebar, a pantalla completa: la tarjeta de
+   acceso es lo unico claro de la vista. */
+.pz-login {
+  background: linear-gradient(180deg, var(--pz-night) 0%, var(--pz-night-2) 100%);
+  position: relative;
+}
+.pz-login::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--pz-night-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--pz-night-line) 1px, transparent 1px);
+  background-size: var(--pz-grid) var(--pz-grid);
+  mask-image: radial-gradient(80% 70% at 50% 40%, #000 20%, transparent 85%);
+  -webkit-mask-image: radial-gradient(80% 70% at 50% 40%, #000 20%, transparent 85%);
+  pointer-events: none;
+}
+.pz-login > * { position: relative; z-index: 1; }
+
 /* ---------- Sidebar ---------- */
 .pz-sidebar {
   background: linear-gradient(180deg, var(--pz-night) 0%, var(--pz-night-2) 100%);

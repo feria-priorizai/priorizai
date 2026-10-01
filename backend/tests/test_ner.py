@@ -33,12 +33,10 @@ def _interconsulta(**extra: Any) -> Interconsulta:
     return Interconsulta(**datos)
 
 
-# --------------------------------------------------------------- segmentar --
 def test_segmentar_corta_en_barra_y_salto_de_linea() -> None:
     texto = "Primera seccion / Segunda seccion"
     fragmentos = segmentar(texto)
 
-    # El corte se hace despues del delimitador, asi que queda en el fragmento.
     assert len(fragmentos) == 2
     assert fragmentos[0][0].strip() == "Primera seccion /"
     assert fragmentos[1][0].strip() == "Segunda seccion"
@@ -70,7 +68,6 @@ def test_segmentar_texto_vacio_devuelve_un_fragmento() -> None:
     assert segmentar("") == [("", 0)]
 
 
-# --------------------------------------------------- resolver_solapamientos --
 def test_resolver_solapamientos_gana_el_de_mayor_score() -> None:
     entidades = [
         {"texto": "dolor", "inicio": 0, "fin": 5, "score": 0.6, "clase": "Sintoma"},
@@ -104,7 +101,6 @@ def test_resolver_solapamientos_conserva_los_disjuntos_ordenados() -> None:
     assert [e["texto"] for e in resultado] == ["HTA", "metformina"]
 
 
-# ----------------------------------------------------- agrupar_por_clase ----
 def test_agrupar_por_clase_deduplica_sin_distinguir_mayusculas() -> None:
     entidades = {
         "historia_clinica": [
@@ -122,7 +118,6 @@ def test_agrupar_por_clase_deduplica_sin_distinguir_mayusculas() -> None:
     assert agrupado["Enfermedad"] == ["diabetes", "cancer"]
 
 
-# ------------------------------------------------------- ingesta / errores --
 class ExtractorDummy:
     def extraer_de_interconsulta(
         self,
@@ -179,11 +174,6 @@ def test_extraer_entidades_sin_interconsultas_no_carga_el_modelo(monkeypatch) ->
     monkeypatch.setattr(main_module, "get_extractor_ner", explotar)
 
     assert main_module._extraer_entidades([]) == 0
-
-
-# --------------------------------------------------------------------------
-# extraer: filtros de clase, umbral y bordes
-# --------------------------------------------------------------------------
 
 
 def _extractor_con(predicciones: list[dict[str, Any]]) -> ExtractorEntidades:

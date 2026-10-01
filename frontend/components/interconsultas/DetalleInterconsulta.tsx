@@ -17,8 +17,6 @@ export default function DetalleInterconsulta({
   return (
     <div className="pz-panel">
       <div className="pz-panel__head">
-        {/* Manda el diagnostico: es lo que el medico busca. El folio queda como
-            referencia arriba, y prioridad/estado viven en la barra de acciones. */}
         <span className="pz-eyebrow">
           {ic.centroOrigen} → {ic.especialidad}
         </span>

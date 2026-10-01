@@ -15,9 +15,11 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.main as main_module
+from app.api.auth import usuario_actual
 from app.core.database import Base, get_db
 from app.main import app
 from app.models.interconsulta import Interconsulta
+from app.models.usuario import Usuario
 from app.schemas.priorizacion import ProbabilidadesPrioridad, ResultadoPriorizacion
 from app.services.priorizador import get_priorizador
 
@@ -59,6 +61,15 @@ class PriorizadorCaido:
         interconsultas: list[Interconsulta],
     ) -> list[ResultadoPriorizacion]:
         raise OSError("Modelo no disponible: simulado para el test")
+
+
+USUARIO_DE_PRUEBA = Usuario(
+    id="usr-test",
+    alias="dratest",
+    nombre="Dra. Test",
+    rol="medico_especialista",
+    password_hash="",
+)
 
 
 @pytest.fixture(scope="session")
@@ -127,6 +138,7 @@ def _client_con(
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_priorizador] = lambda: priorizador
+    app.dependency_overrides[usuario_actual] = lambda: USUARIO_DE_PRUEBA
     try:
         yield TestClient(app)
     finally:

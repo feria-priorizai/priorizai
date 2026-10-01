@@ -2,7 +2,12 @@
 
 import pytest
 
-from app.core.config import CREDENCIALES_POR_DEFECTO, Settings, settings
+from app.core.config import (
+    ADMIN_PASSWORD_EJEMPLO,
+    CREDENCIALES_POR_DEFECTO,
+    Settings,
+    settings,
+)
 
 
 def test_database_url() -> None:
@@ -12,11 +17,6 @@ def test_database_url() -> None:
 
 def test_cors_origins() -> None:
     assert settings.cors_origins == ["http://localhost:3000"]
-
-
-# --------------------------------------------------------------------------
-# DATABASE_URL completa
-# --------------------------------------------------------------------------
 
 
 def test_database_url_completa_tiene_prioridad(
@@ -44,11 +44,6 @@ def test_database_url_se_arma_con_las_piezas_si_no_hay_url(
     assert propias.database_url == "postgresql://u:p@h:5433/d"
 
 
-# --------------------------------------------------------------------------
-# verificar_credenciales
-# --------------------------------------------------------------------------
-
-
 def _con_credenciales(
     monkeypatch: pytest.MonkeyPatch,
     *,
@@ -62,6 +57,7 @@ def _con_credenciales(
     monkeypatch.setattr(propias, "database_password", password)
     monkeypatch.setattr(propias, "database_url_completa", url)
     monkeypatch.setattr(propias, "debug", debug)
+    monkeypatch.setattr(propias, "admin_password", "")
     return propias
 
 
@@ -130,3 +126,20 @@ def test_con_database_url_no_se_miran_las_piezas(
 
     propias.verificar_credenciales()
     assert propias.credenciales_por_defecto() == []
+
+
+def test_la_clave_de_ejemplo_del_admin_frena_el_arranque(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Con la clave de .env.example, cualquiera que lea el repo entraria como
+    administrador al despliegue."""
+    propias = _con_credenciales(
+        monkeypatch,
+        usuario="usuario_real",
+        password="password_real",
+        url="postgresql://otro:secreto@host:5432/db",
+    )
+    monkeypatch.setattr(propias, "admin_password", ADMIN_PASSWORD_EJEMPLO)
+
+    with pytest.raises(RuntimeError, match="admin_password"):
+        propias.verificar_credenciales()

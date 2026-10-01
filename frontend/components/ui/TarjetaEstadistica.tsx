@@ -4,7 +4,6 @@ interface TarjetaEstadisticaProps {
   titulo: string;
   valor: number | string;
   icono: ReactNode;
-  /** Color del acento: filete superior, icono y cifra. */
   acento?: string;
   acentoFondo?: string;
 }

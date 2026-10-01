@@ -32,8 +32,6 @@ export default function FormularioModificarPrioridad({
     texto: string;
   } | null>(null);
 
-  // Si la prioridad vigente cambia (otra accion la actualizo), se reinicia la
-  // seleccion durante el render en vez de usar un efecto.
   const [prioridadSincronizada, setPrioridadSincronizada] =
     useState<NivelPrioridad>(prioridadActual);
   if (prioridadSincronizada !== prioridadActual) {

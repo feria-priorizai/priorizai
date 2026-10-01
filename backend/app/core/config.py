@@ -5,6 +5,8 @@ CREDENCIALES_POR_DEFECTO = {
     "database_password": "priorizai_password",
 }
 
+ADMIN_PASSWORD_EJEMPLO = "cambiar-esta-clave"
+
 
 class Settings:
     app_name: str = os.getenv("APP_NAME", "PriorizAI")
@@ -15,9 +17,6 @@ class Settings:
         if origin.strip()
     ]
 
-    # URL completa. Tiene prioridad sobre las piezas de abajo: sin esto no habia
-    # forma de apuntar la app a otra base (SQLite en los tests, un servicio
-    # gestionado en produccion) sin tocar codigo.
     database_url_completa: str = os.getenv("DATABASE_URL", "")
     database_host: str = os.getenv("DATABASE_HOST", "localhost")
     database_port: int = int(os.getenv("DATABASE_PORT", "5432"))
@@ -29,16 +28,9 @@ class Settings:
         "DATABASE_PASSWORD", CREDENCIALES_POR_DEFECTO["database_password"]
     )
 
-    # Edad maxima aceptada al importar. Por encima de esto la fila se rechaza:
-    # casi siempre es un error de formato, no un paciente.
     edad_maxima: int = int(os.getenv("EDAD_MAXIMA", "130"))
 
     model_path: str = os.getenv("MODEL_PATH", "/models")
-    # Orden de las clases del modelo, indice a indice (LABEL_0,LABEL_1,...).
-    # El config.json del modelo trae labels genericos, asi que sin esto se usa
-    # FALLBACK_ID2LABEL, que es una suposicion escrita a mano: si no coincide
-    # con el LabelEncoder del entrenamiento, el sistema prioriza al reves sin
-    # ningun sintoma. Setear MODEL_LABELS fija el orden real sin tocar codigo.
     model_labels: tuple[str, ...] = tuple(
         etiqueta.strip()
         for etiqueta in os.getenv("MODEL_LABELS", "").split(",")
@@ -47,8 +39,6 @@ class Settings:
     model_max_length: int = int(os.getenv("MODEL_MAX_LENGTH", "512"))
     model_batch_size: int = int(os.getenv("MODEL_BATCH_SIZE", "16"))
 
-    # NER de entidades clinicas. Symptom queda fuera por defecto: su F1 es
-    # 0.51 contra 0.73-0.88 de las demas clases sobre interconsultas reales.
     ner_model_path: str = os.getenv("NER_MODEL_PATH", "/models/NER/modelo")
     ner_umbral: float = float(os.getenv("NER_UMBRAL", "0.5"))
     ner_max_length: int = int(os.getenv("NER_MAX_LENGTH", "256"))
@@ -59,6 +49,16 @@ class Settings:
         )
         if clase.strip()
     )
+
+    sesion_duracion_horas: int = int(os.getenv("SESION_DURACION_HORAS", "8"))
+    sesion_inactividad_minutos: int = int(os.getenv("SESION_INACTIVIDAD_MINUTOS", "30"))
+    cookie_secure: bool = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+    login_max_intentos: int = int(os.getenv("LOGIN_MAX_INTENTOS", "5"))
+    login_bloqueo_minutos: int = int(os.getenv("LOGIN_BLOQUEO_MINUTOS", "15"))
+    admin_alias: str = os.getenv("ADMIN_ALIAS", "")
+    admin_password: str = os.getenv("ADMIN_PASSWORD", "")
+    admin_nombre: str = os.getenv("ADMIN_NOMBRE", "Administrador")
+    admin_correo: str = os.getenv("ADMIN_CORREO", "")
 
     @property
     def database_url(self) -> str:
@@ -74,16 +74,21 @@ class Settings:
 
     def credenciales_por_defecto(self) -> list[str]:
         """Credenciales que quedaron en el valor de fabrica."""
-        if self.database_url_completa:
-            return []
-        return [
-            nombre
-            for nombre, valor in CREDENCIALES_POR_DEFECTO.items()
-            if getattr(self, nombre) == valor
-        ]
+        pendientes = (
+            []
+            if self.database_url_completa
+            else [
+                nombre
+                for nombre, valor in CREDENCIALES_POR_DEFECTO.items()
+                if getattr(self, nombre) == valor
+            ]
+        )
+        if self.admin_password == ADMIN_PASSWORD_EJEMPLO:
+            pendientes.append("admin_password")
+        return pendientes
 
     def verificar_credenciales(self) -> None:
-        """Falla al arrancar si la base usa las credenciales de ejemplo.
+        """Falla al arrancar si la base o el admin usan credenciales de ejemplo.
 
         Antes los valores de fabrica estaban como default en el codigo, asi que
         un despliegue con el `.env` incompleto levantaba igual y nadie se
@@ -95,8 +100,8 @@ class Settings:
         pendientes = self.credenciales_por_defecto()
         if pendientes:
             raise RuntimeError(
-                "Las credenciales de base de datos siguen en el valor de ejemplo: "
-                f"{', '.join(sorted(pendientes))}. Definilas en el entorno "
+                "Hay credenciales que siguen en el valor de ejemplo: "
+                f"{', '.join(sorted(pendientes))}. Defínelas en el entorno "
                 "(o DATABASE_URL), o levanta con DEBUG=true para desarrollo."
             )
 

@@ -6,7 +6,6 @@ import TarjetaEstadistica from "@/components/ui/TarjetaEstadistica";
 
 interface ResumenEstadisticasProps {
   interconsultas: Interconsulta[];
-  /** Total en el servidor. Puede ser mayor que lo cargado. */
   total?: number;
 }
 

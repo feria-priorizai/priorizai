@@ -21,18 +21,38 @@ from app.models.usuario import IntentoLogin, Sesion, Usuario
 
 logger = logging.getLogger(__name__)
 
-ROLES = frozenset(
-    {
-        "medico_especialista",
-        "medico_general",
-        "enfermera",
-        "tens",
-        "secretaria",
-        "administrador",
-    }
-)
-
+ROL_MEDICO = "medico"
 ROL_ADMINISTRADOR = "administrador"
+
+ROLES = frozenset({ROL_MEDICO, ROL_ADMINISTRADOR})
+
+# Las que el medico elige al crear su cuenta. Deben coincidir con ESPECIALIDADES
+# del frontend (types/usuario.ts).
+ESPECIALIDADES = (
+    "Broncopulmonar",
+    "Cardiología",
+    "Cirugía General",
+    "Dermatología",
+    "Endocrinología",
+    "Gastroenterología",
+    "Geriatría",
+    "Ginecología y Obstetricia",
+    "Hematología",
+    "Infectología",
+    "Medicina General",
+    "Medicina Interna",
+    "Nefrología",
+    "Neurocirugía",
+    "Neurología",
+    "Oftalmología",
+    "Oncología",
+    "Otorrinolaringología",
+    "Pediatría",
+    "Psiquiatría",
+    "Reumatología",
+    "Traumatología",
+    "Urología",
+)
 
 ALIAS_VALIDO = re.compile(r"^[a-z0-9._-]{3,64}$")
 CORREO_VALIDO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -110,6 +130,7 @@ def _validar_datos(
     nombre: str,
     correo: str | None,
     rol: str,
+    especialidad: str | None,
     excluir_id: str | None = None,
 ) -> str | None:
     """Valida los datos editables de una cuenta y devuelve el correo
@@ -121,6 +142,8 @@ def _validar_datos(
         raise ValueError(
             f"Rol desconocido: {rol}. Opciones: {', '.join(sorted(ROLES))}"
         )
+    if rol == ROL_MEDICO and especialidad not in ESPECIALIDADES:
+        raise ValueError("Selecciona la especialidad del médico")
     if correo is None:
         return None
     correo_normalizado = normalizar_correo(correo)
@@ -132,6 +155,13 @@ def _validar_datos(
             f"Ya existe un usuario con el correo {correo_normalizado}"
         )
     return correo_normalizado
+
+
+def _especialidad_para(rol: str, especialidad: str | None) -> str | None:
+    """Solo el medico tiene especialidad: la de un administrador se descarta."""
+    if rol != ROL_MEDICO:
+        return None
+    return (especialidad or "").strip() or None
 
 
 def hashear_password(password: str) -> str:
@@ -161,7 +191,10 @@ def crear_usuario(
 ) -> Usuario:
     alias_normalizado = normalizar_alias(alias)
     validar_alias(alias_normalizado)
-    correo_normalizado = _validar_datos(db, nombre=nombre, correo=correo, rol=rol)
+    especialidad = _especialidad_para(rol, especialidad)
+    correo_normalizado = _validar_datos(
+        db, nombre=nombre, correo=correo, rol=rol, especialidad=especialidad
+    )
     validar_password(password)
     if db.scalar(select(Usuario).where(Usuario.alias == alias_normalizado)):
         raise AliasEnUsoError(f"Ya existe un usuario con el alias {alias_normalizado}")
@@ -171,7 +204,7 @@ def crear_usuario(
         nombre=nombre.strip(),
         correo=correo_normalizado,
         rol=rol,
-        especialidad=(especialidad or "").strip() or None,
+        especialidad=especialidad,
         password_hash=hashear_password(password),
     )
     db.add(usuario)
@@ -203,7 +236,7 @@ def autenticar(db: Session, alias: str, password: str) -> Usuario:
         )
 
     if not valida or usuario is None:
-        _registrar_fallo(db, alias_normalizado, intento, ahora)
+        _registrar_fallo(db, alias_normalizado, ahora)
         raise CredencialesInvalidasError
 
     if hash_actualizado is not None:
@@ -215,8 +248,23 @@ def autenticar(db: Session, alias: str, password: str) -> Usuario:
 
 
 def _intento_vigente(db: Session, alias: str, ahora: datetime) -> IntentoLogin | None:
-    """El registro de fallos del alias. Si esta bloqueado, lanza el error."""
-    intento = db.get(IntentoLogin, alias)
+    """El registro de fallos del alias. Si esta bloqueado, lanza el error.
+
+    La fila queda bloqueada (SELECT ... FOR UPDATE) hasta el commit: los intentos
+    simultaneos sobre un mismo alias se atienden de a uno, asi que no pueden
+    probar contrasenas en paralelo mientras el contador no alcanza el limite.
+    SQLite ignora el FOR UPDATE, pero tampoco tiene escrituras concurrentes.
+
+    Un FOR UPDATE no bloquea una fila que no existe: si el alias aun no tiene
+    registro, una rafaga de intentos pasaria entera antes del primer fallo. Por
+    eso la fila se crea vacia antes de bloquearla; un login correcto la borra."""
+    if db.get(IntentoLogin, alias) is None:
+        db.add(IntentoLogin(alias=alias, fallos=0, ultimo_fallo=ahora))
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+    intento = db.get(IntentoLogin, alias, with_for_update=True, populate_existing=True)
     if (
         intento is not None
         and intento.bloqueado_hasta is not None
@@ -246,7 +294,7 @@ def cambiar_password(
     intento = _intento_vigente(db, usuario.alias, ahora)
 
     if not _hasher.verify(password_actual, usuario.password_hash):
-        _registrar_fallo(db, usuario.alias, intento, ahora)
+        _registrar_fallo(db, usuario.alias, ahora)
         raise CredencialesInvalidasError
 
     validar_password(password_nueva)
@@ -266,26 +314,33 @@ def cambiar_password(
     return usuario
 
 
-def _registrar_fallo(
-    db: Session,
-    alias: str,
-    intento: IntentoLogin | None,
-    ahora: datetime,
-) -> None:
-    if intento is None:
-        intento = IntentoLogin(alias=alias, fallos=0)
-        db.add(intento)
-    intento.fallos += 1
-    intento.ultimo_fallo = ahora
-    if intento.fallos >= settings.login_max_intentos:
-        intento.bloqueado_hasta = ahora + timedelta(
-            minutes=settings.login_bloqueo_minutos
+def _registrar_fallo(db: Session, alias: str, ahora: datetime) -> None:
+    """Suma un fallo al alias con la fila bloqueada, para que dos fallos
+    simultaneos no lean el mismo valor y se pisen al escribir.
+
+    Si dos peticiones crean el primer registro a la vez, una choca con la clave
+    primaria; en vez de perder ese fallo, se reintenta sobre la fila que ya
+    existe."""
+    for _ in range(2):
+        intento = db.get(
+            IntentoLogin, alias, with_for_update=True, populate_existing=True
         )
-        intento.fallos = 0
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
+        if intento is None:
+            intento = IntentoLogin(alias=alias, fallos=0)
+            db.add(intento)
+        intento.fallos += 1
+        intento.ultimo_fallo = ahora
+        if intento.fallos >= settings.login_max_intentos:
+            intento.bloqueado_hasta = ahora + timedelta(
+                minutes=settings.login_bloqueo_minutos
+            )
+            intento.fallos = 0
+        try:
+            db.commit()
+            return
+        except IntegrityError:
+            db.rollback()
+    logger.warning("No se pudo registrar el fallo de inicio de sesion de %s", alias)
 
 
 def _limpiar_intentos_vencidos(db: Session, ahora: datetime) -> None:
@@ -388,8 +443,14 @@ def editar_usuario(
     Con `password_temporal`, la contrasena se restablece, se cierran las
     sesiones de la cuenta y se exige cambiarla en el siguiente ingreso.
     """
+    especialidad = _especialidad_para(rol, especialidad)
     correo_normalizado = _validar_datos(
-        db, nombre=nombre, correo=correo, rol=rol, excluir_id=usuario.id
+        db,
+        nombre=nombre,
+        correo=correo,
+        rol=rol,
+        especialidad=especialidad,
+        excluir_id=usuario.id,
     )
     if rol != usuario.rol:
         _impedir_sobre_si_mismo(usuario, por, "cambiar tu propio rol")
@@ -405,7 +466,7 @@ def editar_usuario(
     usuario.nombre = nombre.strip()
     usuario.correo = correo_normalizado
     usuario.rol = rol
-    usuario.especialidad = (especialidad or "").strip() or None
+    usuario.especialidad = especialidad
     db.commit()
     return usuario
 
@@ -414,13 +475,28 @@ def cambiar_estado_usuario(
     db: Session, usuario: Usuario, *, por: Usuario, activo: bool
 ) -> Usuario:
     """Bloquea o desbloquea una cuenta. Al bloquearla se cierran sus sesiones
-    en el acto, no al vencer."""
+    en el acto, no al vencer.
+
+    Desbloquear levanta tambien el bloqueo por intentos fallidos: para quien
+    pidio ayuda al administrador, los dos bloqueos son lo mismo."""
     if not activo:
         _impedir_sobre_si_mismo(usuario, por, "bloquear tu propia cuenta")
         _cerrar_sesiones_de(db, usuario)
+    else:
+        db.execute(delete(IntentoLogin).where(IntentoLogin.alias == usuario.alias))
     usuario.activo = activo
     db.commit()
     return usuario
+
+
+def aliases_bloqueados_por_intentos(db: Session) -> set[str]:
+    """Alias con un bloqueo por intentos fallidos vigente, para que el
+    administrador vea que cuentas necesitan desbloquearse."""
+    return set(
+        db.scalars(
+            select(IntentoLogin.alias).where(IntentoLogin.bloqueado_hasta > _ahora())
+        ).all()
+    )
 
 
 def eliminar_usuario(db: Session, usuario: Usuario, *, por: Usuario) -> None:

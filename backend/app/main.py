@@ -11,7 +11,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, Response, Uploa
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from openpyxl import load_workbook
-from sqlalchemy import inspect, select, text
+from sqlalchemy import inspect, select, text, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette.middleware.base import RequestResponseEndpoint
@@ -23,7 +23,8 @@ from app.api.usuarios import router as usuarios_router
 from app.core.config import settings
 from app.core.database import SessionLocal, engine
 from app.models import Base, Interconsulta
-from app.services.auth import asegurar_admin_inicial
+from app.models.usuario import Usuario
+from app.services.auth import ROL_MEDICO, ROLES, asegurar_admin_inicial
 from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
 from app.services.ner import get_extractor_ner
 from app.services.priorizador import (
@@ -73,6 +74,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     settings.verificar_credenciales()
     Base.metadata.create_all(bind=engine)
     _asegurar_columnas_interconsultas()
+    _migrar_roles_antiguos()
     _crear_admin_inicial()
     yield
 
@@ -482,6 +484,16 @@ def _asegurar_columnas_interconsultas() -> None:
             connection.execute(
                 text(f"ALTER TABLE interconsultas ADD COLUMN {nombre} {definicion}")
             )
+
+
+def _migrar_roles_antiguos() -> None:
+    """Los roles quedaron en medico y administrador. Las cuentas creadas con los
+    anteriores (medico_especialista, tens, ...) pasan a medico: si no, no
+    podrian editarse sin cambiarles el rol."""
+    with engine.begin() as connection:
+        connection.execute(
+            update(Usuario).where(Usuario.rol.not_in(ROLES)).values(rol=ROL_MEDICO)
+        )
 
 
 def _crear_admin_inicial() -> None:

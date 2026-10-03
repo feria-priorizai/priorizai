@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
-from sqlalchemy import select, update
+from sqlalchemy import Engine, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 import app.main as main_module
@@ -65,7 +65,7 @@ def usuario(db: Session) -> Usuario:
         alias="jperez",
         nombre="Dr. Juan Pérez",
         correo="juan@hospital.cl",
-        rol="medico_especialista",
+        rol="medico",
         especialidad="Cardiología",
     )
 
@@ -85,10 +85,11 @@ def test_login_valido_devuelve_el_usuario_y_abre_sesion(
         "alias": "jperez",
         "nombre": "Dr. Juan Pérez",
         "correo": "juan@hospital.cl",
-        "rol": "medico_especialista",
+        "rol": "medico",
         "especialidad": "Cardiología",
         "activo": True,
         "debe_cambiar_password": False,
+        "bloqueado_por_intentos": False,
     }
     me = cliente.get("/api/auth/me")
     assert me.status_code == 200
@@ -376,6 +377,9 @@ def test_un_login_correcto_reinicia_el_contador_de_fallos(
         ({"correo": "JUAN@hospital.cl"}, "Ya existe un usuario con el correo"),
         ({"nombre": " "}, "El nombre es obligatorio"),
         ({"rol": "director"}, "Rol desconocido"),
+        ({"rol": "medico_especialista"}, "Rol desconocido"),
+        ({"rol": "medico"}, "Selecciona la especialidad"),
+        ({"rol": "medico", "especialidad": "Astrología"}, "Selecciona la especialidad"),
         ({"password": "corta"}, "al menos 8 caracteres"),
         ({"alias": "JPEREZ"}, "Ya existe un usuario con el alias jperez"),
     ],
@@ -496,7 +500,7 @@ NUEVA_CUENTA = {
     "alias": "mrojas",
     "nombre": "Dra. Marta Rojas",
     "correo": "marta.rojas@hospital.cl",
-    "rol": "medico_especialista",
+    "rol": "medico",
     "especialidad": "Neurología",
     "password": "clave-inicial-1",
 }
@@ -625,7 +629,9 @@ def test_el_uso_reciente_no_reescribe_la_sesion(
 
 def test_no_se_aceptan_contrasenas_de_mas_de_128_caracteres(db: Session) -> None:
     with pytest.raises(ValueError, match="más de 128"):
-        crear_usuario(db, alias="largo", nombre="Largo", rol="tens", password="x" * 129)
+        crear_usuario(
+            db, alias="largo", nombre="Largo", rol="administrador", password="x" * 129
+        )
 
 
 def test_el_login_rechaza_entradas_enormes_sin_hashearlas(
@@ -638,7 +644,11 @@ def test_el_login_rechaza_entradas_enormes_sin_hashearlas(
 def cuenta_nueva(db: Session) -> Usuario:
     """Como la deja el admin: con una contrasena que el tambien conoce."""
     return crear_usuario(
-        db, alias="mrojas", nombre="Dra. Marta Rojas", rol="tens", password=PASSWORD
+        db,
+        alias="mrojas",
+        nombre="Dra. Marta Rojas",
+        rol="administrador",
+        password=PASSWORD,
     )
 
 
@@ -913,20 +923,29 @@ def test_un_cambio_correcto_limpia_los_fallos_previos(
     assert db.get(IntentoLogin, "jperez") is None
 
 
-def test_dos_fallos_simultaneos_sobre_un_alias_nuevo_no_rompen_el_login(
-    db: Session,
+def test_un_fallo_se_suma_al_registro_que_otra_peticion_acaba_de_crear(
+    db: Session, session_factory: sessionmaker[Session]
 ) -> None:
-    """Las dos peticiones ven que no hay fila y las dos la insertan: la segunda
-    choca con la clave primaria. Se pierde un conteo, no la respuesta."""
+    """Otra peticion inserto la fila despues de que esta la leyera vacia. El
+    fallo se suma releyendo la fila, en vez de pisarla o perderse."""
     ahora = auth_service._ahora()
-    db.add(IntentoLogin(alias="nadie", fallos=1, ultimo_fallo=ahora))
-    db.commit()
+    assert db.get(IntentoLogin, "nadie") is None
+    with session_factory() as otra:
+        otra.add(IntentoLogin(alias="nadie", fallos=1, ultimo_fallo=ahora))
+        otra.commit()
 
-    auth_service._registrar_fallo(db, "nadie", None, ahora)
+    auth_service._registrar_fallo(db, "nadie", ahora)
 
-    intento = db.get(IntentoLogin, "nadie")
+    intento = db.get(IntentoLogin, "nadie", populate_existing=True)
     assert intento is not None
-    assert intento.fallos == 1
+    assert intento.fallos == 2
+
+
+def test_el_login_rechaza_alias_mas_largos_que_la_columna(
+    cliente: TestClient,
+) -> None:
+    """Sin el limite, Postgres no puede guardar el fallo y responde 500."""
+    assert _login(cliente, alias="a" * 65).status_code == 422
 
 
 def test_el_correo_es_obligatorio_al_crear_desde_la_app(
@@ -963,8 +982,8 @@ def test_un_correo_repetido_devuelve_409(
 EDICION = {
     "nombre": "Dr. Juan Pérez Soto",
     "correo": "jperez@hospital.cl",
-    "rol": "medico_general",
-    "especialidad": "",
+    "rol": "medico",
+    "especialidad": "Medicina Interna",
 }
 
 
@@ -984,10 +1003,11 @@ def test_el_admin_edita_los_datos_de_una_cuenta(
         "alias": "jperez",
         "nombre": "Dr. Juan Pérez Soto",
         "correo": "jperez@hospital.cl",
-        "rol": "medico_general",
-        "especialidad": None,
+        "rol": "medico",
+        "especialidad": "Medicina Interna",
         "activo": True,
         "debe_cambiar_password": False,
+        "bloqueado_por_intentos": False,
     }
 
 
@@ -1092,6 +1112,45 @@ def test_bloquear_corta_las_sesiones_y_el_acceso(
     assert login.json()["detail"] == MENSAJE_CREDENCIALES
 
 
+def test_un_administrador_no_guarda_especialidad(db: Session) -> None:
+    cuenta = crear_usuario(
+        db,
+        alias="jefatura",
+        nombre="Jefatura",
+        rol="administrador",
+        especialidad="Cardiología",
+        password=PASSWORD,
+    )
+
+    assert cuenta.especialidad is None
+
+
+def test_desbloquear_levanta_el_bloqueo_por_intentos_fallidos(
+    cliente: TestClient,
+    admin: Usuario,
+    usuario: Usuario,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "login_max_intentos", 3)
+    otro = TestClient(app)
+    for _ in range(3):
+        _login(otro, password="mala-clave")
+    assert _login(otro).status_code == 429
+
+    listado = _como_admin(cliente).get("/api/usuarios").json()
+    assert {u["alias"]: u["bloqueado_por_intentos"] for u in listado} == {
+        "admin": False,
+        "jperez": True,
+    }
+
+    response = cliente.patch(
+        f"/api/usuarios/{usuario.id}/estado", json={"activo": True}
+    )
+
+    assert response.status_code == 200
+    assert _login(otro).status_code == 200
+
+
 def test_desbloquear_devuelve_el_acceso(
     cliente: TestClient, admin: Usuario, usuario: Usuario
 ) -> None:
@@ -1138,7 +1197,7 @@ def test_eliminar_una_cuenta_conserva_su_historial(
 @pytest.mark.parametrize(
     ("metodo", "sufijo", "cuerpo", "mensaje"),
     [
-        ("patch", "", {**EDICION, "rol": "tens"}, "cambiar tu propio rol"),
+        ("patch", "", {**EDICION, "rol": "medico"}, "cambiar tu propio rol"),
         (
             "patch",
             "",
@@ -1229,3 +1288,46 @@ def test_la_gestion_de_cuentas_queda_en_la_auditoria(
         "cuenta_eliminada",
     ]
     assert "temporal-123" not in "\n".join(_eventos(caplog))
+
+
+def test_un_rol_no_clinico_no_cambia_prioridades(
+    cliente: TestClient,
+    usuario: Usuario,
+    db: Session,
+    guardar_interconsulta: Callable[..., Interconsulta],
+) -> None:
+    """Quien cambia una prioridad queda en el historial como medico
+    responsable: un rol que no es clinico no puede hacerlo."""
+    guardar_interconsulta(id="ic-rol", prioridad_actual="media")
+    db.execute(update(Usuario).values(rol="secretaria"))
+    db.commit()
+    _login(cliente)
+
+    response = cliente.patch(
+        "/api/interconsultas/ic-rol/prioridad",
+        json={"prioridad": "alta", "motivo": "Empeora el cuadro clinico"},
+    )
+
+    assert response.status_code == 403
+    db.rollback()
+    assert db.scalar(select(ModificacionPrioridad)) is None
+
+
+def test_el_arranque_pasa_los_roles_antiguos_a_medico(
+    db: Session,
+    usuario: Usuario,
+    admin: Usuario,
+    engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db.execute(update(Usuario).where(Usuario.alias == "jperez").values(rol="tens"))
+    db.commit()
+    monkeypatch.setattr(main_module, "engine", engine)
+
+    main_module._migrar_roles_antiguos()
+
+    db.expire_all()
+    assert {u.alias: u.rol for u in db.scalars(select(Usuario))} == {
+        "admin": "administrador",
+        "jperez": "medico",
+    }

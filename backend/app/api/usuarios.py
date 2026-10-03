@@ -19,6 +19,7 @@ from app.services.auth import (
     AliasEnUsoError,
     CorreoEnUsoError,
     OperacionNoPermitidaError,
+    aliases_bloqueados_por_intentos,
     cambiar_estado_usuario,
     crear_usuario,
     editar_usuario,
@@ -54,8 +55,14 @@ def _buscar(db: Session, usuario_id: str) -> Usuario:
 
 
 @router.get("", response_model=list[UsuarioResponse])
-def listar_usuarios(db: Session = DbSession) -> list[Usuario]:
-    return list(db.scalars(select(Usuario).order_by(Usuario.nombre)).all())
+def listar_usuarios(db: Session = DbSession) -> list[UsuarioResponse]:
+    bloqueados = aliases_bloqueados_por_intentos(db)
+    return [
+        UsuarioResponse.model_validate(usuario).model_copy(
+            update={"bloqueado_por_intentos": usuario.alias in bloqueados}
+        )
+        for usuario in db.scalars(select(Usuario).order_by(Usuario.nombre)).all()
+    ]
 
 
 @router.post(

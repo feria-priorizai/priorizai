@@ -4,7 +4,10 @@ _LARGO_MAXIMO_ENTRADA = 256
 
 
 class LoginRequest(BaseModel):
-    alias: str = Field(max_length=_LARGO_MAXIMO_ENTRADA)
+    # El largo de la columna de intentos_login. Un alias mas largo no puede
+    # existir (ALIAS_VALIDO), asi que limitarlo no revela nada; sin el limite,
+    # Postgres rechaza el registro del fallo y el login responde 500.
+    alias: str = Field(max_length=64)
     password: str = Field(max_length=_LARGO_MAXIMO_ENTRADA)
 
 
@@ -22,6 +25,7 @@ class UsuarioResponse(BaseModel):
     especialidad: str | None
     activo: bool
     debe_cambiar_password: bool
+    bloqueado_por_intentos: bool = False
 
     model_config = {"from_attributes": True}
 

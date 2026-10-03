@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.auth import UsuarioActual
+from app.api.auth import ClinicoActual, UsuarioActual
 from app.core.database import get_db
 from app.models.interconsulta import Interconsulta
 from app.models.modificacion_prioridad import ModificacionPrioridad
@@ -102,7 +102,7 @@ def modificar_prioridad_interconsulta(
     interconsulta_id: str,
     payload: ModificarPrioridadRequest,
     db: Session = DbSession,
-    usuario: Usuario = UsuarioActual,
+    usuario: Usuario = ClinicoActual,
 ) -> Interconsulta:
     nueva_prioridad = _normalizar_prioridad(payload.prioridad)
     motivo = payload.motivo.strip()

@@ -16,7 +16,7 @@ import {
   listarUsuarios,
   type DatosCuenta,
 } from "@/services/auth";
-import { ETIQUETAS_ROL, type RolUsuario, type Usuario } from "@/types/usuario";
+import { ESPECIALIDADES, ETIQUETAS_ROL, type RolUsuario, type Usuario } from "@/types/usuario";
 import EstadoVista from "@/components/ui/EstadoVista";
 
 const PASSWORD_MINIMA = 8;
@@ -33,7 +33,7 @@ const FORMULARIO_VACIO: Formulario = {
   alias: "",
   nombre: "",
   correo: "",
-  rol: "medico_especialista",
+  rol: "medico",
   especialidad: "",
   password: "",
   confirmacion: "",
@@ -143,7 +143,7 @@ function GestionUsuarios({ propia }: { propia: Usuario }) {
       nombre: formulario.nombre,
       correo: formulario.correo,
       rol: formulario.rol,
-      especialidad: formulario.especialidad,
+      especialidad: formulario.rol === "medico" ? formulario.especialidad : "",
     };
 
     setEnviando(true);
@@ -201,14 +201,18 @@ function GestionUsuarios({ propia }: { propia: Usuario }) {
     }
   };
 
-  const alternarBloqueo = (u: Usuario) =>
-    accionSobre(
+  /** Una cuenta activa pero bloqueada por intentos fallidos se desbloquea,
+   *  no se bloquea: es lo que necesita quien pidió ayuda. */
+  const alternarBloqueo = (u: Usuario) => {
+    const desbloquear = !u.activo || Boolean(u.bloqueado_por_intentos);
+    return accionSobre(
       u,
-      () => cambiarEstadoUsuario(u.id, !u.activo),
-      u.activo
-        ? `Cuenta ${u.alias} bloqueada. Sus sesiones abiertas se cerraron.`
-        : `Cuenta ${u.alias} desbloqueada.`,
+      () => cambiarEstadoUsuario(u.id, desbloquear),
+      desbloquear
+        ? `Cuenta ${u.alias} desbloqueada.`
+        : `Cuenta ${u.alias} bloqueada. Sus sesiones abiertas se cerraron.`,
     );
+  };
 
   const eliminar = (u: Usuario) => {
     const confirmado = window.confirm(
@@ -319,19 +323,29 @@ function GestionUsuarios({ propia }: { propia: Usuario }) {
                   ))}
                 </select>
               </div>
-              <div className="col-12 col-sm-6 col-xl-12">
-                <label htmlFor="cuenta-especialidad" className="form-label">
-                  Especialidad (opcional)
-                </label>
-                <input
-                  id="cuenta-especialidad"
-                  className="form-control"
-                  maxLength={255}
-                  autoComplete="off"
-                  value={formulario.especialidad}
-                  onChange={(e) => actualizar("especialidad", e.target.value)}
-                />
-              </div>
+              {formulario.rol === "medico" && (
+                <div className="col-12 col-sm-6 col-xl-12">
+                  <label htmlFor="cuenta-especialidad" className="form-label">
+                    Especialidad
+                  </label>
+                  <select
+                    id="cuenta-especialidad"
+                    className="form-select"
+                    required
+                    value={formulario.especialidad}
+                    onChange={(e) => actualizar("especialidad", e.target.value)}
+                  >
+                    <option value="" disabled>
+                      Selecciona una especialidad
+                    </option>
+                    {ESPECIALIDADES.map((especialidad) => (
+                      <option key={especialidad} value={especialidad}>
+                        {especialidad}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {!esPropia && (
@@ -454,6 +468,7 @@ function GestionUsuarios({ propia }: { propia: Usuario }) {
                   {usuarios.map((u) => {
                     const propiaFila = u.id === propia.id;
                     const deshabilitada = ocupado === u.id;
+                    const bloqueada = !u.activo || Boolean(u.bloqueado_por_intentos);
                     return (
                       <tr key={u.id}>
                         <td>
@@ -470,10 +485,12 @@ function GestionUsuarios({ propia }: { propia: Usuario }) {
                           )}
                         </td>
                         <td>
-                          {u.activo ? (
-                            <span className="pz-chip pz-chip--baja">Activa</span>
-                          ) : (
+                          {!u.activo ? (
                             <span className="pz-chip pz-chip--alta">Bloqueada</span>
+                          ) : u.bloqueado_por_intentos ? (
+                            <span className="pz-chip pz-chip--alta">Bloqueada por intentos</span>
+                          ) : (
+                            <span className="pz-chip pz-chip--baja">Activa</span>
                           )}
                           {u.activo && u.debe_cambiar_password && (
                             <span
@@ -501,9 +518,9 @@ function GestionUsuarios({ propia }: { propia: Usuario }) {
                               onClick={() => void alternarBloqueo(u)}
                               disabled={deshabilitada || propiaFila}
                               title={propiaFila ? "No puedes bloquear tu propia cuenta" : undefined}
-                              aria-label={`${u.activo ? "Bloquear" : "Desbloquear"} ${u.alias}`}
+                              aria-label={`${bloqueada ? "Desbloquear" : "Bloquear"} ${u.alias}`}
                             >
-                              {u.activo ? "Bloquear" : "Desbloquear"}
+                              {bloqueada ? "Desbloquear" : "Bloquear"}
                             </button>
                             <button
                               type="button"

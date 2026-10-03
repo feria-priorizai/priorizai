@@ -8,6 +8,7 @@ from app.models.usuario import Usuario
 from app.schemas.auth import CambiarPasswordRequest, LoginRequest, UsuarioResponse
 from app.services.auth import (
     ROL_ADMINISTRADOR,
+    ROL_MEDICO,
     CredencialesInvalidasError,
     UsuarioBloqueadoError,
     abrir_sesion,
@@ -64,6 +65,23 @@ def administrador_actual(usuario: Usuario = UsuarioActual) -> Usuario:
 
 
 AdministradorActual = Depends(administrador_actual)
+
+
+ROLES_CLINICOS = frozenset({ROL_MEDICO, ROL_ADMINISTRADOR})
+
+
+def clinico_actual(usuario: Usuario = UsuarioActual) -> Usuario:
+    """Decisiones clinicas, como cambiar una prioridad: su autor queda en el
+    historial como medico responsable."""
+    if usuario.rol not in ROLES_CLINICOS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo un médico o un administrador puede realizar esta acción",
+        )
+    return usuario
+
+
+ClinicoActual = Depends(clinico_actual)
 
 
 def _error_bloqueo(error: UsuarioBloqueadoError) -> HTTPException:

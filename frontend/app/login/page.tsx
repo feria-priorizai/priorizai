@@ -11,13 +11,22 @@ import { useState, type FormEvent } from "react";
 import { iniciarSesion } from "@/services/auth";
 
 /** Solo rutas internas: un ?next=https://otro-sitio convertiría el login en
- *  un redirector abierto, útil para phishing. */
+ *  un redirector abierto, útil para phishing. Se compara el origen ya resuelto
+ *  y no el texto, porque el navegador normaliza cosas como `/\evil.com` o un
+ *  tabulador en `/\t/evil.com` hasta convertirlas en otro dominio. */
 function destinoSeguro(): string {
   const next = new URLSearchParams(window.location.search).get("next");
-  if (next && next.startsWith("/") && !next.startsWith("//") && next !== "/login") {
-    return next;
+  if (!next) return "/dashboard";
+  let destino: URL;
+  try {
+    destino = new URL(next, window.location.origin);
+  } catch {
+    return "/dashboard";
   }
-  return "/dashboard";
+  if (destino.origin !== window.location.origin || destino.pathname === "/login") {
+    return "/dashboard";
+  }
+  return destino.pathname + destino.search + destino.hash;
 }
 
 export default function LoginPage() {

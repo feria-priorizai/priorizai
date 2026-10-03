@@ -29,8 +29,6 @@ export default function InterconsultasPage() {
     useState<FiltrosInterconsulta | null>(null);
   const [formatoDescarga, setFormatoDescarga] = useState<"json" | "csv" | "xlsx">("csv");
 
-  // Cuando se activa el modo descarga múltiple, bloquear filtro a "revisada"
-  // y guardar los filtros previos para restaurarlos al cancelar
   const activarDescargaMultiple = useCallback(() => {
     setFiltrosPrevios(filtros);
     actualizarFiltros({ estado: "revisada" });
@@ -63,12 +61,9 @@ export default function InterconsultasPage() {
     if (seleccionadas.size === 0) return;
     const seleccionadasArray = interconsultas.filter((ic) => seleccionadas.has(ic.id));
     exportarInterconsultas(seleccionadasArray, formatoDescarga, config);
-    // Opcional: cancelar modo tras descargar
     cancelarDescargaMultiple();
   }, [seleccionadas, interconsultas, config, cancelarDescargaMultiple, formatoDescarga]);
 
-  // Si estamos en modo descarga múltiple y cambian los filtros (por código),
-  // forzar estado a "revisada"
   useEffect(() => {
     if (modoDescargaMultiple && filtros.estado !== "revisada") {
       actualizarFiltros({ estado: "revisada" });

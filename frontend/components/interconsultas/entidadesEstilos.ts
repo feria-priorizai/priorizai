@@ -9,13 +9,9 @@
 import type { ClaseEntidad } from "@/types/interconsulta";
 
 interface EstiloEntidad {
-  /** Fondo del <mark> dentro del texto clinico. */
   marca: string;
-  /** Chip de la tabla resumen. */
   chip: string;
-  /** Punto de color de la leyenda. */
   punto: string;
-  /** Titulo en plural para la tabla. */
   plural: string;
 }
 
@@ -46,7 +42,6 @@ export const CLASES_ENTIDAD: Record<ClaseEntidad, EstiloEntidad> = {
   },
 };
 
-/** Orden en que se muestran las clases, de mas a menos relevante. */
 export const ORDEN_CLASES: ClaseEntidad[] = [
   "Enfermedad",
   "Sintoma",

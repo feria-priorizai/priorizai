@@ -2,9 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.api.auth import ClinicoActual, UsuarioActual
 from app.core.database import get_db
 from app.models.interconsulta import Interconsulta
 from app.models.modificacion_prioridad import ModificacionPrioridad
+from app.models.usuario import Usuario
 from app.schemas.interconsulta import (
     InterconsultaResponse,
     ModificarEstadoRequest,
@@ -24,27 +26,18 @@ from app.services.priorizador import (
     tiene_informacion_clinica,
 )
 
-router = APIRouter(prefix="/api/interconsultas", tags=["interconsultas"])
+router = APIRouter(
+    prefix="/api/interconsultas",
+    tags=["interconsultas"],
+    dependencies=[UsuarioActual],
+)
 
-# Tope de filas por pagina. Sin tope, un `?limit=999999` trae la tabla entera.
 LIMITE_LISTADO = 100
 
-# El motivo es el unico registro de por que un medico cambio una prioridad
-# clinica (HdU02). La regla vivia solo en el formulario del frontend, asi que
-# por la API entraba un motivo de un caracter.
 MOTIVO_MINIMO = 10
 DbSession = Depends(get_db)
 PriorizadorDependency = Depends(get_priorizador)
 
-# La prioridad que ve el medico es la que decidio el (prioridad_actual) o, si aun
-# no decidio, la que sugiere el modelo. El orden usa esa misma cadena: ordenar por
-# un valor y mostrar otro hace que una interconsulta que en pantalla dice "Alta"
-# aparezca debajo de una que dice "Baja".
-#
-# prioridad_original_csv queda deliberadamente fuera: es la etiqueta que trae el
-# corpus historico (la prioridad que asigno un especialista), no una prioridad de
-# esta aplicacion. En produccion las interconsultas llegan sin priorizar, asi que
-# usarla ordenaria por la respuesta en vez de por lo que el sistema propone.
 _PRIORIDAD_EFECTIVA = func.lower(
     func.coalesce(
         func.nullif(func.trim(Interconsulta.prioridad_actual), ""),
@@ -52,10 +45,6 @@ _PRIORIDAD_EFECTIVA = func.lower(
     )
 )
 
-# HU3-c1: prioridad descendente (alta > media > baja) y, dentro de cada prioridad,
-# fecha de emision ascendente. La prioridad se guarda como texto, asi que se
-# necesita un CASE explicito para que "alta" no ordene alfabeticamente antes que
-# "baja". Las interconsultas sin prioridad alguna quedan al final.
 _ORDEN_PRIORIDAD = case(
     (_PRIORIDAD_EFECTIVA == "alta", 0),
     (_PRIORIDAD_EFECTIVA == "media", 1),
@@ -113,10 +102,10 @@ def modificar_prioridad_interconsulta(
     interconsulta_id: str,
     payload: ModificarPrioridadRequest,
     db: Session = DbSession,
+    usuario: Usuario = ClinicoActual,
 ) -> Interconsulta:
     nueva_prioridad = _normalizar_prioridad(payload.prioridad)
     motivo = payload.motivo.strip()
-    medico_responsable = payload.medico_responsable.strip()
     if not motivo:
         raise HTTPException(
             status_code=422,
@@ -130,12 +119,6 @@ def modificar_prioridad_interconsulta(
                 f"{MOTIVO_MINIMO} caracteres"
             ),
         )
-    if not medico_responsable:
-        raise HTTPException(
-            status_code=422,
-            detail="El medico responsable es obligatorio",
-        )
-
     interconsulta = db.scalar(
         select(Interconsulta)
         .options(selectinload(Interconsulta.modificaciones))
@@ -149,9 +132,6 @@ def modificar_prioridad_interconsulta(
 
     prioridad_anterior = interconsulta.prioridad_actual
     interconsulta.prioridad_actual = nueva_prioridad
-    # D5/D7: una vez que el medico decide, la prioridad ya no vino de la regla de
-    # banderas rojas. La bandera (bandera_roja/terminos_bandera_roja) se mantiene:
-    # sigue siendo informacion valida sobre el texto, solo deja de forzar.
     interconsulta.prioridad_forzada_por_regla = False
     db.add(
         ModificacionPrioridad(
@@ -159,7 +139,7 @@ def modificar_prioridad_interconsulta(
             prioridad_anterior=prioridad_anterior,
             prioridad_nueva=nueva_prioridad,
             motivo=motivo,
-            medico_responsable=medico_responsable,
+            medico_responsable=usuario.nombre,
         )
     )
     db.commit()

@@ -5,7 +5,6 @@
  */
 
 interface BadgeBanderaRojaProps {
-  /** Nombres clínicos de los términos, ya resueltos por el backend. */
   terminos: string[];
 }
 

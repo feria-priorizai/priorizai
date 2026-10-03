@@ -1,13 +1,3 @@
-# Catálogo de términos de alarma (RF7 / HU5-c3, c4).
-#
-# Semilla configurable, NO es el listado definitivo: el documento fuente del backlog
-# declara explícitamente que debe definirse con especialistas de cada disciplina
-# (pendiente abierto del proyecto). Editable sin tocar el motor de detección
-# (backend/app/services/banderas_rojas.py) — ver docs/RF7-banderas-rojas.md, D4.
-#
-# "id" es la clave estable: es lo que se persiste en la base de datos y lo que la
-# interfaz muestra como motivo de la bandera roja. No renombrar un id existente sin
-# migrar los datos ya guardados.
 version: 1
 terminos:
   - id: dolor_toracico

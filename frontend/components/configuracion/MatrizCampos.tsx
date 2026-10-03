@@ -48,8 +48,6 @@ const GRUPOS: Grupo[] = [
   },
 ];
 
-/** Solo los campos que vienen en el archivo pueden exigirse al importar; los de
- *  priorización y metadatos los produce el sistema. */
 const GRUPOS_IMPORTABLES: GrupoCampo[] = ["paciente", "clinico"];
 
 function esImportable(campo: DefinicionCampo): boolean {
@@ -90,7 +88,6 @@ export default function MatrizCampos() {
 
   return (
     <div className="flex flex-col gap-7">
-      {/* Qué está configurado hoy, y las acciones que aplican a todo */}
       <section className="pz-panel">
         <div className="pz-panel__head">
           <span className="pz-eyebrow">Campos</span>
@@ -183,7 +180,6 @@ export default function MatrizCampos() {
         </div>
       </section>
 
-      {/* Una tarjeta por grupo: las secciones se leen separadas de verdad */}
       <div className="row g-4">
         {GRUPOS.map((grupo) => {
           const campos = TODOS_LOS_CAMPOS.filter((c) => c.grupo === grupo.clave);
@@ -218,7 +214,6 @@ export default function MatrizCampos() {
                   </span>
                 </div>
 
-                {/* Cabecera de columnas: qué significa cada interruptor */}
                 <div
                   className="pz-campo"
                   style={{ borderTop: 0, background: "var(--pz-paper-2)" }}

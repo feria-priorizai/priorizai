@@ -30,10 +30,6 @@ function parsearFechaApi(fechaISO: string): Date {
   return new Date(tieneZonaHoraria ? fechaISO : `${fechaISO}Z`);
 }
 
-// FECHA_EMISION es una fecha de calendario, no un instante: el backend la guarda
-// como medianoche sin zona. Convertirla a horario de Chile la corria al dia
-// anterior (01/09 se mostraba como 31/08), asi que se formatea en UTC sobre la
-// medianoche UTC de esa misma fecha: el dia que dice el archivo es el que se ve.
 const FORMATO_FECHA_CORTO = new Intl.DateTimeFormat("es-CL", {
   day: "2-digit",
   month: "2-digit",

@@ -53,7 +53,6 @@ def test_obtener_interconsulta_incluye_las_modificaciones(
         json={
             "prioridad": "alta",
             "motivo": "Empeora el cuadro",
-            "medico_responsable": "Dra. Test",
         },
     )
 
@@ -81,7 +80,6 @@ def test_modificar_prioridad_de_interconsulta_inexistente_devuelve_404(
         json={
             "prioridad": "alta",
             "motivo": "Motivo valido",
-            "medico_responsable": "Dra. Test",
         },
     )
 
@@ -112,7 +110,6 @@ def test_modificar_prioridad_rechaza_prioridad_invalida(
         json={
             "prioridad": "urgentisima",
             "motivo": "Motivo valido",
-            "medico_responsable": "Dra. Test",
         },
     )
 
@@ -120,23 +117,26 @@ def test_modificar_prioridad_rechaza_prioridad_invalida(
     assert response.json()["detail"] == "La prioridad debe ser alta, media o baja"
 
 
-def test_modificar_prioridad_rechaza_medico_responsable_vacio(
+def test_el_medico_responsable_sale_de_la_sesion_y_no_del_cuerpo(
     client: TestClient,
     guardar_interconsulta: CrearInterconsulta,
 ) -> None:
-    guardar_interconsulta(id="ic-sin-medico", prioridad_actual="media")
+    """Si el nombre lo mandara el cliente, cualquiera podria firmar un cambio de
+    prioridad a nombre de otro medico."""
+    guardar_interconsulta(id="ic-firma", prioridad_actual="media")
 
     response = client.patch(
-        "/api/interconsultas/ic-sin-medico/prioridad",
+        "/api/interconsultas/ic-firma/prioridad",
         json={
             "prioridad": "alta",
             "motivo": "Motivo valido",
-            "medico_responsable": "   ",
+            "medico_responsable": "Dr. Suplantado",
         },
     )
 
-    assert response.status_code == 422
-    assert response.json()["detail"] == "El medico responsable es obligatorio"
+    assert response.status_code == 200
+    modificacion = response.json()["modificaciones"][0]
+    assert modificacion["medico_responsable"] == "Dra. Test"
 
 
 def test_modificar_estado_rechaza_estado_invalido(
@@ -166,7 +166,6 @@ def test_modificar_prioridad_acepta_prioridad_con_mayusculas_y_espacios(
         json={
             "prioridad": "  ALTA  ",
             "motivo": "Motivo valido",
-            "medico_responsable": "Dra. Test",
         },
     )
 
@@ -224,11 +223,6 @@ def test_reevaluar_banderas_marca_las_que_tienen_termino_de_alarma(
     assert con_alarma is not None
     assert con_alarma.bandera_roja is True
     assert con_alarma.prioridad_actual == "alta"
-
-
-# --------------------------------------------------------------------------
-# Paginacion del listado
-# --------------------------------------------------------------------------
 
 
 def test_listado_publica_el_total_real_en_la_cabecera(
@@ -296,7 +290,6 @@ def test_motivo_demasiado_corto_devuelve_422(
         json={
             "prioridad": "alta",
             "motivo": "corto",
-            "medico_responsable": "Dra. Perez",
         },
     )
 
@@ -315,7 +308,6 @@ def test_motivo_en_el_limite_se_acepta(
         json={
             "prioridad": "alta",
             "motivo": "10 chars!!",
-            "medico_responsable": "Dra. Perez",
         },
     )
 

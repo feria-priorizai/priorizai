@@ -23,7 +23,6 @@ class ModeloConfiguracion:
     path: str
     max_length: int
     batch_size: int
-    # Vacio = deducir del modelo. Ver Settings.model_labels.
     labels: tuple[str, ...] = ()
 
 

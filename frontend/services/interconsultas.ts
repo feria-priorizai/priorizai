@@ -4,11 +4,7 @@ import type {
   Interconsulta,
   NivelPrioridad,
 } from "@/types/interconsulta";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ??
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  "http://localhost:8000";
+import { apiFetch, obtenerMensajeError } from "@/services/api";
 
 export const EVENTO_INTERCONSULTAS_ACTUALIZADAS =
   "priorizai:interconsultas-actualizadas";
@@ -38,8 +34,6 @@ interface InterconsultaApi {
   fecha_emision: string | null;
   bandera_roja: boolean;
   terminos_bandera_roja: string | null;
-  /** Los mismos terminos con su nombre clinico, resueltos por el backend contra
-   * el catalogo. Es lo que se muestra; el campo anterior son los ids. */
   terminos_bandera_roja_nombres: string[];
   prioridad_forzada_por_regla: boolean;
   created_at: string;
@@ -68,15 +62,12 @@ interface PriorizarResponse {
   }>;
 }
 
-/** Filas por peticion y tope de lo que el cliente mantiene en memoria. */
 const TAMANO_PAGINA = 100;
 const MAXIMO_EN_MEMORIA = 2000;
 
 export interface ListadoInterconsultas {
   interconsultas: Interconsulta[];
-  /** Total en el servidor, no el largo de lo cargado. */
   total: number;
-  /** true si el servidor tiene mas de las que se pudieron cargar. */
   truncado: boolean;
 }
 
@@ -95,8 +86,8 @@ export async function obtenerInterconsultas(
   let total = 0;
 
   for (let offset = 0; offset < MAXIMO_EN_MEMORIA; offset += TAMANO_PAGINA) {
-    const respuesta = await fetch(
-      `${API_BASE}/api/interconsultas?limit=${TAMANO_PAGINA}&offset=${offset}`,
+    const respuesta = await apiFetch(
+      `/api/interconsultas?limit=${TAMANO_PAGINA}&offset=${offset}`,
       { cache: "no-store", signal }
     );
     if (!respuesta.ok) {
@@ -127,7 +118,7 @@ export async function obtenerInterconsultas(
 export async function obtenerInterconsultaPorId(
   id: string
 ): Promise<Interconsulta | null> {
-  const respuesta = await fetch(`${API_BASE}/api/interconsultas/${id}`, {
+  const respuesta = await apiFetch(`/api/interconsultas/${id}`, {
     cache: "no-store",
   });
   if (respuesta.status === 404) return null;
@@ -141,7 +132,7 @@ export async function obtenerInterconsultaPorId(
 
 /** Ejecuta el modelo predictivo para una sola interconsulta. */
 export async function priorizarInterconsulta(id: string): Promise<Interconsulta> {
-  const respuesta = await fetch(`${API_BASE}/api/interconsultas/priorizar`, {
+  const respuesta = await apiFetch(`/api/interconsultas/priorizar`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids: [id] }),
@@ -171,8 +162,8 @@ export async function reevaluarBanderasRojas(): Promise<{
   total_evaluadas: number;
   total_con_bandera_roja: number;
 }> {
-  const respuesta = await fetch(
-    `${API_BASE}/api/interconsultas/reevaluar-banderas`,
+  const respuesta = await apiFetch(
+    `/api/interconsultas/reevaluar-banderas`,
     { method: "POST" }
   );
 
@@ -189,22 +180,23 @@ export async function reevaluarBanderasRojas(): Promise<{
   return respuesta.json();
 }
 
-/** Actualiza la prioridad de una interconsulta y guarda el historial (HdU02). */
+/**
+ * Actualiza la prioridad de una interconsulta y guarda el historial (HdU02).
+ * El médico responsable no se envía: el backend lo toma de la sesión.
+ */
 export async function modificarPrioridad(
   interconsultaId: string,
   nuevaPrioridad: NivelPrioridad,
   motivo: string,
-  medicoResponsable: string
 ): Promise<Interconsulta> {
-  const respuesta = await fetch(
-    `${API_BASE}/api/interconsultas/${interconsultaId}/prioridad`,
+  const respuesta = await apiFetch(
+    `/api/interconsultas/${interconsultaId}/prioridad`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         prioridad: nuevaPrioridad,
         motivo,
-        medico_responsable: medicoResponsable,
       }),
     }
   );
@@ -223,8 +215,8 @@ export async function modificarEstadoInterconsulta(
   interconsultaId: string,
   estado: EstadoInterconsulta,
 ): Promise<Interconsulta> {
-  const respuesta = await fetch(
-    `${API_BASE}/api/interconsultas/${interconsultaId}/estado`,
+  const respuesta = await apiFetch(
+    `/api/interconsultas/${interconsultaId}/estado`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -257,13 +249,11 @@ export async function subirCsvInterconsultas(
 }> {
   const formData = new FormData();
   formData.append("file", archivo);
-  // Sin esto el backend valida contra sus propias listas fijas y la
-  // pestaña de configuración de import no tenía ningún efecto.
   if (camposObligatorios) {
     formData.append("campos_obligatorios", camposObligatorios.join(","));
   }
 
-  const respuesta = await fetch(`${API_BASE}/upload-csv`, {
+  const respuesta = await apiFetch(`/upload-csv`, {
     method: "POST",
     body: formData,
   });
@@ -282,16 +272,8 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
   const prioridadSugerida = normalizarPrioridad(api.prioridad_sugerida_modelo);
   const estaPriorizada = prioridadSugerida !== null;
   const esValidaParaPriorizacion = tieneInformacionClinica(api);
-  // La prioridad que se muestra es la que decidio el medico o, si aun no decidio,
-  // la que sugiere el modelo. NO se cae a prioridad_original_csv: esa es la
-  // etiqueta del corpus historico (la prioridad que ya asigno un especialista) y
-  // mostrarla seria presentar la respuesta como si fuera la salida del sistema.
-  // En produccion las interconsultas llegan sin priorizar y ese campo va vacio.
   const prioridadDisponible =
     normalizarPrioridad(api.prioridad_actual) ?? prioridadSugerida;
-  // HU2-c5: sin prioridad disponible, no se debe defaultear a "baja" (el lado
-  // inseguro). El "baja" de relleno solo satisface el tipo; sinPrioridad=true le
-  // dice a la interfaz que no lo muestre como si fuera una prioridad real.
   const sinPrioridad = prioridadDisponible === null;
   const prioridadActual = prioridadDisponible ?? "baja";
   const confianza = api.confianza_modelo ?? 0;
@@ -343,7 +325,6 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
     fechaIngreso: api.created_at,
     fechaActualizacion: api.updated_at,
 
-    // Campos crudos del backend (para export configurable)
     especOrigen: api.espec_origen,
     especDestino: api.espec_destino,
     sexo: api.sexo,
@@ -386,17 +367,4 @@ function primerTextoNoVacio(...valores: Array<string | null | undefined>) {
 
 function normalizarEstado(estado: string): EstadoInterconsulta {
   return estado.trim().toLowerCase() === "revisada" ? "revisada" : "pendiente";
-}
-
-function obtenerMensajeError(detail: unknown, fallback: string): string {
-  if (typeof detail === "string") return detail;
-  if (
-    detail &&
-    typeof detail === "object" &&
-    "message" in detail &&
-    typeof detail.message === "string"
-  ) {
-    return detail.message;
-  }
-  return fallback;
 }

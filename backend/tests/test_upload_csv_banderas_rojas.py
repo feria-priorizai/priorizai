@@ -83,8 +83,6 @@ def test_upload_acepta_archivo_sin_columna_prioridad(
     db: Session,
     ingesta_sin_modelo: object,
 ) -> None:
-    # En produccion la interconsulta llega SIN priorizar: el archivo del sistema
-    # hospitalario no trae la columna PRIORIDAD. Exigirla rompia la carga real.
     csv_sin_prioridad = (
         "ESPEC_ORIGEN,EDAD,SEXO,ESPEC_DESTINO,HISTORIA_CLINICA,"
         "FUNDAMENTOS_DIAGNOSTICO,EXAMENES_COMPLEMENTARIOS,MOTIVO_INTERCONSULTA\n"
@@ -103,7 +101,6 @@ def test_upload_acepta_archivo_sin_columna_prioridad(
     interconsulta = db.scalar(select(Interconsulta))
     assert interconsulta is not None
     assert interconsulta.prioridad_original_csv is None
-    # La bandera roja sigue funcionando sin la columna PRIORIDAD.
     assert interconsulta.bandera_roja is True
     assert interconsulta.prioridad_actual == "alta"
 
@@ -113,8 +110,6 @@ def test_upload_guarda_la_etiqueta_historica_cuando_viene(
     db: Session,
     ingesta_sin_modelo: object,
 ) -> None:
-    # Los archivos historicos si traen PRIORIDAD (la etiqueta del especialista).
-    # Se sigue guardando para poder contrastar despues el modelo contra ella.
     response = _subir_fixture(client)
 
     assert response.status_code == 200
@@ -148,7 +143,6 @@ def test_reevaluar_banderas_no_pisa_decision_medica_previa(
         json={
             "prioridad": "media",
             "motivo": "Evaluado por el medico, no amerita prioridad alta",
-            "medico_responsable": "Dra. Test",
         },
     )
     assert respuesta_modificacion.status_code == 200

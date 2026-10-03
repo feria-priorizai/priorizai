@@ -41,6 +41,11 @@ cp .env.example .env
 | `POSTGRES_PORT` | `5432` | Puerto publicado de PostgreSQL |
 | `BACKEND_PORT` | `8000` | Puerto publicado del backend |
 | `CORS_ORIGINS` | `http://localhost:3000` | Orígenes autorizados, separados por coma |
+| `ADMIN_ALIAS` | `admin` | Alias del administrador inicial |
+| `ADMIN_PASSWORD` | `cambiar-esta-clave` | Contraseña del administrador inicial. Fuera de `DEBUG=true` el backend no arranca con la de ejemplo |
+| `ADMIN_NOMBRE` | `Administrador` | Nombre visible del administrador inicial |
+| `ADMIN_CORREO` | vacío | Correo del administrador inicial (opcional) |
+| `COOKIE_SECURE` | `false` | `true` cuando la app se sirve por HTTPS (por ejemplo, detrás de Cloudflare) |
 | `MODEL_SERVICE_URL` | *(vacía)* | URL del servicio de modelos externo. Vacía, los modelos corren dentro del backend |
 | `MODEL_SERVICE_TIMEOUT` | `300` | Segundos de espera por respuesta del servicio |
 | `MODEL_SERVICE_API_KEY` | *(vacía)* | Clave que exige el servicio. Es un secreto: solo en el `.env` local |
@@ -48,6 +53,68 @@ cp .env.example .env
 El backend acepta además `MODEL_PATH`, `NER_MODEL_PATH` y `MODEL_LABELS`, que
 `docker-compose.yml` ya define apuntando a la carpeta `models/`. Solo se usan
 cuando `MODEL_SERVICE_URL` está vacía.
+
+## Acceso
+
+Toda la aplicación exige iniciar sesión con alias y contraseña. Nadie se
+registra solo: las cuentas las gestiona un administrador desde la vista
+**Usuarios** (`/usuarios`), donde puede crearlas, editarlas, restablecer su
+contraseña, bloquearlas y eliminarlas.
+
+- Cada cuenta tiene alias, nombre, correo, rol y especialidad opcional. El
+  alias usa solo letras minúsculas, números, punto, guion o guion bajo (de 3 a
+  64 caracteres) y no se puede cambiar. El correo no se puede repetir.
+- Bloquear una cuenta cierra sus sesiones abiertas en el acto. Eliminarla
+  conserva el historial de cambios de prioridad, que guarda el nombre del médico.
+- Restablecer la contraseña deja una temporal que la persona debe cambiar en su
+  siguiente ingreso.
+- Un administrador no puede bloquearse, eliminarse ni cambiarse el rol a sí
+  mismo, así que el sistema nunca queda sin un administrador activo.
+
+La primera cuenta sale del `.env`: al arrancar con la base sin usuarios, el
+backend crea un administrador con `ADMIN_ALIAS` y `ADMIN_PASSWORD`. Si ya hay
+usuarios, esas variables no tienen efecto, así que cambiarlas después no pisa
+la contraseña que el administrador tenga en uso.
+
+Toda cuenta nueva, incluido ese administrador, debe cambiar su contraseña en el
+primer ingreso: la inicial la conoce otra persona. Hasta hacerlo, la API
+responde 403 a todo lo demás. Después, cada usuario puede cambiarla desde
+**Mi cuenta** (`/cuenta`); hacerlo cierra sus sesiones abiertas en otros
+equipos.
+
+- Las contraseñas se guardan con hash Argon2 y deben tener entre 8 y 128
+  caracteres.
+- La sesión vive en la base y viaja en una cookie `httpOnly` con
+  `SameSite=Lax`. Cerrar sesión la invalida en el servidor. Se cierra sola tras
+  30 minutos sin actividad (`SESION_INACTIVIDAD_MINUTOS`) y, en cualquier caso,
+  a las 8 horas (`SESION_DURACION_HORAS`).
+- Tras 5 intentos fallidos seguidos, el alias queda bloqueado 15 minutos
+  (`LOGIN_MAX_INTENTOS`, `LOGIN_BLOQUEO_MINUTOS`). El contador se lleva por
+  alias exista o no, así que la respuesta no revela qué alias son reales.
+- El médico responsable de cada cambio de prioridad sale de la sesión, no de lo
+  que envíe el cliente.
+- Las peticiones que modifican datos se rechazan si el navegador declara que
+  vienen de otro sitio (`Sec-Fetch-Site`). Es una segunda barrera contra CSRF,
+  además de `SameSite`.
+- Frontend y backend envían cabeceras de seguridad: la app no se puede mostrar
+  dentro de un iframe (`frame-ancestors 'none'`, `X-Frame-Options`), y además
+  `X-Content-Type-Options`, `Referrer-Policy` y HSTS. Las respuestas de la API
+  llevan `Cache-Control: no-store`.
+- Inicios de sesión, fallos, bloqueos, cambios de contraseña y altas de cuentas
+  quedan en el log del backend con la etiqueta `AUDITORIA`, junto con la IP del
+  cliente. Nunca se registran contraseñas ni tokens:
+
+  ```bash
+  docker compose logs backend | grep AUDITORIA
+  ```
+- El rol se guarda pero todavía no restringe funciones, salvo la gestión de
+  cuentas, que es solo de administradores.
+
+El navegador nunca llama al backend directamente: el servidor de Next reenvía
+`/api/*` y `/upload-csv` a `API_URL` (`frontend/next.config.ts`). Así la cookie
+es del mismo origen que la página sin importar dónde se despliegue cada parte, y
+el backend no necesita estar expuesto a internet.
+
 
 ## Modelos
 
@@ -168,16 +235,26 @@ docker compose down -v
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | `GET` | `/health` | Estado del servicio |
+| `POST` | `/api/auth/login` | Inicia sesión con alias y contraseña; deja la cookie de sesión |
+| `POST` | `/api/auth/logout` | Cierra la sesión en el servidor |
+| `GET` | `/api/auth/me` | Usuario de la sesión actual |
+| `POST` | `/api/auth/cambiar-password` | Cambia la contraseña propia; exige la actual |
+| `GET` | `/api/usuarios` | Lista las cuentas (solo administrador) |
+| `POST` | `/api/usuarios` | Crea una cuenta (solo administrador) |
+| `PATCH` | `/api/usuarios/{id}` | Edita una cuenta y opcionalmente restablece su contraseña (solo administrador) |
+| `PATCH` | `/api/usuarios/{id}/estado` | Bloquea o desbloquea una cuenta (solo administrador) |
+| `DELETE` | `/api/usuarios/{id}` | Elimina una cuenta (solo administrador) |
 | `POST` | `/upload-csv` | Ingesta de un archivo CSV o XLSX |
 | `GET` | `/api/interconsultas` | Listado paginado (`limit` de 1 a 500, `offset`); el total va en la cabecera `X-Total-Count` |
 | `GET` | `/api/interconsultas/{id}` | Detalle de una interconsulta |
-| `PATCH` | `/api/interconsultas/{id}/prioridad` | Cambio manual de prioridad con motivo y responsable |
+| `PATCH` | `/api/interconsultas/{id}/prioridad` | Cambio manual de prioridad con motivo; el responsable sale de la sesión |
 | `PATCH` | `/api/interconsultas/{id}/estado` | Marca la interconsulta como revisada o pendiente |
 | `POST` | `/api/interconsultas/priorizar` | Ejecuta el modelo sobre los identificadores indicados |
 | `POST` | `/api/interconsultas/priorizar-pendientes` | Ejecuta el modelo sobre las que aún no tienen prioridad |
 | `POST` | `/api/interconsultas/reevaluar-banderas` | Vuelve a aplicar el catálogo de términos de alarma |
 
-La documentación interactiva completa está en http://localhost:8000/docs.
+Salvo `/health` y `/api/auth/login`, todo responde 401 sin sesión. La
+documentación interactiva completa está en http://localhost:8000/docs.
 
 ## Frontend
 
@@ -189,6 +266,9 @@ Next.js 16 con App Router, React 19, Bootstrap 5 y Tailwind CSS 4.
 | `/interconsultas` | Lista de espera completa, con filtros y descarga múltiple |
 | `/interconsultas/[id]` | Detalle: columna de decisión fija y sustento clínico al lado |
 | `/configuracion` | Campos exigidos al importar y campos incluidos al exportar |
+| `/login` | Inicio de sesión |
+| `/cuenta` | Datos de la sesión y cambio de contraseña |
+| `/usuarios` | Gestión de cuentas: alta, edición, bloqueo y eliminación (solo administrador) |
 
 El sistema visual vive en `frontend/app/globals.css` bajo el prefijo `pz-`.
 Comparte la paleta de marca con la landing. El color codifica una sola cosa: la
@@ -284,11 +364,6 @@ alineadas.
 
 ## Limitaciones conocidas
 
-- **No hay autenticación.** Todos los endpoints son públicos para quien tenga
-  acceso de red al backend, y el médico responsable que queda registrado en el
-  historial de modificaciones sale de una constante en
-  `frontend/data/sesion.ts`. Mientras esto siga así, el sistema no debe operar
-  sobre datos de pacientes reales.
 - **La ingesta es síncrona.** La carga de un archivo ejecuta el NER y el
   priorizador dentro de la misma petición HTTP, sin cola de trabajo ni endpoint
   de estado. Con archivos grandes la petición puede exceder el tiempo de espera

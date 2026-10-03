@@ -15,10 +15,6 @@ if TYPE_CHECKING:
 
 Asercion = Literal["afirmado", "negado", "historico", "hipotetico"]
 
-# Campos de texto libre de la interconsulta. Se evaluan por separado (no concatenados
-# como en priorizador.construir_texto) porque un marcador en un campo no debe alterar
-# la asercion de un termino en otro: "dolor toracico" + "sospecha de sindrome coronario"
-# son dos campos distintos, y "sospecha de" no debe filtrarse a "dolor toracico".
 CAMPOS_CLINICOS = (
     "historia_clinica",
     "fundamentos_diagnostico",
@@ -246,12 +242,6 @@ def aplicar_banderas_a_interconsulta(
         interconsulta.prioridad_actual = "alta"
         interconsulta.prioridad_forzada_por_regla = True
     elif interconsulta.prioridad_forzada_por_regla:
-        # La regla dejo de aplicar (se edito el catalogo y se reevaluo). Sin
-        # esta rama la marca quedaba pegada en True y, como aplicar_resultado
-        # la respeta, esa interconsulta no volvia a recibir nunca la prioridad
-        # del modelo: se quedaba en 'alta' para siempre. La prioridad vuelve a
-        # la que sugiere el modelo, o a ninguna si todavia no se priorizo; el
-        # 'alta' forzado no fue una decision del medico, asi que no se conserva.
         interconsulta.prioridad_forzada_por_regla = False
         interconsulta.prioridad_actual = interconsulta.prioridad_sugerida_modelo
     return resultado

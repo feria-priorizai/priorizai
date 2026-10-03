@@ -60,6 +60,11 @@ def test_el_lifespan_prepara_la_base_y_verifica_las_credenciales(
     )
     monkeypatch.setattr(
         main_module,
+        "_migrar_roles_antiguos",
+        lambda: llamadas.append("roles"),
+    )
+    monkeypatch.setattr(
+        main_module,
         "_crear_admin_inicial",
         lambda: llamadas.append("admin_inicial"),
     )
@@ -67,7 +72,13 @@ def test_el_lifespan_prepara_la_base_y_verifica_las_credenciales(
     with TestClient(main_module.app) as cliente:
         assert cliente.get("/health").status_code == 200
 
-    assert llamadas == ["credenciales", "create_all", "columnas", "admin_inicial"]
+    assert llamadas == [
+        "credenciales",
+        "create_all",
+        "columnas",
+        "roles",
+        "admin_inicial",
+    ]
 
 
 def test_importar_el_modulo_no_toca_la_base(

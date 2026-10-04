@@ -9,24 +9,46 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import type { ConfiguracionCampos, PerfilConfiguracion, Usuario } from "@/types/campos";
+import { useSesion } from "@/context/SesionContext";
+import type { ConfiguracionCampos, PerfilConfiguracion, Usuario as UsuarioConfig } from "@/types/campos";
 import { DEFAULT_CONFIG, mergeConfigPerfil, TODOS_LOS_CAMPOS } from "@/types/campos";
+import type { Usuario, RolUsuario } from "@/types/usuario";
 
 const STORAGE_KEY = "priorizai-config-campos";
 
 interface ConfiguracionState {
   config: ConfiguracionCampos;
-  usuario: Usuario | null;
+  usuario: UsuarioConfig | null;
   puedeVer: boolean;
   puedeEditar: boolean;
   actualizarConfigImport: (campos: string[]) => void;
   actualizarConfigExport: (campos: string[]) => void;
   restablecerDefaults: () => void;
-  setUsuario: (usuario: Usuario | null) => void;
+  setUsuario: (usuario: UsuarioConfig | null) => void;
   setPerfil: (perfil: PerfilConfiguracion) => void;
 }
 
 const ConfiguracionContext = createContext<ConfiguracionState | null>(null);
+
+/**
+ * Mapea el rol del usuario autenticado al perfil de configuración.
+ * El backend usa "medico" / "administrador"; la config usa "medico" / "admin".
+ */
+function mapearRolConfiguracion(rol: RolUsuario): PerfilConfiguracion {
+  return rol === "administrador" ? "admin" : "medico";
+}
+
+/**
+ * Convierte el usuario de la sesión al formato que espera la configuración.
+ */
+function adaptarUsuario(usuario: Usuario | null): UsuarioConfig | null {
+  if (!usuario) return null;
+  return {
+    id: usuario.id,
+    nombre: usuario.nombre,
+    rol: mapearRolConfiguracion(usuario.rol),
+  };
+}
 
 /**
  * Lee la configuracion guardada. Devuelve null si no hay nada utilizable.
@@ -68,12 +90,6 @@ function sinSuscripcion(): () => void {
   return () => {};
 }
 
-const USUARIO_POR_DEFECTO: Usuario = {
-  id: "default",
-  nombre: "Médico",
-  rol: "medico",
-};
-
 export function ConfiguracionProvider({ children }: { children: ReactNode }) {
   const hidratado = useSyncExternalStore(
     sinSuscripcion,
@@ -91,7 +107,16 @@ export function ConfiguracionProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const [usuario, setUsuario] = useState<Usuario | null>(USUARIO_POR_DEFECTO);
+  // Obtener el usuario real desde SesionContext y adaptarlo
+  const { usuario: usuarioSesion } = useSesion();
+  const [usuario, setUsuario] = useState<UsuarioConfig | null>(() =>
+    adaptarUsuario(usuarioSesion),
+  );
+
+  // Sincronizar con cambios en la sesión
+  useEffect(() => {
+    setUsuario(adaptarUsuario(usuarioSesion));
+  }, [usuarioSesion]);
 
   useEffect(() => {
     if (leido) {
@@ -99,10 +124,10 @@ export function ConfiguracionProvider({ children }: { children: ReactNode }) {
     }
   }, [config, leido]);
 
-  const esUsuarioConocido =
-    usuario?.rol === "admin" || usuario?.rol === "medico";
-  const puedeVer = esUsuarioConocido;
-  const puedeEditar = esUsuarioConocido;
+  // Derivar permisos exclusivamente del rol real del usuario autenticado
+  const esAdministrador = usuarioSesion?.rol === "administrador";
+  const puedeVer = esAdministrador;
+  const puedeEditar = esAdministrador;
 
   const actualizarConfigImport = useCallback((campos: string[]) => {
     setConfig(prev => ({ ...prev, camposObligatoriosImport: campos }));

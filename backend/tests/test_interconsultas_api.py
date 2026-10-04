@@ -312,3 +312,138 @@ def test_motivo_en_el_limite_se_acepta(
     )
 
     assert response.status_code == 200
+
+
+# --- Tests para filtrado por especialidad (HDU-5) ---
+
+
+def test_listado_filtra_por_especialidad_del_medico(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """El medico solo ve interconsultas de su especialidad (Cardiologia)."""
+    # Una de su especialidad
+    guardar_interconsulta(id="ic-cardio", espec_destino="Cardiologia")
+    # De otra especialidad
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia")
+
+    response = client.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["id"] == "ic-cardio"
+    assert body[0]["espec_destino"] == "Cardiologia"
+    # Total count en cabecera tambien debe reflejar el filtro
+    assert response.headers["X-Total-Count"] == "1"
+
+
+def test_listado_admin_ve_todas_las_especialidades(
+    client_admin: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """El administrador ve interconsultas de todas las especialidades."""
+    guardar_interconsulta(id="ic-cardio", espec_destino="Cardiologia")
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia")
+    guardar_interconsulta(id="ic-derma", espec_destino="Dermatologia")
+
+    response = client_admin.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 3
+    assert response.headers["X-Total-Count"] == "3"
+
+
+def test_medico_no_ve_interconsulta_de_otra_especialidad_devuelve_404(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """GET /api/interconsultas/{id} devuelve 404 si la especialidad no coincide."""
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia")
+
+    response = client.get("/api/interconsultas/ic-neuro")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Interconsulta no encontrada"
+
+
+def test_admin_ve_interconsulta_de_cualquier_especialidad(
+    client_admin: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """GET /api/interconsultas/{id} funciona para admin sin importar especialidad."""
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia")
+
+    response = client_admin.get("/api/interconsultas/ic-neuro")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == "ic-neuro"
+
+
+def test_medico_no_puede_modificar_prioridad_de_otra_especialidad(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """PATCH /prioridad devuelve 404 si la especialidad no coincide."""
+    guardar_interconsulta(
+        id="ic-neuro", espec_destino="Neurologia", prioridad_actual="media"
+    )
+
+    response = client.patch(
+        "/api/interconsultas/ic-neuro/prioridad",
+        json={"prioridad": "alta", "motivo": "Motivo valido"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Interconsulta no encontrada"
+
+
+def test_admin_puede_modificar_prioridad_de_cualquier_especialidad(
+    client_admin: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """PATCH /prioridad funciona para admin sin importar especialidad."""
+    guardar_interconsulta(
+        id="ic-neuro", espec_destino="Neurologia", prioridad_actual="media"
+    )
+
+    response = client_admin.patch(
+        "/api/interconsultas/ic-neuro/prioridad",
+        json={"prioridad": "alta", "motivo": "Motivo valido"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["prioridad_actual"] == "alta"
+
+
+def test_medico_no_puede_modificar_estado_de_otra_especialidad(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """PATCH /estado devuelve 404 si la especialidad no coincide."""
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia", estado="pendiente")
+
+    response = client.patch(
+        "/api/interconsultas/ic-neuro/estado",
+        json={"estado": "revisada"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Interconsulta no encontrada"
+
+
+def test_admin_puede_modificar_estado_de_cualquier_especialidad(
+    client_admin: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """PATCH /estado funciona para admin sin importar especialidad."""
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia", estado="pendiente")
+
+    response = client_admin.patch(
+        "/api/interconsultas/ic-neuro/estado",
+        json={"estado": "revisada"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["estado"] == "revisada"

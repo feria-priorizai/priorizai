@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core import auditoria
 from app.core.config import settings
 from app.core.database import get_db
+from app.models.interconsulta import Interconsulta
 from app.models.usuario import Usuario
 from app.schemas.auth import CambiarPasswordRequest, LoginRequest, UsuarioResponse
 from app.services.auth import (
@@ -82,6 +83,17 @@ def clinico_actual(usuario: Usuario = UsuarioActual) -> Usuario:
 
 
 ClinicoActual = Depends(clinico_actual)
+
+
+def _filtrar_por_especialidad_si_medico(query, usuario: Usuario):
+    """Aplica filtro por especialidad si el usuario es medico.
+
+    Los administradores ven todas las interconsultas; los medicos solo
+    las de su especialidad (espec_destino).
+    """
+    if usuario.rol == ROL_MEDICO and usuario.especialidad:
+        return query.where(Interconsulta.espec_destino == usuario.especialidad)
+    return query
 
 
 def _error_bloqueo(error: UsuarioBloqueadoError) -> HTTPException:

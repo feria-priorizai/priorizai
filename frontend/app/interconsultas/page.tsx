@@ -8,8 +8,10 @@ import ColaInterconsultas from "@/components/interconsultas/ColaInterconsultas";
 import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
 import { exportarInterconsultas } from "@/utils/exportUtils";
 import EstadoVista from "@/components/ui/EstadoVista";
+import { useSesion } from "@/context/SesionContext";
 
 export default function InterconsultasPage() {
+  const { usuario } = useSesion();
   const {
     interconsultas,
     cargando,
@@ -28,6 +30,11 @@ export default function InterconsultasPage() {
   const [filtrosPrevios, setFiltrosPrevios] =
     useState<FiltrosInterconsulta | null>(null);
   const [formatoDescarga, setFormatoDescarga] = useState<"json" | "csv" | "xlsx">("csv");
+
+  // Mensaje especializado para medicos cuando no hay interconsultas de su especialidad
+  const mensajeVacio = usuario?.rol === "medico"
+    ? "No existen interconsultas disponibles para su especialidad"
+    : undefined;
 
   const activarDescargaMultiple = useCallback(() => {
     setFiltrosPrevios(filtros);
@@ -102,6 +109,7 @@ export default function InterconsultasPage() {
         onActivarDescargaMultiple={activarDescargaMultiple}
         formatoDescarga={formatoDescarga}
         onCambiarFormatoDescarga={setFormatoDescarga}
+        mensajeVacio={mensajeVacio}
       />
 
       <p className="pz-label">

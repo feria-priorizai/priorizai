@@ -68,6 +68,7 @@ USUARIO_DE_PRUEBA = Usuario(
     alias="dratest",
     nombre="Dra. Test",
     rol="medico",
+    especialidad="Cardiologia",
     password_hash="",
 )
 

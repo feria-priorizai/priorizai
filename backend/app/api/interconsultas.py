@@ -1,13 +1,19 @@
+import logging
+from collections.abc import Callable
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import case, func, or_, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, sessionmaker
 
 from app.api.auth import ClinicoActual, UsuarioActual
 from app.core.database import get_db
 from app.models.interconsulta import Interconsulta
 from app.models.modificacion_prioridad import ModificacionPrioridad
 from app.models.usuario import Usuario
+from app.schemas.explicacion import VERSION_EXPLICACION, EstadoExplicacion
 from app.schemas.interconsulta import (
+    InterconsultaDetalleResponse,
     InterconsultaResponse,
     ModificarEstadoRequest,
     ModificarPrioridadRequest,
@@ -18,13 +24,17 @@ from app.schemas.priorizacion import (
     PriorizarInterconsultasResponse,
     ResultadoPriorizacion,
 )
+from app.services import explicabilidad
 from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
+from app.services.cola_explicaciones import ColaExplicaciones, get_cola
 from app.services.priorizador import (
     PriorizadorRigoBerta,
     aplicar_resultado,
     get_priorizador,
     tiene_informacion_clinica,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/interconsultas",
@@ -79,7 +89,7 @@ def listar_interconsultas(
     return list(db.scalars(stmt).all())
 
 
-@router.get("/{interconsulta_id}", response_model=InterconsultaResponse)
+@router.get("/{interconsulta_id}", response_model=InterconsultaDetalleResponse)
 def obtener_interconsulta(
     interconsulta_id: str,
     db: Session = DbSession,
@@ -95,6 +105,132 @@ def obtener_interconsulta(
             detail="Interconsulta no encontrada",
         )
     return interconsulta
+
+
+def _explicacion_vigente(interconsulta: Interconsulta) -> dict[str, Any] | None:
+    """La explicacion guardada, si todavia corresponde a la sugerencia actual.
+
+    Queda vieja si cambio su formato o si la interconsulta se volvio a
+    priorizar con otro resultado (por ejemplo, tras corregir MODEL_LABELS):
+    explicaria una prioridad que el modelo ya no sugiere.
+    """
+    guardada = interconsulta.explicacion
+    if not isinstance(guardada, dict) or guardada.get("version") != VERSION_EXPLICACION:
+        return None
+    sugerida = interconsulta.prioridad_sugerida_modelo
+    if sugerida is not None and guardada.get("clase") != sugerida:
+        return None
+    return guardada
+
+
+ColaDependency = Depends(get_cola)
+
+
+def _buscar_o_404(db: Session, interconsulta_id: str) -> Interconsulta:
+    interconsulta = db.get(Interconsulta, interconsulta_id)
+    if interconsulta is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interconsulta no encontrada",
+        )
+    return interconsulta
+
+
+def _guardar_explicacion(
+    db: Session, interconsulta_id: str
+) -> Callable[[dict[str, Any]], None]:
+    """Callback para la cola. Abre su propia sesion porque corre en otro hilo,
+    cuando la de esta peticion ya se cerro."""
+    fabrica = sessionmaker(bind=db.get_bind(), autoflush=False)
+
+    def guardar(resultado: dict[str, Any]) -> None:
+        with fabrica() as sesion:
+            interconsulta = sesion.get(Interconsulta, interconsulta_id)
+            if interconsulta is None:
+                return
+            interconsulta.explicacion = resultado
+            sesion.commit()
+
+    return guardar
+
+
+def _estado_explicacion(
+    db: Session, interconsulta_id: str, cola: ColaExplicaciones
+) -> dict[str, Any]:
+    """El orden importa: primero la cola, despues la base. La cola guarda el
+    resultado en la base y recien entonces olvida el trabajo, asi que si ya no
+    lo tiene, la base si. Al reves, un calculo que termina entre las dos
+    lecturas no aparece en ninguna y la pagina deja de preguntar.
+    """
+    trabajo = cola.estado(interconsulta_id)
+    interconsulta = _buscar_o_404(db, interconsulta_id)
+    if trabajo is not None:
+        return trabajo
+    if (vigente := _explicacion_vigente(interconsulta)) is not None:
+        return {"estado": "lista", "resultado": vigente}
+    return {"estado": "sin_explicacion"}
+
+
+@router.post(
+    "/{interconsulta_id}/explicacion",
+    response_model=EstadoExplicacion,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={200: {"description": "La explicacion ya estaba lista"}},
+)
+def explicar_interconsulta(
+    interconsulta_id: str,
+    response: Response,
+    forzar: bool = Query(
+        default=False,
+        description="Recalcula aunque haya una explicacion guardada vigente",
+    ),
+    db: Session = DbSession,
+    priorizador: PriorizadorRigoBerta = PriorizadorDependency,
+    cola: ColaExplicaciones = ColaDependency,
+) -> dict[str, Any]:
+    """Pide la explicacion de por que el modelo sugiere la prioridad que
+    sugiere: cuanto aporto cada campo, con SHAP.
+
+    Tarda minutos, asi que no se calcula aca: se encola, se responde 202 y el
+    avance se consulta con GET. Si ya hay una guardada y vigente, responde 200.
+    """
+    interconsulta = _buscar_o_404(db, interconsulta_id)
+    if not tiene_informacion_clinica(interconsulta):
+        raise HTTPException(
+            status_code=422,
+            detail="La interconsulta no tiene texto clínico que explicar",
+        )
+    if not explicabilidad.modelo_disponible(priorizador):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "La explicación necesita el modelo cargado en el backend. Con "
+                "MODEL_SERVICE_URL las predicciones vienen del servicio externo, "
+                "que todavía no expone explicaciones."
+            ),
+        )
+
+    if _explicacion_vigente(interconsulta) is not None and not forzar:
+        response.status_code = status.HTTP_200_OK
+    else:
+        cola.encolar(
+            interconsulta_id,
+            explicabilidad.valores_de_interconsulta(interconsulta),
+            priorizador,
+            _guardar_explicacion(db, interconsulta_id),
+        )
+    return _estado_explicacion(db, interconsulta_id, cola)
+
+
+@router.get("/{interconsulta_id}/explicacion", response_model=EstadoExplicacion)
+def estado_explicacion(
+    interconsulta_id: str,
+    db: Session = DbSession,
+    cola: ColaExplicaciones = ColaDependency,
+) -> dict[str, Any]:
+    """En que va la explicacion: en cola, calculando (con su avance), lista,
+    con error o inexistente."""
+    return _estado_explicacion(db, interconsulta_id, cola)
 
 
 @router.patch("/{interconsulta_id}/prioridad", response_model=InterconsultaResponse)

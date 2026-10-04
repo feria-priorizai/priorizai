@@ -4,4 +4,5 @@
  */
 
 export * from "./interconsulta";
+export * from "./explicacion";
 export * from "./usuario";

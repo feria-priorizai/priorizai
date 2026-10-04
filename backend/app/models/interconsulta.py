@@ -40,6 +40,9 @@ class Interconsulta(Base):
     prioridad_actual: Mapped[str | None] = mapped_column(String(20), nullable=True)
     entidades: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     entidades_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Explicacion de la sugerencia del modelo (IG + SHAP). Se calcula bajo
+    # demanda y se guarda: recalcularla cuesta minutos.
+    explicacion: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     estado: Mapped[str] = mapped_column(
         String(20),

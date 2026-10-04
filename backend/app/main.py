@@ -465,6 +465,7 @@ COLUMNAS_NUEVAS = {
     "prioridad_forzada_por_regla": "BOOLEAN DEFAULT false NOT NULL",
     "entidades": "JSON",
     "entidades_error": "TEXT",
+    "explicacion": "JSON",
 }
 
 

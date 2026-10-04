@@ -1,3 +1,5 @@
+import type { ExplicacionShap } from "./explicacion";
+
 /**
  * Tipos relacionados con las interconsultas medicas.
  * Representan el flujo de priorizacion automatica y manual (HdU01, HdU02).
@@ -82,4 +84,10 @@ export interface Interconsulta {
 
   entidades?: EntidadesPorCampo | null;
   entidadesError?: string | null;
+
+  /** Motivo tal como llegó, sin el texto de reemplazo de `motivoInterconsulta`:
+   *  las palabras de la explicación se ubican sobre este. */
+  motivoOriginal?: string;
+  /** Solo viene en el detalle; el listado no la trae. */
+  explicacion?: ExplicacionShap | null;
 }

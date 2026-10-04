@@ -14,8 +14,11 @@
  * - Paso a paso: cómo se pasa de la probabilidad con la interconsulta vacía a
  *   la confianza final.
  *
- * Corre en segundo plano (un par de minutos), así que el componente la pide,
- * pregunta cada pocos segundos en qué va y muestra el avance real.
+ * Se calcula sola, apenas el modelo prioriza la interconsulta (al cargar el
+ * archivo), en segundo plano y de a una. El componente pregunta cada pocos
+ * segundos en qué va y muestra el avance real. El botón para pedirla queda
+ * para las que no la tienen: cargadas antes de esto, o con un cálculo que
+ * falló.
  *
  * Las vistas se acomodan al ancho del panel con container queries (@md,
  * @xl), no al de la pantalla: en escritorio el panel comparte la fila con el
@@ -85,6 +88,10 @@ const CAMBIO_PEQUENO = 5;
 /** Fracción de cada mitad del eje que puede ocupar la barra más larga: el
  *  resto queda para que la etiqueta del valor no se salga. */
 const LARGO_MAXIMO_BARRA = 0.78;
+
+/** Minutos que toma una explicación en CPU, para estimar la espera en cola.
+ *  Medido: entre 3 y 4 minutos por interconsulta. */
+const MINUTOS_POR_EXPLICACION = 3.5;
 
 /** Cada cuánto se pregunta por el avance mientras se calcula. */
 const INTERVALO_CONSULTA_MS = 2500;
@@ -495,10 +502,11 @@ function Invitacion({
       <p className="text-[.86rem] leading-relaxed text-[var(--pz-ink-2)]">
         {desactualizada &&
           "La sugerencia del modelo cambió desde el último cálculo. "}
-        Muestra cuánto empujó cada campo de la interconsulta (historia clínica,
-        fundamentos, exámenes, motivo, edad, sexo y especialidades) hacia la
-        prioridad sugerida o en contra de ella. Tarda un par de minutos y corre
-        en segundo plano; después queda guardada.
+        Esta interconsulta todavía no tiene explicación: se cargó antes de que
+        se calcularan solas, o el cálculo no terminó. La explicación muestra
+        cuánto empujó cada campo y cada palabra hacia la prioridad sugerida o
+        en contra. Tarda unos minutos y corre en segundo plano; después queda
+        guardada.
       </p>
       <div>
         <button type="button" onClick={onPedir} className="pz-btn pz-btn--morado">
@@ -531,7 +539,7 @@ function Progreso({
     const delante = estado.delante ?? 0;
     titulo =
       delante > 0
-        ? `En cola · ${delante} ${delante === 1 ? "cálculo" : "cálculos"} antes que este`
+        ? `En cola · ${delante} ${delante === 1 ? "explicación" : "explicaciones"} antes que esta (unos ${Math.max(1, Math.round(delante * MINUTOS_POR_EXPLICACION))} min)`
         : "En cola · empieza en un momento";
   } else if (preparando) {
     titulo = "Preparando el modelo";
@@ -578,7 +586,8 @@ function Progreso({
         </span>
       )}
       <p className="text-[.8rem] text-[var(--pz-ink-3)]">
-        Puedes seguir revisando la interconsulta o salir de la página: el
+        La explicación se empezó a calcular sola al priorizar la
+        interconsulta. Puedes seguir revisándola o salir de la página: el
         cálculo sigue en el servidor y queda guardado.
       </p>
       {errorRed && (

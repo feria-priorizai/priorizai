@@ -154,6 +154,48 @@ def _guardar_explicacion(
     return guardar
 
 
+# Las de prioridad alta se explican primero: son las que el medico revisa antes.
+_ORDEN_EXPLICACION = {"alta": 0, "media": 1, "baja": 2}
+
+
+def encolar_explicaciones(
+    db: Session,
+    interconsultas: list[Interconsulta],
+    priorizador: Any,
+    cola: ColaExplicaciones,
+) -> int:
+    """Encola la explicacion de cada interconsulta recien priorizada, en el
+    mismo momento en que se prioriza: el medico la encuentra lista, o en
+    camino, al abrir el detalle, sin tener que pedirla.
+
+    La prediccion no espera a la explicacion. Priorizar toma segundos y
+    explicar minutos por interconsulta, asi que la explicacion corre despues,
+    en la cola, de a una. Sin el modelo en el proceso (MODEL_SERVICE_URL) no
+    hay como explicar y no se encola nada; la carga sigue igual. Las que ya
+    tienen una explicacion vigente no se recalculan.
+    """
+    if not explicabilidad.modelo_disponible(priorizador):
+        return 0
+    pendientes = [
+        interconsulta
+        for interconsulta in interconsultas
+        if interconsulta.prioridad_sugerida_modelo is not None
+        and tiene_informacion_clinica(interconsulta)
+        and _explicacion_vigente(interconsulta) is None
+    ]
+    pendientes.sort(
+        key=lambda ic: _ORDEN_EXPLICACION.get(ic.prioridad_sugerida_modelo or "", 3)
+    )
+    for interconsulta in pendientes:
+        cola.encolar(
+            interconsulta.id,
+            explicabilidad.valores_de_interconsulta(interconsulta),
+            priorizador,
+            _guardar_explicacion(db, interconsulta.id),
+        )
+    return len(pendientes)
+
+
 def _estado_explicacion(
     db: Session, interconsulta_id: str, cola: ColaExplicaciones
 ) -> dict[str, Any]:
@@ -360,11 +402,13 @@ def priorizar_interconsultas(
     payload: PriorizarInterconsultasRequest,
     db: Session = DbSession,
     priorizador: PriorizadorRigoBerta = PriorizadorDependency,
+    cola: ColaExplicaciones = ColaDependency,
 ) -> PriorizarInterconsultasResponse:
     interconsultas = _buscar_interconsultas(db, payload.ids)
     _validar_interconsultas_para_prediccion(interconsultas)
     resultados = _predecir_o_503(priorizador, interconsultas)
     _guardar_resultados(db, interconsultas, resultados)
+    encolar_explicaciones(db, interconsultas, priorizador, cola)
     return PriorizarInterconsultasResponse(
         total=len(resultados),
         resultados=resultados,
@@ -376,6 +420,7 @@ def priorizar_interconsultas_pendientes(
     limit: int = Query(default=25, ge=1, le=500),
     db: Session = DbSession,
     priorizador: PriorizadorRigoBerta = PriorizadorDependency,
+    cola: ColaExplicaciones = ColaDependency,
 ) -> PriorizarInterconsultasResponse:
     stmt = (
         select(Interconsulta)
@@ -387,6 +432,7 @@ def priorizar_interconsultas_pendientes(
     interconsultas = list(db.scalars(stmt).all())
     resultados = _predecir_o_503(priorizador, interconsultas)
     _guardar_resultados(db, interconsultas, resultados)
+    encolar_explicaciones(db, interconsultas, priorizador, cola)
     return PriorizarInterconsultasResponse(
         total=len(resultados),
         resultados=resultados,

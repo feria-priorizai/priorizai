@@ -292,6 +292,8 @@ export async function subirCsvInterconsultas(
   prioritized: number;
   prioritization_status: string;
   ids: string[];
+  /** Explicaciones encoladas al cargar. 0 sin el modelo en el backend. */
+  explanations_queued?: number;
   rejected: Array<{fila: number; campos_faltantes: string[]; datos_raw: Record<string, unknown>}>;
   rejected_count: number;
 }> {

@@ -83,6 +83,7 @@ export default function Sidebar() {
       );
       const total = resultado.stored ?? resultado.inserted;
       const priorizadas = resultado.prioritized ?? 0;
+      const explicaciones = resultado.explanations_queued ?? 0;
       const rechazadas = resultado.rejected_count ?? 0;
 
       if (rechazadas > 0) {
@@ -101,6 +102,9 @@ export default function Sidebar() {
       let detalle = `${archivo.name}: ${total} guardada${total !== 1 ? "s" : ""}`;
       if (priorizadas > 0) {
         detalle += `, ${priorizadas} priorizada${priorizadas !== 1 ? "s" : ""} con IA`;
+      }
+      if (explicaciones > 0) {
+        detalle += `. Sus explicaciones se calculan en segundo plano, de a una (unos ${Math.round(explicaciones * 3.5)} min)`;
       }
       if (rechazadas > 0) {
         detalle += `, ${rechazadas} incompleta${rechazadas !== 1 ? "s" : ""} no guardada${

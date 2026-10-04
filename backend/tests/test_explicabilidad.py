@@ -22,9 +22,11 @@ from transformers import (
     PreTrainedTokenizerFast,
 )
 
+import app.main as main_module
 from app.main import app
 from app.models.interconsulta import Interconsulta
 from app.schemas.explicacion import VERSION_EXPLICACION, ExplicacionShap
+from app.schemas.priorizacion import ProbabilidadesPrioridad, ResultadoPriorizacion
 from app.services import explicabilidad
 from app.services.cola_explicaciones import ColaExplicaciones, get_cola
 from app.services.explicabilidad import (
@@ -747,3 +749,150 @@ def test_sin_modelo_local_el_endpoint_responde_503(
 
     assert respuesta.status_code == 503
     assert "MODEL_SERVICE_URL" in respuesta.json()["detail"]
+
+
+# ------------------------------------------------- explicacion al priorizar --
+class PriorizadorConModelo:
+    """Prioriza como el modelo local y tiene recursos(): la explicacion se
+    puede encolar. Sugiere la prioridad que diga el motivo de interconsulta."""
+
+    def predecir(self, interconsultas: list[Interconsulta]) -> list[Any]:
+        return [
+            ResultadoPriorizacion(
+                id=ic.id,
+                prioridad=ic.motivo_interconsulta.lower(),
+                confianza=80.0,
+                probabilidades=ProbabilidadesPrioridad(
+                    baja=10.0, media=10.0, alta=80.0
+                ),
+            )
+            for ic in interconsultas
+        ]
+
+    def recursos(self) -> None:  # pragma: no cover - el calculo esta reemplazado
+        return None
+
+
+CSV = (
+    "ESPEC_ORIGEN;EDAD;SEXO;ESPEC_DESTINO;HISTORIA_CLINICA;"
+    "FUNDAMENTOS_DIAGNOSTICO;EXAMENES_COMPLEMENTARIOS;MOTIVO_INTERCONSULTA\n"
+    "MEDICINA GENERAL;40;FEMENINO;DERMATOLOGIA;Psoriasis;Placas;;BAJA\n"
+    "MEDICINA GENERAL;70;MASCULINO;CARDIOLOGIA;Insuficiencia;Disnea;;ALTA\n"
+)
+
+
+@pytest.fixture
+def carga_con_modelo(
+    client: TestClient,
+    session_factory: Any,
+    cola: ColaExplicaciones,
+    monkeypatch: pytest.MonkeyPatch,
+) -> TestClient:
+    monkeypatch.setattr(main_module, "SessionLocal", session_factory)
+    monkeypatch.setattr(main_module, "get_priorizador", PriorizadorConModelo)
+    monkeypatch.setattr(main_module, "get_cola", lambda: cola)
+    monkeypatch.setattr(main_module, "get_extractor_ner", lambda: None)
+    return client
+
+
+def test_al_cargar_se_prioriza_y_se_encola_la_explicacion_alta_primero(
+    carga_con_modelo: TestClient,
+    cola: ColaExplicaciones,
+    explicar_controlado: ExplicarControlado,
+) -> None:
+    respuesta = carga_con_modelo.post(
+        "/upload-csv", files={"file": ("c.csv", CSV, "text/csv")}
+    )
+
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    assert cuerpo["prioritized"] == 2
+    assert cuerpo["explanations_queued"] == 2
+    explicar_controlado.liberar.set()
+    assert cola.esperar(ESPERA)
+    # La de prioridad alta va primero, aunque venga segunda en el archivo.
+    destinos = [v["espec_destino"] for v in explicar_controlado.llamadas]
+    assert destinos == ["CARDIOLOGIA", "DERMATOLOGIA"]
+    for id_ in cuerpo["ids"]:
+        detalle = carga_con_modelo.get(f"/api/interconsultas/{id_}").json()
+        assert detalle["explicacion"]["final"] == 91.5
+
+
+def test_sin_modelo_local_la_carga_no_encola_explicaciones(
+    client: TestClient,
+    session_factory: Any,
+    cola: ColaExplicaciones,
+    priorizador_fake: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    explicar_controlado: ExplicarControlado,
+) -> None:
+    monkeypatch.setattr(main_module, "SessionLocal", session_factory)
+    monkeypatch.setattr(main_module, "get_priorizador", lambda: priorizador_fake)
+    monkeypatch.setattr(main_module, "get_cola", lambda: cola)
+    monkeypatch.setattr(main_module, "get_extractor_ner", lambda: None)
+
+    respuesta = client.post("/upload-csv", files={"file": ("c.csv", CSV, "text/csv")})
+
+    assert respuesta.json()["prioritized"] == 2
+    assert respuesta.json()["explanations_queued"] == 0
+    assert explicar_controlado.llamadas == []
+
+
+def test_un_fallo_al_encolar_no_tumba_la_carga(
+    carga_con_modelo: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def roto() -> ColaExplicaciones:
+        raise RuntimeError("cola rota")
+
+    monkeypatch.setattr(main_module, "get_cola", roto)
+
+    respuesta = carga_con_modelo.post(
+        "/upload-csv", files={"file": ("c.csv", CSV, "text/csv")}
+    )
+
+    assert respuesta.status_code == 200
+    assert respuesta.json()["prioritized"] == 2
+    assert respuesta.json()["explanations_queued"] == 0
+
+
+def test_priorizar_desde_el_endpoint_tambien_encola_la_explicacion(
+    client: TestClient,
+    cola: ColaExplicaciones,
+    guardar_interconsulta: Callable[..., Interconsulta],
+    explicar_controlado: ExplicarControlado,
+) -> None:
+    guardar_interconsulta(id="ic-1", motivo_interconsulta="ALTA")
+    guardar_interconsulta(
+        id="ic-2", motivo_interconsulta="ALTA", explicacion=_shap(clase="alta")
+    )
+    app.dependency_overrides[get_priorizador] = PriorizadorConModelo
+    app.dependency_overrides[get_cola] = lambda: cola
+
+    respuesta = client.post(
+        "/api/interconsultas/priorizar", json={"ids": ["ic-1", "ic-2"]}
+    )
+
+    assert respuesta.status_code == 200
+    explicar_controlado.liberar.set()
+    assert cola.esperar(ESPERA)
+    # ic-2 ya tenia una explicacion vigente para alta: no se recalcula.
+    assert len(explicar_controlado.llamadas) == 1
+    assert client.get(f"{URL}").json()["estado"] == "lista"
+
+
+def test_priorizar_pendientes_encola_sus_explicaciones(
+    client: TestClient,
+    cola: ColaExplicaciones,
+    guardar_interconsulta: Callable[..., Interconsulta],
+    explicar_controlado: ExplicarControlado,
+) -> None:
+    guardar_interconsulta(id="ic-1", motivo_interconsulta="MEDIA")
+    app.dependency_overrides[get_priorizador] = PriorizadorConModelo
+    app.dependency_overrides[get_cola] = lambda: cola
+
+    respuesta = client.post("/api/interconsultas/priorizar-pendientes")
+
+    assert respuesta.status_code == 200
+    explicar_controlado.liberar.set()
+    assert cola.esperar(ESPERA)
+    assert len(explicar_controlado.llamadas) == 1

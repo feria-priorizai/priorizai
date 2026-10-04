@@ -203,11 +203,17 @@ en una interconsulta corta, con grupos de palabras que todavía compartían un
 mismo valor, y lo que sumaban las palabras de cada campo no calzaba con su
 aporte exacto (−10,5 contra −18,8 en una historia clínica).
 
-Explicar una interconsulta toma unos minutos en CPU (unos 2,5 los campos y
-alrededor de uno más las palabras), así que no se hace en la ingesta: se pide
-bajo demanda y corre **en segundo plano**, porque tarda más de lo que aguanta
-cualquier proxy (Next corta a los 10 minutos, Cloudflare a los 100 segundos). El `POST` encola el cálculo y
-responde al tiro; la interfaz consulta el avance con `GET`. El resultado queda
+La explicación **se calcula sola, al mismo tiempo que la priorización**: apenas
+el modelo prioriza una interconsulta (al cargar el archivo, o con
+`/priorizar` y `/priorizar-pendientes`), su explicación entra a una cola, las
+de prioridad alta primero. La carga no la espera: priorizar toma segundos y
+explicar unos minutos por interconsulta en CPU (unos 2,5 los campos y alrededor
+de uno más las palabras), así que corre **en segundo plano**, de a una, y el
+detalle muestra el avance. Un archivo de 12 interconsultas deja la cola
+trabajando unos 40 minutos. La respuesta de `/upload-csv` dice cuántas encoló
+(`explanations_queued`). El botón para pedirla a mano queda para las que no la
+tienen: cargadas antes, o con un cálculo que falló; `POST` encola y `GET`
+consulta el avance. El resultado queda
 guardado en la columna `explicacion` con su versión, clase y fecha, y se
 descarta si la interconsulta se vuelve a priorizar con otro resultado.
 

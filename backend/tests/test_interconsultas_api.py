@@ -447,3 +447,48 @@ def test_admin_puede_modificar_estado_de_cualquier_especialidad(
 
     assert response.status_code == 200
     assert response.json()["estado"] == "revisada"
+
+
+def test_listado_coincide_independiente_de_mayusculas_o_tildes(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """El medico (Cardiologia) debe ver interconsultas con 'CARDIOLOGÍA' o 'Cardiología'."""
+    guardar_interconsulta(id="ic-mayus-tilde", espec_destino="CARDIOLOGÍA")
+
+    response = client.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["id"] == "ic-mayus-tilde"
+
+
+def test_medico_sin_especialidad_no_ve_interconsultas(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """Si un medico no tiene especialidad asignada, no debe ver interconsultas ajenas."""
+    guardar_interconsulta(id="ic-cardio", espec_destino="Cardiologia")
+    from app.api.auth import usuario_actual
+    from app.main import app
+    from app.models.usuario import Usuario
+
+    medico_sin_esp = Usuario(
+        id="usr-sin-esp",
+        alias="sin_esp",
+        nombre="Dr. Sin Especialidad",
+        rol="medico",
+        especialidad=None,
+        password_hash="",
+        debe_cambiar_password=False,
+    )
+    app.dependency_overrides[usuario_actual] = lambda: medico_sin_esp
+    try:
+        response = client.get("/api/interconsultas")
+        assert response.status_code == 200
+        assert len(response.json()) == 0
+    finally:
+        from tests.conftest import USUARIO_DE_PRUEBA
+        app.dependency_overrides[usuario_actual] = lambda: USUARIO_DE_PRUEBA
+

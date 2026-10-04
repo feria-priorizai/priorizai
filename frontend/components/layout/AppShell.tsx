@@ -6,7 +6,9 @@
  * de contenido sobre la retícula de plano que comparte con la landing.
  */
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useSesion } from "@/context/SesionContext";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { ConfiguracionProvider } from "@/context/ConfiguracionContext";
@@ -17,29 +19,45 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
-export default function AppShell({ children }: AppShellProps) {
+/** Componente interno que sí tiene acceso a SesionProvider */
+function AppShellInner({ children }: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { usuario } = useSesion();
+
+  // Guard de ruta: redirigir a /dashboard si un no-admin intenta acceder a /configuracion
+  useEffect(() => {
+    if (pathname === "/configuracion" && usuario?.rol !== "administrador") {
+      router.push("/dashboard");
+    }
+  }, [pathname, usuario?.rol, router]);
 
   if (pathname === "/login") {
     return <>{children}</>;
   }
 
   return (
-    <SesionProvider>
-      <ConfiguracionProvider>
-        <div className="flex h-screen overflow-hidden">
-          <Sidebar />
+    <ConfiguracionProvider>
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar />
 
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <Header />
-            <main className="pz-blueprint custom-scrollbar flex-1 overflow-y-auto p-6">
-              {children}
-            </main>
-          </div>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header />
+          <main className="pz-blueprint custom-scrollbar flex-1 overflow-y-auto p-6">
+            {children}
+          </main>
         </div>
+      </div>
 
-        <ModalErroresCarga />
-      </ConfiguracionProvider>
+      <ModalErroresCarga />
+    </ConfiguracionProvider>
+  );
+}
+
+export default function AppShell({ children }: AppShellProps) {
+  return (
+    <SesionProvider>
+      <AppShellInner>{children}</AppShellInner>
     </SesionProvider>
   );
 }

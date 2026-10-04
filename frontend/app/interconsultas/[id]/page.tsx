@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import type { NivelPrioridad } from "@/types";
 import { useInterconsultaDetalle } from "@/hooks/useInterconsultas";
 import { useSesion } from "@/context/SesionContext";
@@ -35,17 +35,13 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
     cambiarEstado,
     priorizarConIA,
   } = useInterconsultaDetalle(id);
-  const { config, setUsuario } = useConfiguracionExport();
+  const { config } = useConfiguracionExport();
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
   const [formato, setFormato] = useState<FormatoExportacion>("json");
 
-  useEffect(() => {
-    setUsuario({
-      id: usuario.id,
-      nombre: usuario.nombre,
-      rol: usuario.rol === "administrador" ? "admin" : "medico",
-    });
-  }, [setUsuario, usuario]);
+  if (!usuario) {
+    return null; // SesionProvider redirige al login si no hay usuario
+  }
 
   if (cargando) {
     return <EstadoVista tipo="cargando" texto="Cargando interconsulta…" />;

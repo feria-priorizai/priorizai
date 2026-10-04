@@ -48,13 +48,14 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { usuario, cerrarSesion } = useSesion();
   const [cerrandoSesion, setCerrandoSesion] = useState(false);
-  const items = filtrarItemsPorRol(itemsNavegacion, usuario.rol);
   const { camposObligatorios } = useConfiguracionImport();
   const [colapsado, setColapsado] = useState(false);
   const [notificacion, setNotificacion] = useState<Notificacion | null>(null);
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
   const [reevaluando, setReevaluando] = useState(false);
   const inputArchivoRef = useRef<HTMLInputElement | null>(null);
+
+  const items = filtrarItemsPorRol(itemsNavegacion, usuario?.rol ?? "medico");
 
   const esRutaActiva = (ruta: string) => pathname.startsWith(ruta);
 
@@ -167,6 +168,10 @@ export default function Sidebar() {
     setCerrandoSesion(true);
     await cerrarSesion();
   };
+
+  if (!usuario) {
+    return null; // SesionProvider redirige al login si no hay usuario
+  }
 
   const iniciales = usuario.nombre
     .split(" ")

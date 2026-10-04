@@ -54,21 +54,23 @@ FILA_XLSX = [
 CORTA = "MEDICINA GENERAL,46\n"
 
 
-def _subir(client: TestClient, nombre: str, contenido: bytes | str):
-    return client.post("/upload-csv", files={"file": (nombre, contenido, "text/csv")})
+def _subir(client_admin: TestClient, nombre: str, contenido: bytes | str):
+    return client_admin.post(
+        "/upload-csv", files={"file": (nombre, contenido, "text/csv")}
+    )
 
 
-def test_csv_no_codificado_en_utf8_devuelve_400(client: TestClient) -> None:
+def test_csv_no_codificado_en_utf8_devuelve_400(client_admin: TestClient) -> None:
     contenido = (HEADER + FILA).encode("latin-1").replace(b"CANCER", b"CANCI\xd3N")
 
-    response = _subir(client, "latin1.csv", contenido)
+    response = _subir(client_admin, "latin1.csv", contenido)
 
     assert response.status_code == 400
     assert response.json()["detail"] == "El CSV debe estar codificado en UTF-8"
 
 
-def test_csv_vacio_devuelve_400(client: TestClient) -> None:
-    response = _subir(client, "vacio.csv", b"")
+def test_csv_vacio_devuelve_400(client_admin: TestClient) -> None:
+    response = _subir(client_admin, "vacio.csv", b"")
 
     assert response.status_code == 400
     assert response.json()["detail"] == "El CSV no contiene filas"
@@ -86,26 +88,26 @@ def limite_de_campo_csv() -> Iterator[None]:
 
 
 def test_csv_ilegible_devuelve_400(
-    client: TestClient,
+    client_admin: TestClient,
     limite_de_campo_csv: None,
 ) -> None:
     contenido = HEADER + "MEDICINA GENERAL," + "x" * 500 + ",F,CARDIO,ALTA,H,F,,M\n"
 
-    response = _subir(client, "corrupto.csv", contenido)
+    response = _subir(client_admin, "corrupto.csv", contenido)
 
     assert response.status_code == 400
     assert "Error al parsear el CSV" in response.json()["detail"]
 
 
 def test_csv_con_columnas_de_mas_rechaza_solo_esa_fila(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     """Regresion: cualquier fila mal formada devolvia 400 y no entraba
     ninguna, aunque el resto del archivo estuviera bien."""
     contenido = HEADER + FILA + FILA.replace("\n", ",columna extra\n")
 
-    response = _subir(client, "extra.csv", contenido)
+    response = _subir(client_admin, "extra.csv", contenido)
 
     assert response.status_code == 200
     body = response.json()
@@ -115,12 +117,12 @@ def test_csv_con_columnas_de_mas_rechaza_solo_esa_fila(
 
 
 def test_csv_saltea_las_filas_completamente_vacias(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     contenido = HEADER + FILA + "\n" + ",,,,,,,,\n" + FILA
 
-    response = _subir(client, "con_vacias.csv", contenido)
+    response = _subir(client_admin, "con_vacias.csv", contenido)
 
     assert response.status_code == 200
     body = response.json()
@@ -138,22 +140,22 @@ def _xlsx(filas: Sequence[Sequence[object]]) -> bytes:
     return buffer.getvalue()
 
 
-def test_xlsx_ilegible_devuelve_400(client: TestClient) -> None:
-    response = _subir(client, "roto.xlsx", b"esto no es un xlsx")
+def test_xlsx_ilegible_devuelve_400(client_admin: TestClient) -> None:
+    response = _subir(client_admin, "roto.xlsx", b"esto no es un xlsx")
 
     assert response.status_code == 400
     assert "No se pudo leer el XLSX" in response.json()["detail"]
 
 
-def test_xlsx_sin_filas_devuelve_400(client: TestClient) -> None:
-    response = _subir(client, "vacio.xlsx", _xlsx([]))
+def test_xlsx_sin_filas_devuelve_400(client_admin: TestClient) -> None:
+    response = _subir(client_admin, "vacio.xlsx", _xlsx([]))
 
     assert response.status_code == 400
     assert response.json()["detail"] == "El XLSX no contiene filas"
 
 
 def test_xlsx_con_columnas_extra_absorbe_la_columna_sin_nombre(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     encabezados = HEADER.strip().split(",")
@@ -170,14 +172,14 @@ def test_xlsx_con_columnas_extra_absorbe_la_columna_sin_nombre(
         "dato de mas",
     ]
 
-    response = _subir(client, "extra.xlsx", _xlsx([encabezados, fila]))
+    response = _subir(client_admin, "extra.xlsx", _xlsx([encabezados, fila]))
 
     assert response.status_code == 200
     assert response.json()["inserted"] == 1
 
 
 def test_xlsx_acepta_la_edad_como_float(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     encabezados = HEADER.strip().split(",")
@@ -193,14 +195,14 @@ def test_xlsx_acepta_la_edad_como_float(
         "CONTROL",
     ]
 
-    response = _subir(client, "edad_float.xlsx", _xlsx([encabezados, fila]))
+    response = _subir(client_admin, "edad_float.xlsx", _xlsx([encabezados, fila]))
 
     assert response.status_code == 200
     assert response.json()["inserted"] == 1
 
 
 def test_xlsx_saltea_las_filas_vacias(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     encabezados = HEADER.strip().split(",")
@@ -217,7 +219,7 @@ def test_xlsx_saltea_las_filas_vacias(
     ]
 
     response = _subir(
-        client,
+        client_admin,
         "con_vacias.xlsx",
         _xlsx([encabezados, fila, [None] * 9, fila]),
     )
@@ -226,17 +228,17 @@ def test_xlsx_saltea_las_filas_vacias(
     assert response.json()["inserted"] == 2
 
 
-def test_archivo_solo_con_encabezados_devuelve_400(client: TestClient) -> None:
-    response = _subir(client, "solo_header.csv", HEADER)
+def test_archivo_solo_con_encabezados_devuelve_400(client_admin: TestClient) -> None:
+    response = _subir(client_admin, "solo_header.csv", HEADER)
 
     assert response.status_code == 400
     assert response.json()["detail"] == "El archivo no contiene filas de datos"
 
 
-def test_faltan_encabezados_obligatorios_devuelve_400(client: TestClient) -> None:
+def test_faltan_encabezados_obligatorios_devuelve_400(client_admin: TestClient) -> None:
     contenido = "ESPEC_ORIGEN,EDAD,SEXO\nMEDICINA GENERAL,46,FEMENINO\n"
 
-    response = _subir(client, "incompleto.csv", contenido)
+    response = _subir(client_admin, "incompleto.csv", contenido)
 
     assert response.status_code == 400
     detail = response.json()["detail"]
@@ -246,12 +248,12 @@ def test_faltan_encabezados_obligatorios_devuelve_400(client: TestClient) -> Non
 
 
 def test_edad_no_numerica_rechaza_la_fila(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     contenido = HEADER + FILA + FILA.replace(",46,", ",cuarenta y seis,")
 
-    response = _subir(client, "edad_texto.csv", contenido)
+    response = _subir(client_admin, "edad_texto.csv", contenido)
 
     assert response.status_code == 200
     body = response.json()
@@ -262,13 +264,13 @@ def test_edad_no_numerica_rechaza_la_fila(
 
 
 def test_edad_con_espacios_intercalados_se_rechaza(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     """ "4 6" se leia como 46. Es mas probable que sea un error de tipeo."""
     contenido = HEADER + FILA.replace(",46,", ',"4 6",')
 
-    response = _subir(client, "edad_espacios.csv", contenido)
+    response = _subir(client_admin, "edad_espacios.csv", contenido)
 
     assert response.status_code == 200
     body = response.json()
@@ -277,12 +279,12 @@ def test_edad_con_espacios_intercalados_se_rechaza(
 
 
 def test_fila_sin_campo_obligatorio_se_rechaza_con_el_detalle(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     contenido = HEADER + FILA + FILA.replace("CANCER PULMONAR", "")
 
-    response = _subir(client, "sin_historia.csv", contenido)
+    response = _subir(client_admin, "sin_historia.csv", contenido)
 
     assert response.status_code == 200
     body = response.json()
@@ -291,37 +293,37 @@ def test_fila_sin_campo_obligatorio_se_rechaza_con_el_detalle(
 
 
 def test_fecha_emision_del_archivo_se_persiste(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     contenido = HEADER.replace("\n", ",FECHA_EMISION\n") + FILA.replace(
         "\n", ",15/03/2026\n"
     )
 
-    response = _subir(client, "con_fecha.csv", contenido)
+    response = _subir(client_admin, "con_fecha.csv", contenido)
 
     assert response.status_code == 200
     interconsulta_id = response.json()["ids"][0]
 
-    detalle = client.get(f"/api/interconsultas/{interconsulta_id}")
+    detalle = client_admin.get(f"/api/interconsultas/{interconsulta_id}")
     assert detalle.status_code == 200
     assert detalle.json()["fecha_emision"].startswith("2026-03-15")
 
 
 def test_fecha_emision_no_reconocida_no_rompe_la_carga(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     contenido = HEADER.replace("\n", ",FECHA_EMISION\n") + FILA.replace(
         "\n", ",15.03.2026\n"
     )
 
-    response = _subir(client, "fecha_rara.csv", contenido)
+    response = _subir(client_admin, "fecha_rara.csv", contenido)
 
     assert response.status_code == 200
     interconsulta_id = response.json()["ids"][0]
 
-    detalle = client.get(f"/api/interconsultas/{interconsulta_id}")
+    detalle = client_admin.get(f"/api/interconsultas/{interconsulta_id}")
     assert detalle.json()["fecha_emision"] is None
 
 
@@ -345,13 +347,13 @@ class SessionQueFalla:
 
 
 def test_error_de_base_de_datos_hace_rollback_y_devuelve_500(
-    client: TestClient,
+    client_admin: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     session = SessionQueFalla()
     monkeypatch.setattr(main_module, "SessionLocal", lambda: session)
 
-    response = _subir(client, "ok.csv", HEADER + FILA)
+    response = _subir(client_admin, "ok.csv", HEADER + FILA)
 
     assert response.status_code == 500
     assert "Error en la base de datos" in response.json()["detail"]
@@ -360,15 +362,15 @@ def test_error_de_base_de_datos_hace_rollback_y_devuelve_500(
     assert session.cerrada is True
 
 
-def test_extension_no_soportada_devuelve_400(client: TestClient) -> None:
-    response = _subir(client, "datos.txt", HEADER + FILA)
+def test_extension_no_soportada_devuelve_400(client_admin: TestClient) -> None:
+    response = _subir(client_admin, "datos.txt", HEADER + FILA)
 
     assert response.status_code == 400
     assert response.json()["detail"] == "El archivo debe ser CSV o XLSX valido"
 
 
-def test_archivo_sin_nombre_devuelve_400(client: TestClient) -> None:
-    response = client.post("/upload-csv", files={"file": ("", b"contenido")})
+def test_archivo_sin_nombre_devuelve_400(client_admin: TestClient) -> None:
+    response = client_admin.post("/upload-csv", files={"file": ("", b"contenido")})
 
     assert response.status_code in (400, 422)
 
@@ -392,13 +394,13 @@ class SessionQueLanzaHttp:
 
 
 def test_httpexception_durante_la_insercion_hace_rollback_y_se_propaga(
-    client: TestClient,
+    client_admin: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     session = SessionQueLanzaHttp()
     monkeypatch.setattr(main_module, "SessionLocal", lambda: session)
 
-    response = _subir(client, "ok.csv", HEADER + FILA)
+    response = _subir(client_admin, "ok.csv", HEADER + FILA)
 
     assert response.status_code == 409
     assert response.json()["detail"] == "conflicto de insercion"
@@ -407,29 +409,29 @@ def test_httpexception_durante_la_insercion_hace_rollback_y_se_propaga(
 
 
 def test_edad_decimal_no_se_convierte_en_otro_numero(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     """Regresion: "53.0" -lo que exporta cualquier planilla- se guardaba como
     530 anios, y de ahi pasaba al texto que ve el modelo y al export."""
     contenido = HEADER + FILA.replace(",46,", ",53.0,")
 
-    response = _subir(client, "edad_decimal.csv", contenido)
+    response = _subir(client_admin, "edad_decimal.csv", contenido)
 
     assert response.status_code == 200
     assert response.json()["rejected_count"] == 0
 
-    listado = client.get("/api/interconsultas").json()
+    listado = client_admin.get("/api/interconsultas").json()
     assert [interconsulta["edad"] for interconsulta in listado] == [53]
 
 
 def test_edad_fuera_de_rango_se_rechaza_con_su_propio_motivo(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     contenido = HEADER + FILA + FILA.replace(",46,", ",530,")
 
-    response = _subir(client, "edad_imposible.csv", contenido)
+    response = _subir(client_admin, "edad_imposible.csv", contenido)
 
     assert response.status_code == 200
     body = response.json()
@@ -439,30 +441,30 @@ def test_edad_fuera_de_rango_se_rechaza_con_su_propio_motivo(
 
 
 def test_edad_cero_se_acepta(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     """Un recien nacido es una edad valida, no un campo vacio."""
     contenido = HEADER + FILA.replace(",46,", ",0,")
 
-    response = _subir(client, "edad_cero.csv", contenido)
+    response = _subir(client_admin, "edad_cero.csv", contenido)
 
     assert response.status_code == 200
     assert response.json()["rejected_count"] == 0
 
-    listado = client.get("/api/interconsultas").json()
+    listado = client_admin.get("/api/interconsultas").json()
     assert [interconsulta["edad"] for interconsulta in listado] == [0]
 
 
 def test_la_fila_rechazada_conserva_su_numero_de_linea_real(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     """Las filas en blanco se saltean al leer: numerarlas despues corria el
     indice y el modal de errores senalaba una fila distinta a la del archivo."""
     contenido = HEADER + FILA + BLANCO + VACIA + FILA.replace(",46,", ",,")
 
-    response = _subir(client, "con_blancos.csv", contenido)
+    response = _subir(client_admin, "con_blancos.csv", contenido)
 
     assert response.status_code == 200
     body = response.json()
@@ -472,12 +474,12 @@ def test_la_fila_rechazada_conserva_su_numero_de_linea_real(
 
 
 def test_una_fila_con_menos_columnas_se_rechaza_sola(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     contenido = HEADER + FILA + CORTA
 
-    response = _subir(client, "corta.csv", contenido)
+    response = _subir(client_admin, "corta.csv", contenido)
 
     assert response.status_code == 200
     body = response.json()
@@ -507,7 +509,7 @@ class LibroIrregular:
 
 
 def test_xlsx_con_celdas_de_mas_rechaza_solo_esa_fila(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -521,7 +523,7 @@ def test_xlsx_con_celdas_de_mas_rechaza_solo_esa_fila(
         main_module, "load_workbook", lambda *_, **__: LibroIrregular(filas)
     )
 
-    response = client.post(
+    response = client_admin.post(
         "/upload-csv",
         files={
             "file": (
@@ -543,7 +545,7 @@ def test_xlsx_con_celdas_de_mas_rechaza_solo_esa_fila(
 
 
 def test_si_el_modelo_ner_no_carga_la_carga_igual_termina(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -554,10 +556,10 @@ def test_si_el_modelo_ner_no_carga_la_carga_igual_termina(
 
     monkeypatch.setattr(main_module, "get_extractor_ner", explota)
 
-    response = _subir(client, "sin_ner.csv", HEADER + FILA)
+    response = _subir(client_admin, "sin_ner.csv", HEADER + FILA)
 
     assert response.status_code == 200
     assert response.json()["inserted"] == 1
 
-    listado = client.get("/api/interconsultas").json()
+    listado = client_admin.get("/api/interconsultas").json()
     assert "modelo NER" in listado[0]["entidades_error"]

@@ -71,6 +71,14 @@ USUARIO_DE_PRUEBA = Usuario(
     password_hash="",
 )
 
+USUARIO_ADMIN_PRUEBA = Usuario(
+    id="usr-admin-test",
+    alias="admintest",
+    nombre="Admin Test",
+    rol="administrador",
+    password_hash="",
+)
+
 
 @pytest.fixture(scope="session")
 def engine() -> Iterator[Engine]:
@@ -128,6 +136,7 @@ def priorizador_caido() -> PriorizadorCaido:
 def _client_con(
     session_factory: sessionmaker[Session],
     priorizador: object,
+    usuario: Usuario = USUARIO_DE_PRUEBA,
 ) -> Iterator[TestClient]:
     def override_get_db() -> Iterator[Session]:
         sesion = session_factory()
@@ -138,7 +147,7 @@ def _client_con(
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_priorizador] = lambda: priorizador
-    app.dependency_overrides[usuario_actual] = lambda: USUARIO_DE_PRUEBA
+    app.dependency_overrides[usuario_actual] = lambda: usuario
     try:
         yield TestClient(app)
     finally:
@@ -161,6 +170,24 @@ def client_sin_modelo(
     priorizador_caido: PriorizadorCaido,
 ) -> Iterator[TestClient]:
     yield from _client_con(session_factory, priorizador_caido)
+
+
+@pytest.fixture
+def client_admin(
+    _sin_overrides: None,
+    session_factory: sessionmaker[Session],
+    priorizador_fake: PriorizadorFake,
+) -> Iterator[TestClient]:
+    yield from _client_con(session_factory, priorizador_fake, USUARIO_ADMIN_PRUEBA)
+
+
+@pytest.fixture
+def client_admin_sin_modelo(
+    _sin_overrides: None,
+    session_factory: sessionmaker[Session],
+    priorizador_caido: PriorizadorCaido,
+) -> Iterator[TestClient]:
+    yield from _client_con(session_factory, priorizador_caido, USUARIO_ADMIN_PRUEBA)
 
 
 @pytest.fixture

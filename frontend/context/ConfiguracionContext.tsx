@@ -11,8 +11,8 @@ import {
 } from "react";
 import { useSesion } from "@/context/SesionContext";
 import type { ConfiguracionCampos, PerfilConfiguracion, Usuario as UsuarioConfig } from "@/types/campos";
+import type { RolUsuario, Usuario } from "@/types/usuario";
 import { DEFAULT_CONFIG, mergeConfigPerfil, TODOS_LOS_CAMPOS } from "@/types/campos";
-import type { Usuario, RolUsuario } from "@/types/usuario";
 
 const STORAGE_KEY = "priorizai-config-campos";
 
@@ -24,7 +24,6 @@ interface ConfiguracionState {
   actualizarConfigImport: (campos: string[]) => void;
   actualizarConfigExport: (campos: string[]) => void;
   restablecerDefaults: () => void;
-  setUsuario: (usuario: UsuarioConfig | null) => void;
   setPerfil: (perfil: PerfilConfiguracion) => void;
 }
 
@@ -109,14 +108,7 @@ export function ConfiguracionProvider({ children }: { children: ReactNode }) {
 
   // Obtener el usuario real desde SesionContext y adaptarlo
   const { usuario: usuarioSesion } = useSesion();
-  const [usuario, setUsuario] = useState<UsuarioConfig | null>(() =>
-    adaptarUsuario(usuarioSesion),
-  );
-
-  // Sincronizar con cambios en la sesión
-  useEffect(() => {
-    setUsuario(adaptarUsuario(usuarioSesion));
-  }, [usuarioSesion]);
+  const usuario = adaptarUsuario(usuarioSesion);
 
   useEffect(() => {
     if (leido) {
@@ -155,7 +147,6 @@ export function ConfiguracionProvider({ children }: { children: ReactNode }) {
         actualizarConfigImport,
         actualizarConfigExport,
         restablecerDefaults,
-        setUsuario,
         setPerfil,
       }}
     >

@@ -13,6 +13,10 @@ export default function CuentaPage() {
   const { usuario } = useSesion();
   const [cambiada, setCambiada] = useState(false);
 
+  if (!usuario) {
+    return null; // SesionProvider redirige al login si no hay usuario
+  }
+
   return (
     <div className="row g-4">
       <div className="col-12 col-lg-5">

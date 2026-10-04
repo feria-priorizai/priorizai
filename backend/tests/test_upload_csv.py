@@ -282,10 +282,10 @@ def test_upload_file_empty_edad_returns_error(
     assert len(session_dummy.executed) == 1
 
 
-def test_upload_csv_medico_puede_subir(client: TestClient) -> None:
-    """Un usuario con rol medico ahora PUEDE subir CSV: endpoint permite medico y admin."""
-    # El fixture `client` usa la base de datos real con un usuario medico logueado
-    # (ver conftest.py y test_auth.py: fixture `usuario` crea un medico)
+def test_upload_csv_medico_puede_subir(
+    client: TestClient, session_dummy: DummySession
+) -> None:
+    """Un usuario con rol medico puede subir CSV: el endpoint admite medico y admin."""
     csv_content = (
         HEADER
         + "MEDICINA GENERAL,46,FEMENINO,RESPIRATORIO ADULTO,ALTA,"

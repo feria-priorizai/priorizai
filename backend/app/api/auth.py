@@ -91,8 +91,7 @@ ClinicoActual = Depends(clinico_actual)
 
 def _quitar_tildes(texto: str) -> str:
     return "".join(
-        c for c in unicodedata.normalize("NFKD", texto)
-        if not unicodedata.combining(c)
+        c for c in unicodedata.normalize("NFKD", texto) if not unicodedata.combining(c)
     )
 
 

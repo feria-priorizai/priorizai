@@ -490,5 +490,5 @@ def test_medico_sin_especialidad_no_ve_interconsultas(
         assert len(response.json()) == 0
     finally:
         from tests.conftest import USUARIO_DE_PRUEBA
-        app.dependency_overrides[usuario_actual] = lambda: USUARIO_DE_PRUEBA
 
+        app.dependency_overrides[usuario_actual] = lambda: USUARIO_DE_PRUEBA

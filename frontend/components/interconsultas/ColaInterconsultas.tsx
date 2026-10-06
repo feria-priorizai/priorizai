@@ -27,6 +27,9 @@ interface ColaInterconsultasProps {
   formatoDescarga?: FormatoDescarga;
   onCambiarFormatoDescarga?: (formato: FormatoDescarga) => void;
   mostrarBotonDescargaMultiple?: boolean;
+  /** Mensaje personalizado cuando la lista está vacía.
+   *  Si no se proporciona, usa el genérico "No se encontraron interconsultas". */
+  mensajeVacio?: string;
 }
 
 const GRUPOS: { clave: ClaveGrupo; titulo: string }[] = [
@@ -62,6 +65,7 @@ export default function ColaInterconsultas({
   formatoDescarga = "csv",
   onCambiarFormatoDescarga,
   mostrarBotonDescargaMultiple = true,
+  mensajeVacio,
 }: ColaInterconsultasProps) {
   const router = useRouter();
   const idBase = useId();
@@ -162,7 +166,9 @@ export default function ColaInterconsultas({
 
       {porGrupo.length === 0 ? (
         <div className="px-5 py-12 text-center">
-          <span className="pz-label">No se encontraron interconsultas</span>
+          <span className="pz-label">
+            {mensajeVacio ?? "No se encontraron interconsultas"}
+          </span>
         </div>
       ) : (
         porGrupo.map((grupo) => (

@@ -14,10 +14,13 @@ import {
 } from "@/services/interconsultas";
 import { useConfiguracionImport } from "@/hooks/useConfiguracionCampos";
 
+type RolUsuario = "medico" | "administrador";
+
 interface ItemNavegacion {
   nombre: string;
   ruta: string;
   icono: "dashboard" | "interconsultas" | "configuracion" | "usuarios";
+  roles: RolUsuario[]; // Roles que pueden ver este item
 }
 
 interface Notificacion {
@@ -26,32 +29,33 @@ interface Notificacion {
   detalle: string;
 }
 
+/**
+ * Matriz de visibilidad de items de navegación por rol.
+ * Cada item define explícitamente qué roles pueden verlo.
+ */
 const itemsNavegacion: ItemNavegacion[] = [
-  { nombre: "Dashboard", ruta: "/dashboard", icono: "dashboard" },
-  { nombre: "Interconsultas", ruta: "/interconsultas", icono: "interconsultas" },
-  { nombre: "Configuración", ruta: "/configuracion", icono: "configuracion" },
+  { nombre: "Dashboard", ruta: "/dashboard", icono: "dashboard", roles: ["medico", "administrador"] },
+  { nombre: "Interconsultas", ruta: "/interconsultas", icono: "interconsultas", roles: ["medico", "administrador"] },
+  { nombre: "Configuración", ruta: "/configuracion", icono: "configuracion", roles: ["administrador"] },
+  { nombre: "Usuarios", ruta: "/usuarios", icono: "usuarios", roles: ["administrador"] },
 ];
 
-const itemUsuarios: ItemNavegacion = {
-  nombre: "Usuarios",
-  ruta: "/usuarios",
-  icono: "usuarios",
-};
+function filtrarItemsPorRol(items: ItemNavegacion[], rol: RolUsuario): ItemNavegacion[] {
+  return items.filter((item) => item.roles.includes(rol));
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { usuario, cerrarSesion } = useSesion();
   const [cerrandoSesion, setCerrandoSesion] = useState(false);
-  const items =
-    usuario.rol === "administrador"
-      ? [...itemsNavegacion, itemUsuarios]
-      : itemsNavegacion;
   const { camposObligatorios } = useConfiguracionImport();
   const [colapsado, setColapsado] = useState(false);
   const [notificacion, setNotificacion] = useState<Notificacion | null>(null);
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
   const [reevaluando, setReevaluando] = useState(false);
   const inputArchivoRef = useRef<HTMLInputElement | null>(null);
+
+  const items = filtrarItemsPorRol(itemsNavegacion, usuario?.rol ?? "medico");
 
   const esRutaActiva = (ruta: string) => pathname.startsWith(ruta);
 
@@ -164,6 +168,10 @@ export default function Sidebar() {
     setCerrandoSesion(true);
     await cerrarSesion();
   };
+
+  if (!usuario) {
+    return null; // SesionProvider redirige al login si no hay usuario
+  }
 
   const iniciales = usuario.nombre
     .split(" ")

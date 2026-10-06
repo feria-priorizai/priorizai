@@ -8,7 +8,7 @@ import { DEFAULT_CONFIG, mergeConfigPerfil } from "@/types/campos";
  * con filtrado automático por perfil de usuario.
  */
 export function useConfiguracionCampos() {
-  const { config, usuario, puedeEditar, actualizarConfigImport, actualizarConfigExport, restablecerDefaults, setPerfil, setUsuario } = useConfiguracion();
+  const { config, usuario, puedeEditar, actualizarConfigImport, actualizarConfigExport, restablecerDefaults, setPerfil } = useConfiguracion();
 
   const perfilActual = usuario?.rol ?? "medico";
   const configEfectiva = mergeConfigPerfil(config ?? DEFAULT_CONFIG, perfilActual);
@@ -23,7 +23,6 @@ export function useConfiguracionCampos() {
     actualizarConfigExport,
     restablecerDefaults,
     setPerfil,
-    setUsuario,
   };
 }
 
@@ -60,7 +59,7 @@ export function useConfiguracionImport() {
  * Hook específico para configuración de export
  */
 export function useConfiguracionExport() {
-  const { config, actualizarConfigExport, puedeEditar, setUsuario, usuario, ...resto } = useConfiguracionCampos();
+  const { config, actualizarConfigExport, puedeEditar, usuario, ...resto } = useConfiguracionCampos();
 
   const toggleCampo = (clave: string) => {
     const nuevos = config.camposExport.includes(clave)
@@ -80,7 +79,6 @@ export function useConfiguracionExport() {
     toggleCampo,
     setExportables,
     puedeEditar,
-    setUsuario,
     usuario,
     ...resto,
   };

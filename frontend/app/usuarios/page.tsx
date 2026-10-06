@@ -47,7 +47,7 @@ interface Aviso {
 export default function UsuariosPage() {
   const { usuario } = useSesion();
 
-  if (usuario.rol !== "administrador") {
+  if (!usuario || usuario.rol !== "administrador") {
     return (
       <EstadoVista
         tipo="error"

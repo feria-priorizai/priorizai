@@ -15,20 +15,20 @@ from app.models.interconsulta import Interconsulta
 FIXTURE = Path(__file__).parent / "fixtures" / "interconsultas_banderas_rojas.csv"
 
 
-def _subir_fixture(client: TestClient):
+def _subir_fixture(client_admin: TestClient):
     with FIXTURE.open("rb") as archivo:
-        return client.post(
+        return client_admin.post(
             "/upload-csv",
             files={"file": ("interconsultas.csv", archivo, "text/csv")},
         )
 
 
 def test_upload_csv_aplica_banderas_rojas_sin_modelo_disponible(
-    client: TestClient,
+    client_admin: TestClient,
     db: Session,
     ingesta_sin_modelo: object,
 ) -> None:
-    response = _subir_fixture(client)
+    response = _subir_fixture(client_admin)
 
     assert response.status_code == 200
     body = response.json()
@@ -79,7 +79,7 @@ def test_upload_csv_aplica_banderas_rojas_sin_modelo_disponible(
 
 
 def test_upload_acepta_archivo_sin_columna_prioridad(
-    client: TestClient,
+    client_admin: TestClient,
     db: Session,
     ingesta_sin_modelo: object,
 ) -> None:
@@ -90,7 +90,7 @@ def test_upload_acepta_archivo_sin_columna_prioridad(
         "Paciente con dolor toracico de inicio subito,Cuadro agudo,,Evaluacion\n"
     )
 
-    response = client.post(
+    response = client_admin.post(
         "/upload-csv",
         files={"file": ("sin_prioridad.csv", csv_sin_prioridad, "text/csv")},
     )
@@ -106,11 +106,11 @@ def test_upload_acepta_archivo_sin_columna_prioridad(
 
 
 def test_upload_guarda_la_etiqueta_historica_cuando_viene(
-    client: TestClient,
+    client_admin: TestClient,
     db: Session,
     ingesta_sin_modelo: object,
 ) -> None:
-    response = _subir_fixture(client)
+    response = _subir_fixture(client_admin)
 
     assert response.status_code == 200
 
@@ -123,11 +123,11 @@ def test_upload_guarda_la_etiqueta_historica_cuando_viene(
 
 
 def test_reevaluar_banderas_no_pisa_decision_medica_previa(
-    client: TestClient,
+    client_admin: TestClient,
     db: Session,
     ingesta_sin_modelo: object,
 ) -> None:
-    _subir_fixture(client)
+    _subir_fixture(client_admin)
 
     afirmado = db.scalar(
         select(Interconsulta).where(
@@ -138,7 +138,7 @@ def test_reevaluar_banderas_no_pisa_decision_medica_previa(
     assert afirmado is not None
     interconsulta_id = afirmado.id
 
-    respuesta_modificacion = client.patch(
+    respuesta_modificacion = client_admin.patch(
         f"/api/interconsultas/{interconsulta_id}/prioridad",
         json={
             "prioridad": "media",
@@ -147,7 +147,7 @@ def test_reevaluar_banderas_no_pisa_decision_medica_previa(
     )
     assert respuesta_modificacion.status_code == 200
 
-    respuesta_reevaluar = client.post("/api/interconsultas/reevaluar-banderas")
+    respuesta_reevaluar = client_admin.post("/api/interconsultas/reevaluar-banderas")
     assert respuesta_reevaluar.status_code == 200
 
     db.rollback()

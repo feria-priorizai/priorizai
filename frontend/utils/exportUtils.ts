@@ -5,20 +5,9 @@ import * as XLSX from "xlsx";
 import type { ConfiguracionCampos } from "@/types/campos";
 import { getCampoPorClave } from "@/types/campos";
 
-/**
- * Utilidades de exportación dinámicas basadas en configuración.
- * Reemplazan las funciones hardcodeadas en page.tsx
- */
-
-// Mapeo de claves de config a propiedades de Interconsulta (incluye campos computados)
 const MAPEO_CAMPOS: Record<string, (ic: Interconsulta) => string | number | undefined> = {
-  // Datos base
   ID: ic => ic.id,
   PACIENTE_ID: ic => ic.pacienteId,
-  // PACIENTE_NOMBRE y PACIENTE_RUT se retiraron: el backend no guarda datos de
-  // paciente y el frontend los inventaba ("Paciente 3f2a1b8c", "XX.XXX.XXX-X").
-  // Exportarlos sacaba identidad ficticia de la app en un archivo descargable.
-  // No estaban en TODOS_LOS_CAMPOS, asi que ninguna configuracion los usaba.
   PACIENTE_EDAD: ic => ic.pacienteEdad,
   ESPECIALIDAD: ic => ic.especialidad,
   CENTRO_ORIGEN: ic => ic.centroOrigen,
@@ -30,7 +19,6 @@ const MAPEO_CAMPOS: Record<string, (ic: Interconsulta) => string | number | unde
   FECHA_INGRESO: ic => ic.fechaIngreso,
   FECHA_ACTUALIZACION: ic => ic.fechaActualizacion,
 
-  // IA / Priorización
   NIVEL_SUGERIDO_IA: ic => ic.priorizacionIA?.nivelSugerido,
   CONFIANZA_IA: ic => ic.priorizacionIA?.confianza,
   PROB_BAJA: ic => ic.priorizacionIA?.probabilidades?.baja,
@@ -39,7 +27,6 @@ const MAPEO_CAMPOS: Record<string, (ic: Interconsulta) => string | number | unde
   JUSTIFICACION_IA: ic => ic.priorizacionIA?.justificacion,
   PRIORIZADA_IA: ic => (ic.priorizacionIA?.priorizada === undefined ? undefined : String(ic.priorizacionIA?.priorizada)),
 
-  // Campos crudos del backend (sin alias)
   EDAD: ic => ic.edad ?? ic.pacienteEdad,
   SEXO: ic => ic.sexo,
   ESPEC_ORIGEN: ic => ic.especOrigen,
@@ -64,7 +51,6 @@ export function prepararDatosParaExport(
     if (mapper) {
       resultado[clave] = mapper(interconsulta);
     } else {
-      // Fallback: intentar acceder directamente a la propiedad (solo si existe en el tipo)
       resultado[clave] = (interconsulta as unknown as Record<string, unknown>)[clave] as string | number | undefined;
     }
   }
@@ -96,7 +82,6 @@ export function generarDatosCSV(
       valor = (interconsulta as unknown as Record<string, unknown>)[clave] as string | number | undefined;
     }
 
-    // Convertir a string y escapar comillas
     const valorStr = valor === undefined || valor === null ? "" : String(valor);
     fila.push(valorStr);
   }
@@ -238,7 +223,6 @@ export function descargarCSVMultiple(
 ) {
   if (interconsultas.length === 0) return;
 
-  // Headers basados en la primera interconsulta
   const { headers } = generarDatosCSV(interconsultas[0], config);
   const filas: string[][] = interconsultas.map((ic) => generarDatosCSV(ic, config).fila);
   const contenido = componerCSV(headers, filas);

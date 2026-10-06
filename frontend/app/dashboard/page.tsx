@@ -9,9 +9,10 @@ import { useInterconsultas } from "@/hooks/useInterconsultas";
 import ResumenEstadisticas from "@/components/dashboard/ResumenEstadisticas";
 import ColaInterconsultas from "@/components/interconsultas/ColaInterconsultas";
 import EstadoVista from "@/components/ui/EstadoVista";
-import { usuarioActual } from "@/data/sesion";
+import { useSesion } from "@/context/SesionContext";
 
 export default function DashboardPage() {
+  const { usuario } = useSesion();
   const { interconsultas, cargando, error, totalInterconsultas } =
     useInterconsultas();
 
@@ -35,7 +36,7 @@ export default function DashboardPage() {
           Bienvenido a tus interconsultas
         </h2>
         <p className="mb-0" style={{ fontSize: "var(--fs-md)", color: "var(--pz-ink-2)" }}>
-          {usuarioActual.nombre.split(" ").slice(0, 2).join(" ")}, hoy tienes{" "}
+          {usuario.nombre.split(" ").slice(0, 2).join(" ")}, hoy tienes{" "}
           <strong style={{ color: "var(--pz-ink)" }}>
             {pendientes} {pendientes === 1 ? "interconsulta" : "interconsultas"}
           </strong>{" "}
@@ -48,7 +49,6 @@ export default function DashboardPage() {
         total={totalInterconsultas}
       />
 
-      {/* La descarga multiple vive en el listado, no en el panel. */}
       <ColaInterconsultas
         interconsultas={interconsultas}
         titulo="Interconsultas recientes"

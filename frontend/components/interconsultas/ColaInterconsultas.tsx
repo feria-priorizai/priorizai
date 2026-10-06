@@ -17,7 +17,6 @@ interface ColaInterconsultasProps {
   interconsultas: Interconsulta[];
   titulo?: string;
   subtitulo?: string;
-  /** HU13: modo de descarga múltiple con selección por fila. */
   modoDescargaMultiple?: boolean;
   seleccionadas?: Set<string>;
   onCambiarSeleccion?: (ids: Set<string>) => void;

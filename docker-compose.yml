@@ -20,10 +20,12 @@ services:
       DATABASE_USER: ${POSTGRES_USER}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
-      # Entorno de desarrollo: habilita las credenciales de ejemplo.
       DEBUG: ${DEBUG:-true}
-      # Con URL, el backend llama al servicio de modelos por HTTP y no carga
-      # torch. Vacio (por defecto) = los modelos corren en este proceso.
+      ADMIN_ALIAS: ${ADMIN_ALIAS:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NOMBRE: ${ADMIN_NOMBRE:-Administrador}
+      ADMIN_CORREO: ${ADMIN_CORREO:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       MODEL_SERVICE_URL: ${MODEL_SERVICE_URL:-}
       MODEL_SERVICE_TIMEOUT: ${MODEL_SERVICE_TIMEOUT:-300}
       MODEL_SERVICE_API_KEY: ${MODEL_SERVICE_API_KEY:-}
@@ -42,7 +44,7 @@ services:
         - /app/node_modules
         - /app/.next
       environment:
-        NEXT_PUBLIC_API_URL: http://localhost:8000
+        API_URL: http://backend:8000
         WATCHPACK_POLLING: "true"
       depends_on:
         - backend

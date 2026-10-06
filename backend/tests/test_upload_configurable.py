@@ -35,11 +35,6 @@ def _subir(client: TestClient, contenido: str, campos: str | None = None):
     )
 
 
-# --------------------------------------------------------------------------
-# _resolver_obligatorias
-# --------------------------------------------------------------------------
-
-
 def test_sin_configuracion_se_usan_los_de_fabrica() -> None:
     assert _resolver_obligatorias(None) == COLUMNAS_OBLIGATORIAS_POR_FILA
 
@@ -75,11 +70,6 @@ def test_se_normalizan_minusculas_y_espacios() -> None:
         "ESPEC_ORIGEN",
         "EDAD",
     ]
-
-
-# --------------------------------------------------------------------------
-# Efecto sobre la carga
-# --------------------------------------------------------------------------
 
 
 def test_sin_configuracion_la_fila_sin_motivo_se_rechaza(

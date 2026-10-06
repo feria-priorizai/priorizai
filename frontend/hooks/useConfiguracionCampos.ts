@@ -10,19 +10,15 @@ import { DEFAULT_CONFIG, mergeConfigPerfil } from "@/types/campos";
 export function useConfiguracionCampos() {
   const { config, usuario, puedeEditar, actualizarConfigImport, actualizarConfigExport, restablecerDefaults, setPerfil, setUsuario } = useConfiguracion();
 
-  // Configuración efectiva según perfil del usuario
   const perfilActual = usuario?.rol ?? "medico";
-  // Fallback a DEFAULT_CONFIG si mergeConfigPerfil falla por alguna razón
   const configEfectiva = mergeConfigPerfil(config ?? DEFAULT_CONFIG, perfilActual);
 
   return {
-    // Estado
     config: configEfectiva,
     usuario,
     puedeEditar,
     perfilActual,
 
-    // Acciones
     actualizarConfigImport,
     actualizarConfigExport,
     restablecerDefaults,
@@ -79,7 +75,7 @@ export function useConfiguracionExport() {
   };
 
   return {
-    config, // configEfectiva con camposExport garantizado
+    config,
     camposExport: config.camposExport,
     toggleCampo,
     setExportables,

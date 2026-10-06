@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import type { NivelPrioridad } from "@/types";
 import { useInterconsultaDetalle } from "@/hooks/useInterconsultas";
-import { usuarioActual } from "@/data/sesion";
+import { useSesion } from "@/context/SesionContext";
 import PanelDecision from "@/components/interconsultas/PanelDecision";
 import DetalleInterconsulta from "@/components/interconsultas/DetalleInterconsulta";
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
@@ -26,6 +26,7 @@ type FormatoExportacion = "json" | "csv" | "xlsx";
  */
 export default function InterconsultaDetallePage({ params }: PageProps) {
   const { id } = use(params);
+  const { usuario } = useSesion();
   const {
     interconsulta,
     cargando,
@@ -40,11 +41,11 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
 
   useEffect(() => {
     setUsuario({
-      id: usuarioActual.id,
-      nombre: usuarioActual.nombre,
-      rol: "medico",
+      id: usuario.id,
+      nombre: usuario.nombre,
+      rol: usuario.rol === "administrador" ? "admin" : "medico",
     });
-  }, [setUsuario]);
+  }, [setUsuario, usuario]);
 
   if (cargando) {
     return <EstadoVista tipo="cargando" texto="Cargando interconsulta…" />;
@@ -88,7 +89,7 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
       <div className="col-12 col-lg-5 col-xl-4">
         <PanelDecision
           interconsulta={interconsulta}
-          medicoResponsable={usuarioActual.nombre}
+          medicoResponsable={usuario.nombre}
           actualizandoEstado={actualizandoEstado}
           formato={formato}
           onCambiarFormato={setFormato}

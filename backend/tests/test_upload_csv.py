@@ -270,7 +270,6 @@ def test_upload_file_empty_edad_returns_error(
         files={"file": ("test.csv", csv_content, "text/csv")},
     )
 
-    # Las filas validas se guardan; las incompletas se rechazan (no se guardan).
     assert response.status_code == 200
     body = response.json()
     assert body["inserted"] == 1
@@ -278,4 +277,4 @@ def test_upload_file_empty_edad_returns_error(
     assert body["rejected_count"] == 1
     assert body["rejected"][0]["fila"] == 3
     assert body["rejected"][0]["campos_faltantes"] == ["EDAD"]
-    assert len(session_dummy.executed) == 1  # Solo se inserto la fila valida
+    assert len(session_dummy.executed) == 1

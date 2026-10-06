@@ -27,11 +27,12 @@ npm run dev
 
 | Variable | Valor por defecto | Descripción |
 | --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Base de la API que consumen los servicios de `services/` |
+| `API_URL` | `http://localhost:8000` | Backend al que el servidor de Next reenvía `/api/*` y `/upload-csv` |
 
-El backend autoriza orígenes mediante `CORS_ORIGINS`, que por defecto solo
-incluye `http://localhost:3000`. Al abrir la aplicación por `127.0.0.1:3000` las
-peticiones se rechazan por CORS aunque el servidor responda.
+El navegador solo habla con el servidor de Next, que hace de proxy hacia el
+backend (`next.config.ts`). Por eso los servicios usan rutas relativas y la
+cookie de sesión es del mismo origen que la página. `API_URL` se lee al
+arrancar el servidor (`npm run dev` o `npm run start`), no desde el navegador.
 
 ## Comandos
 
@@ -48,16 +49,17 @@ No hay tests todavia: falta instalar un runner y cubrir la logica de
 
 | Carpeta | Contenido |
 | --- | --- |
-| `app/` | Rutas del App Router (`dashboard`, `interconsultas`, `interconsultas/[id]`, `configuracion`) y el sistema de diseño en `globals.css` |
+| `app/` | Rutas del App Router (`login`, `dashboard`, `interconsultas`, `interconsultas/[id]`, `configuracion`, `usuarios`, `cuenta`) y el sistema de diseño en `globals.css` |
+| `components/auth/` | Cambio de contraseña, incluida la pantalla obligatoria del primer ingreso |
 | `components/layout/` | Contenedor de la aplicación, barra lateral y encabezado |
 | `components/interconsultas/` | Cola agrupada, detalle, panel de decisión, resumen clínico y entidades |
 | `components/configuracion/` | Matriz de campos de importación y exportación, y aviso de filas rechazadas |
 | `components/dashboard/`, `components/ui/` | Indicadores del resumen y piezas compartidas |
-| `services/` | Llamadas a la API y mapeo de las respuestas al modelo del front |
-| `hooks/`, `context/` | Estado del listado y de la configuración de campos |
+| `services/` | Llamadas a la API (`api.ts` centraliza el fetch y el manejo del 401), sesión y mapeo de las respuestas al modelo del front |
+| `hooks/`, `context/` | Estado del listado, de la sesión (`SesionContext`) y de la configuración de campos |
 | `types/` | Tipos compartidos del dominio |
 | `utils/` | Formato de fechas y exportación a los distintos formatos |
-| `data/` | Sesión del usuario, provisional hasta que exista autenticación |
+| `data/` | Datos fijos de la instalación, como el nombre del establecimiento |
 
 ## Sistema de diseño
 

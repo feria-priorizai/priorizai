@@ -26,7 +26,6 @@ FILA = (
 )
 
 
-# Una linea en blanco y una fila de solo comas: las dos se saltean al leer.
 BLANCO = "\n"
 VACIA = ",,,,,,,,\n"
 ENCABEZADOS_XLSX = [
@@ -52,17 +51,11 @@ FILA_XLSX = [
     "CONTROL DE ESPECIALIDAD",
 ]
 
-# Fila con menos columnas que el encabezado.
 CORTA = "MEDICINA GENERAL,46\n"
 
 
 def _subir(client: TestClient, nombre: str, contenido: bytes | str):
     return client.post("/upload-csv", files={"file": (nombre, contenido, "text/csv")})
-
-
-# --------------------------------------------------------------------------
-# CSV: formato del archivo
-# --------------------------------------------------------------------------
 
 
 def test_csv_no_codificado_en_utf8_devuelve_400(client: TestClient) -> None:
@@ -135,11 +128,6 @@ def test_csv_saltea_las_filas_completamente_vacias(
     assert body["rejected_count"] == 0
 
 
-# --------------------------------------------------------------------------
-# XLSX: formato del archivo
-# --------------------------------------------------------------------------
-
-
 def _xlsx(filas: Sequence[Sequence[object]]) -> bytes:
     workbook = Workbook()
     hoja = workbook.active
@@ -168,10 +156,6 @@ def test_xlsx_con_columnas_extra_absorbe_la_columna_sin_nombre(
     client: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
-    # openpyxl rellena TODAS las filas hasta el ancho de la hoja, encabezado
-    # incluido. Por eso `len(header)` nunca es menor que `len(row)` y el guard de
-    # "columnas extra con datos" (`main.py:172-177`) no se alcanza por esta via:
-    # la columna de mas entra como un encabezado vacio y su dato se descarta.
     encabezados = HEADER.strip().split(",")
     fila = [
         "MEDICINA GENERAL",
@@ -196,7 +180,6 @@ def test_xlsx_acepta_la_edad_como_float(
     client: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
-    # openpyxl entrega los enteros como float; 46.0 debe guardarse como 46.
     encabezados = HEADER.strip().split(",")
     fila = [
         "MEDICINA GENERAL",
@@ -241,11 +224,6 @@ def test_xlsx_saltea_las_filas_vacias(
 
     assert response.status_code == 200
     assert response.json()["inserted"] == 2
-
-
-# --------------------------------------------------------------------------
-# Validacion de contenido
-# --------------------------------------------------------------------------
 
 
 def test_archivo_solo_con_encabezados_devuelve_400(client: TestClient) -> None:
@@ -312,11 +290,6 @@ def test_fila_sin_campo_obligatorio_se_rechaza_con_el_detalle(
     assert body["rejected"][0]["campos_faltantes"] == ["HISTORIA_CLINICA"]
 
 
-# --------------------------------------------------------------------------
-# Fecha de emision (HU3-c1)
-# --------------------------------------------------------------------------
-
-
 def test_fecha_emision_del_archivo_se_persiste(
     client: TestClient,
     ingesta_con_modelo: object,
@@ -350,11 +323,6 @@ def test_fecha_emision_no_reconocida_no_rompe_la_carga(
 
     detalle = client.get(f"/api/interconsultas/{interconsulta_id}")
     assert detalle.json()["fecha_emision"] is None
-
-
-# --------------------------------------------------------------------------
-# Fallo de base de datos
-# --------------------------------------------------------------------------
 
 
 class SessionQueFalla:
@@ -427,8 +395,6 @@ def test_httpexception_durante_la_insercion_hace_rollback_y_se_propaga(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # La HTTPException no se convierte en 500: se re-lanza tal cual, pero la
-    # transaccion igual se revierte antes.
     session = SessionQueLanzaHttp()
     monkeypatch.setattr(main_module, "SessionLocal", lambda: session)
 
@@ -502,7 +468,6 @@ def test_la_fila_rechazada_conserva_su_numero_de_linea_real(
     body = response.json()
     assert body["inserted"] == 1
     assert body["rejected_count"] == 1
-    # linea 1 encabezado, 2 valida, 3 y 4 en blanco, 5 la incompleta
     assert body["rejected"][0]["fila"] == 5
 
 

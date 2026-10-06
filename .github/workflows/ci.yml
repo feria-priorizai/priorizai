@@ -12,8 +12,6 @@ on:
 jobs:
   backend-quality:
     runs-on: ubuntu-latest
-    # Sin servicio de base: los tests usan SQLite en memoria y, desde que el
-    # I/O de arranque vive en el lifespan, importar la app ya no abre conexion.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

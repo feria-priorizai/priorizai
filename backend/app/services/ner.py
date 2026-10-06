@@ -18,8 +18,6 @@ if TYPE_CHECKING:
     from app.models.interconsulta import Interconsulta
 
 
-# Campos de la interconsulta sobre los que se corre el modelo, en el orden en
-# que se muestran en la interfaz.
 CAMPOS_CLINICOS = (
     "historia_clinica",
     "fundamentos_diagnostico",
@@ -27,8 +25,6 @@ CAMPOS_CLINICOS = (
     "motivo_interconsulta",
 )
 
-# El modelo predice cuatro clases. Symptom queda fuera por defecto: su F1 es
-# 0.51 contra 0.73-0.88 de las demas sobre interconsultas reales.
 NOMBRES = {
     "Disease": "Enfermedad",
     "Medication": "Farmaco",
@@ -140,15 +136,11 @@ class ExtractorEntidades:
         )
 
         ruta = self.config.path
-        # add_prefix_space solo lo aceptan los tokenizers BPE tipo RoBERTa.
         try:
             tokenizer = AutoTokenizer.from_pretrained(ruta, add_prefix_space=True)
         except (TypeError, ValueError):
             tokenizer = AutoTokenizer.from_pretrained(ruta)
 
-        # `max_length` era configuracion muerta: el pipeline de
-        # token-classification no acepta `truncation` ni `max_length` como
-        # argumentos, hay que dejarselo dicho al tokenizador.
         tokenizer.model_max_length = self.config.max_length
 
         modelo = AutoModelForTokenClassification.from_pretrained(ruta)

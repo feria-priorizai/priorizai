@@ -6,9 +6,10 @@ from app.services.banderas_rojas import nombres_de_terminos
 
 
 class ModificarPrioridadRequest(BaseModel):
+    """El medico responsable no viene aca: lo pone el backend desde la sesion."""
+
     prioridad: str
     motivo: str
-    medico_responsable: str
 
 
 class ModificarEstadoRequest(BaseModel):

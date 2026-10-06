@@ -1,13 +1,11 @@
 import unicodedata
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import false, func, or_
 from sqlalchemy.orm import Session
 
 from app.core import auditoria
 from app.core.config import settings
 from app.core.database import get_db
-from app.models.interconsulta import Interconsulta
 from app.models.usuario import Usuario
 from app.schemas.auth import CambiarPasswordRequest, LoginRequest, UsuarioResponse
 from app.services.auth import (
@@ -111,9 +109,6 @@ def _variantes_especialidad(especialidad: str) -> set[str]:
             # SQLite LOWER() solo convierte caracteres ASCII:
             variantes.add("".join(c.lower() if c.isascii() else c for c in variante))
     return variantes
-
-
-from app.services.especialidades import filtrar_por_especialidad_si_medico as _filtrar_por_especialidad_si_medico
 
 
 def _error_bloqueo(error: UsuarioBloqueadoError) -> HTTPException:

@@ -2,9 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.auth import UsuarioActual, ClinicoActual
-from app.services.auth import ROL_MEDICO
-from app.services.especialidades import filtrar_por_especialidad_si_medico as _filtrar_por_especialidad_si_medico
+from app.api.auth import ClinicoActual, UsuarioActual
 from app.core.database import get_db
 from app.models.interconsulta import Interconsulta
 from app.models.modificacion_prioridad import ModificacionPrioridad
@@ -20,7 +18,11 @@ from app.schemas.priorizacion import (
     PriorizarInterconsultasResponse,
     ResultadoPriorizacion,
 )
+from app.services.auth import ROL_MEDICO
 from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
+from app.services.especialidades import (
+    filtrar_por_especialidad_si_medico as _filtrar_por_especialidad_si_medico,
+)
 from app.services.priorizador import (
     PriorizadorRigoBerta,
     aplicar_resultado,

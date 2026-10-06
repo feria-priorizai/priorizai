@@ -1,24 +1,22 @@
-'''Specialty filtering utilities for interconsultas.'''
+"""Specialty filtering utilities for interconsultas."""
 
 from __future__ import annotations
 
 import unicodedata
-from typing import Set
 
-from sqlalchemy import func, or_, false
+from sqlalchemy import false, func, or_
 from sqlalchemy.sql import Select
 
 from app.models.interconsulta import Interconsulta
 from app.models.usuario import Usuario
 from app.services.auth import (
     ESPECIALIDADES,
-    ROL_ADMINISTRADOR,
     ROL_MEDICO,
 )
 
 # Mapping from catalog specialty to possible "espec_destino" values in the dataset.
 # Extend this mapping as new mismatches are discovered.
-DESTINOS_POR_ESPECIALIDAD: dict[str, Set[str]] = {
+DESTINOS_POR_ESPECIALIDAD: dict[str, set[str]] = {
     "Broncopulmonar": {"RESPIRATORIO ADULTO", "BRONCOPULMONAR"},
     "Ginecología y Obstetricia": {"GINECOLOGIA"},
     "Cirugía General": {"CIRUGIA DIGESTIVA"},
@@ -27,10 +25,12 @@ DESTINOS_POR_ESPECIALIDAD: dict[str, Set[str]] = {
 
 def _quitar_tildes(texto: str) -> str:
     """Remove diacritic marks from a string using Unicode NFKD normalization."""
-    return "".join(c for c in unicodedata.normalize("NFKD", texto) if not unicodedata.combining(c))
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", texto) if not unicodedata.combining(c)
+    )
 
 
-def _variantes_especialidad(especialidad: str) -> Set[str]:
+def _variantes_especialidad(especialidad: str) -> set[str]:
     """Generate case‑, accent‑ and ASCII‑insensitive variants for a specialty.
 
     Includes the raw value, the version without tildes, and any catalog entry
@@ -43,7 +43,7 @@ def _variantes_especialidad(especialidad: str) -> Set[str]:
         if _quitar_tildes(esp).strip().lower() == sin_tilde.strip().lower():
             formas.add(esp.strip())
             formas.add(_quitar_tildes(esp).strip())
-    variantes: Set[str] = set()
+    variantes: set[str] = set()
     for f in formas:
         for variante in (f.lower(), f.upper(), f.capitalize()):
             variantes.add(variante)
@@ -52,7 +52,7 @@ def _variantes_especialidad(especialidad: str) -> Set[str]:
     return variantes
 
 
-def _destinos_equivalentes(especialidad: str) -> Set[str]:
+def _destinos_equivalentes(especialidad: str) -> set[str]:
     """Return additional destination strings that map to the given specialty.
 
     Looks up ``DESTINOS_POR_ESPECIALIDAD`` and expands each destination with its
@@ -96,17 +96,26 @@ def filtrar_por_especialidad_si_medico(query: Select, usuario: Usuario) -> Selec
     # Non‑doctor (admin) – no filtering.
     return query
 
+
 # Helper to remove common accent characters in SQL expressions (SQLite lacks built‑in unaccent).
 def _unaccent_sql(expr):
     """Return a SQL expression with accented characters replaced by their non‑accented equivalents.
     This is a simple chain of REPLACE calls covering the characters used in the dataset.
     """
     replacements = [
-        ("á", "a"), ("é", "e"), ("í", "i"), ("ó", "o"), ("ú", "u"),
-        ("Á", "a"), ("É", "e"), ("Í", "i"), ("Ó", "o"), ("Ú", "u"),
-        ("ñ", "n"), ("Ñ", "n"),
+        ("á", "a"),
+        ("é", "e"),
+        ("í", "i"),
+        ("ó", "o"),
+        ("ú", "u"),
+        ("Á", "a"),
+        ("É", "e"),
+        ("Í", "i"),
+        ("Ó", "o"),
+        ("Ú", "u"),
+        ("ñ", "n"),
+        ("Ñ", "n"),
     ]
     for acc, plain in replacements:
         expr = func.replace(expr, acc, plain)
     return expr
-

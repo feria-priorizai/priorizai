@@ -113,34 +113,7 @@ def _variantes_especialidad(especialidad: str) -> set[str]:
     return variantes
 
 
-def _filtrar_por_especialidad_si_medico(query, usuario: Usuario):
-    """Aplica filtro por especialidad si el usuario es medico.
-
-    Los administradores ven todas las interconsultas; los medicos solo
-    las de su especialidad (espec_destino). Soporta coincidencia parcial
-    (substring), mayusculas, minusculas y presencia o ausencia de tildes.
-
-    Ejemplos:
-    - Especialidad "Cardiología" coincide con "Cardiología", "Cardiología adulto",
-      "Cardiología infantil", "Cardiología - consulta externa"
-    - Especialidad "Pediatría" coincide con "Pediatría", "Pediatría general"
-    """
-    if usuario.rol == ROL_MEDICO:
-        if not usuario.especialidad:
-            return query.where(false())
-        variantes = _variantes_especialidad(usuario.especialidad)
-        # Las variantes ya incluyen todas las combinaciones de mayusculas/minusculas
-        # y con/sin tildes. Usamos LIKE directamente sobre la columna (sin func.lower)
-        # para evitar problemas con LOWER() de SQLite que no convierte caracteres no-ASCII.
-        condiciones = []
-        for v in variantes:
-            # Escapar caracteres especiales de LIKE (% _)
-            patron = v.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-            condiciones.append(
-                func.trim(Interconsulta.espec_destino).like(f"%{patron}%", escape="\\")
-            )
-        return query.where(or_(*condiciones))
-    return query
+from app.services.especialidades import filtrar_por_especialidad_si_medico as _filtrar_por_especialidad_si_medico
 
 
 def _error_bloqueo(error: UsuarioBloqueadoError) -> HTTPException:

@@ -2,11 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.auth import (
-    ClinicoActual,
-    UsuarioActual,
-    _filtrar_por_especialidad_si_medico,
-)
+from app.api.auth import UsuarioActual, ClinicoActual
+from app.services.auth import ROL_MEDICO
+from app.services.especialidades import filtrar_por_especialidad_si_medico as _filtrar_por_especialidad_si_medico
 from app.core.database import get_db
 from app.models.interconsulta import Interconsulta
 from app.models.modificacion_prioridad import ModificacionPrioridad
@@ -245,8 +243,23 @@ def priorizar_interconsultas(
     payload: PriorizarInterconsultasRequest,
     db: Session = DbSession,
     priorizador: PriorizadorRigoBerta = PriorizadorDependency,
+    usuario: Usuario = UsuarioActual,
 ) -> PriorizarInterconsultasResponse:
+    # Retrieve requested interconsultas
     interconsultas = _buscar_interconsultas(db, payload.ids)
+    # Apply specialty filter for doctors
+    if usuario.rol == ROL_MEDICO:
+        # Build a query to find allowed IDs
+        stmt = select(Interconsulta.id).where(Interconsulta.id.in_(payload.ids))
+        stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
+        allowed_ids = {row for row in db.scalars(stmt)}
+        # Verify all requested interconsultas are allowed
+        disallowed = [ic.id for ic in interconsultas if ic.id not in allowed_ids]
+        if disallowed:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"interconsultas_no_permitidas": disallowed},
+            )
     _validar_interconsultas_para_prediccion(interconsultas)
     resultados = _predecir_o_503(priorizador, interconsultas)
     _guardar_resultados(db, interconsultas, resultados)

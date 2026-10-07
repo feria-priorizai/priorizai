@@ -483,6 +483,69 @@ h1, h2, h3, h4, h5 {
   box-shadow: var(--shadow-lg);
 }
 
+/* Resumen de carga de archivo. */
+.pz-cifras-carga {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .6rem;
+  margin: 0;
+}
+.pz-cifras-carga__item {
+  padding: .8rem 1rem;
+  background: var(--pz-paper-2);
+  border-radius: var(--radius-sm);
+  border-top: 3px solid var(--pz-line-2);
+}
+.pz-cifras-carga__item--verde { border-top-color: var(--pz-green-ink); }
+.pz-cifras-carga__item--alta  { border-top-color: var(--pz-alta); background: var(--pz-alta-bg); }
+.pz-cifras-carga__n {
+  font-family: var(--pz-display);
+  font-variation-settings: "wdth" 88;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--pz-ink);
+  margin: .35rem 0 0;
+}
+.pz-aviso-carga {
+  margin: 0;
+  padding: .7rem .9rem;
+  font-size: var(--fs-sm);
+  color: var(--pz-ink-2);
+  background: var(--pz-media-bg);
+  border-left: 3px solid var(--pz-media);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.pz-fila-problema {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  padding: .65rem .9rem;
+  font-size: var(--fs-sm);
+  background: var(--pz-paper-2);
+  border-left: 3px solid var(--pz-alta);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.pz-fila-problema__cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem; }
+@media (max-width: 575.98px) {
+  .pz-cifras-carga { gap: .4rem; }
+  .pz-cifras-carga__item { padding: .55rem .6rem; }
+  .pz-cifras-carga__item .pz-label { font-size: .62rem; letter-spacing: .05em; }
+  .pz-cifras-carga__n { font-size: 1.5rem; }
+}
+
+/* Aviso del sidebar cuando el menú está contraído: flota a su derecha. */
+.pz-aviso-flotante {
+  position: fixed;
+  left: 5.75rem;
+  bottom: 1rem;
+  width: min(20rem, calc(100vw - 7rem));
+  z-index: 40;
+  background: var(--pz-night-2);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+}
+
 /* ---------- Tablas ---------- */
 .pz-table { --bs-table-bg: transparent; margin-bottom: 0; }
 .pz-table > thead th {

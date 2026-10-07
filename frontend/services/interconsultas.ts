@@ -8,7 +8,25 @@ import { apiFetch, obtenerMensajeError } from "@/services/api";
 
 export const EVENTO_INTERCONSULTAS_ACTUALIZADAS =
   "priorizai:interconsultas-actualizadas";
-export const EVENTO_ERRORES_CARGA = "priorizai:errores-carga";
+/** Resumen de una carga de archivo; lo muestra ModalResultadoCarga. */
+export const EVENTO_RESULTADO_CARGA = "priorizai:resultado-carga";
+
+/** Fila del archivo que no se guardó. `campos_faltantes` trae nombres de
+ *  columna o, si el problema fue otro, el motivo en texto. */
+export interface FilaRechazada {
+  fila: number;
+  campos_faltantes: string[];
+  datos_raw: Record<string, unknown>;
+}
+
+export type ResultadoCarga =
+  | {
+      archivo: string;
+      guardadas: number;
+      priorizadas: number;
+      rechazadas: FilaRechazada[];
+    }
+  | { archivo: string; error: string };
 
 type PrioridadApi = string | null | undefined;
 
@@ -244,7 +262,7 @@ export async function subirCsvInterconsultas(
   prioritized: number;
   prioritization_status: string;
   ids: string[];
-  rejected: Array<{fila: number; campos_faltantes: string[]; datos_raw: Record<string, unknown>}>;
+  rejected: FilaRechazada[];
   rejected_count: number;
 }> {
   const formData = new FormData();

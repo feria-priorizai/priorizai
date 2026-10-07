@@ -13,7 +13,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { ConfiguracionProvider } from "@/context/ConfiguracionContext";
 import { SesionProvider } from "@/context/SesionContext";
-import { ModalErroresCarga } from "@/components/configuracion/ModalErroresCarga";
+import { ModalResultadoCarga } from "@/components/interconsultas/ModalResultadoCarga";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -49,7 +49,7 @@ function AppShellInner({ children }: AppShellProps) {
         </div>
       </div>
 
-      <ModalErroresCarga />
+      <ModalResultadoCarga />
     </ConfiguracionProvider>
   );
 }

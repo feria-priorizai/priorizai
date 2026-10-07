@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * Panel principal (HdU05): bienvenida, riel de cifras y lista de espera
- * ordenada por el backend según prioridad y fecha de emisión.
+ * Panel principal (HdU05): riel de cifras y lista de espera ordenada por el
+ * backend según prioridad y fecha de emisión. Sin bienvenida: empujaba la
+ * lista hacia abajo sin aportar nada que el riel no diga.
  */
 
 import { useInterconsultas } from "@/hooks/useInterconsultas";
@@ -10,11 +11,13 @@ import ResumenEstadisticas from "@/components/dashboard/ResumenEstadisticas";
 import ColaInterconsultas from "@/components/interconsultas/ColaInterconsultas";
 import EstadoVista from "@/components/ui/EstadoVista";
 import { useSesion } from "@/context/SesionContext";
+import { useVistaLista } from "@/hooks/useVistaLista";
 
 export default function DashboardPage() {
   const { usuario } = useSesion();
   const { interconsultas, cargando, error, totalInterconsultas } =
     useInterconsultas();
+  const [vista, setVista] = useVistaLista();
 
   if (!usuario) {
     return null; // SesionProvider redirige al login si no hay usuario
@@ -28,26 +31,9 @@ export default function DashboardPage() {
     return <EstadoVista tipo="error" texto={error} />;
   }
 
-  const pendientes = interconsultas.filter((ic) => ic.estado === "pendiente").length;
-
   return (
-    <div className="flex flex-col gap-7">
-      <header>
-        <h2
-          className="mb-2"
-          style={{ fontSize: "var(--fs-xl)", letterSpacing: "-.03em" }}
-        >
-          Bienvenido a tus interconsultas
-        </h2>
-        <p className="mb-0" style={{ fontSize: "var(--fs-md)", color: "var(--pz-ink-2)" }}>
-          {usuario.nombre.split(" ").slice(0, 2).join(" ")}, hoy tienes{" "}
-          <strong style={{ color: "var(--pz-ink)" }}>
-            {pendientes} {pendientes === 1 ? "interconsulta" : "interconsultas"}
-          </strong>{" "}
-          {pendientes === 1 ? "pendiente" : "pendientes"} de revisión.
-        </p>
-      </header>
-
+    // gap-[…] y no gap-5: Bootstrap define .gap-5 (3rem) con !important y gana.
+    <div className="flex flex-col gap-[1.25rem]">
       <ResumenEstadisticas
         interconsultas={interconsultas}
         total={totalInterconsultas}
@@ -58,6 +44,8 @@ export default function DashboardPage() {
         titulo="Interconsultas recientes"
         subtitulo="Agrupadas por prioridad"
         mostrarBotonDescargaMultiple={false}
+        vista={vista}
+        onCambiarVista={setVista}
       />
     </div>
   );

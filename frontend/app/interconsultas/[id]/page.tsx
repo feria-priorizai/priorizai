@@ -9,6 +9,7 @@ import DetalleInterconsulta from "@/components/interconsultas/DetalleInterconsul
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
 import TablaEntidades from "@/components/interconsultas/TablaEntidades";
+import NavegacionInterconsultas from "@/components/interconsultas/NavegacionInterconsultas";
 import EstadoVista from "@/components/ui/EstadoVista";
 import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
 import { exportarInterconsulta } from "@/utils/exportUtils";
@@ -82,6 +83,10 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
 
   return (
     <div className="row g-4">
+      <div className="col-12">
+        <NavegacionInterconsultas id={interconsulta.id} />
+      </div>
+
       <div className="col-12 col-lg-5 col-xl-4">
         <PanelDecision
           interconsulta={interconsulta}

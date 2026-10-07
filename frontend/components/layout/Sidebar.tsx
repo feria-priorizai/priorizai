@@ -7,10 +7,11 @@ import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "r
 import { useSesion } from "@/context/SesionContext";
 import { ETIQUETAS_ROL } from "@/types/usuario";
 import {
-  EVENTO_ERRORES_CARGA,
   EVENTO_INTERCONSULTAS_ACTUALIZADAS,
+  EVENTO_RESULTADO_CARGA,
   reevaluarBanderasRojas,
   subirCsvInterconsultas,
+  type ResultadoCarga,
 } from "@/services/interconsultas";
 import { useConfiguracionImport } from "@/hooks/useConfiguracionCampos";
 
@@ -49,7 +50,11 @@ export default function Sidebar() {
   const { usuario, cerrarSesion } = useSesion();
   const [cerrandoSesion, setCerrandoSesion] = useState(false);
   const { camposObligatorios } = useConfiguracionImport();
-  const [colapsado, setColapsado] = useState(false);
+  // En pantallas angostas el menú abierto se comía casi todo el ancho: parte
+  // contraído. Se monta solo con sesión confirmada, así que window existe.
+  const [colapsado, setColapsado] = useState(
+    () => window.matchMedia("(max-width: 991.98px)").matches,
+  );
   const [notificacion, setNotificacion] = useState<Notificacion | null>(null);
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
   const [reevaluando, setReevaluando] = useState(false);
@@ -69,62 +74,47 @@ export default function Sidebar() {
 
     const nombreArchivo = archivo.name.toLowerCase();
     if (!nombreArchivo.endsWith(".csv") && !nombreArchivo.endsWith(".xlsx")) {
-      setNotificacion({
-        tipo: "error",
-        titulo: "Archivo no valido",
-        detalle: "Sube un archivo CSV o XLSX.",
-      });
+      const resultado: ResultadoCarga = {
+        archivo: archivo.name,
+        error: "El archivo debe ser CSV o XLSX.",
+      };
+      window.dispatchEvent(
+        new CustomEvent(EVENTO_RESULTADO_CARGA, { detail: resultado }),
+      );
       return;
     }
 
     setSubiendoArchivo(true);
     setNotificacion(null);
 
+    let resultado: ResultadoCarga;
     try {
-      const resultado = await subirCsvInterconsultas(
+      const respuesta = await subirCsvInterconsultas(
         archivo,
         camposObligatorios,
       );
-      const total = resultado.stored ?? resultado.inserted;
-      const priorizadas = resultado.prioritized ?? 0;
-      const rechazadas = resultado.rejected_count ?? 0;
-
-      if (rechazadas > 0) {
-        window.dispatchEvent(
-          new CustomEvent(EVENTO_ERRORES_CARGA, {
-            detail: {
-              rejected: resultado.rejected,
-              rejected_count: rechazadas,
-            },
-          }),
-        );
-      }
-
+      resultado = {
+        archivo: archivo.name,
+        guardadas: respuesta.stored ?? respuesta.inserted,
+        priorizadas: respuesta.prioritized ?? 0,
+        rechazadas: respuesta.rejected ?? [],
+      };
       window.dispatchEvent(new Event(EVENTO_INTERCONSULTAS_ACTUALIZADAS));
-
-      let detalle = `${archivo.name}: ${total} guardada${total !== 1 ? "s" : ""}`;
-      if (priorizadas > 0) {
-        detalle += `, ${priorizadas} priorizada${priorizadas !== 1 ? "s" : ""} con IA`;
-      }
-      if (rechazadas > 0) {
-        detalle += `, ${rechazadas} incompleta${rechazadas !== 1 ? "s" : ""} no guardada${
-          rechazadas !== 1 ? "s" : ""
-        }`;
-      }
-
-      setNotificacion({ tipo: "success", titulo: "Carga completada", detalle });
     } catch (error) {
-      setNotificacion({
-        tipo: "error",
-        titulo: "No se pudo cargar",
-        detalle:
+      resultado = {
+        archivo: archivo.name,
+        error:
           error instanceof Error
             ? error.message
             : "Revisa el archivo e intenta nuevamente.",
-      });
+      };
     } finally {
       setSubiendoArchivo(false);
     }
+
+    window.dispatchEvent(
+      new CustomEvent(EVENTO_RESULTADO_CARGA, { detail: resultado }),
+    );
   };
 
   const manejarReevaluarBanderas = async () => {
@@ -288,8 +278,9 @@ export default function Sidebar() {
 
       <div className="flex-1" />
 
-      {notificacion && !colapsado && (
-        <div className="px-3 pb-3">
+      {/* Con el menú contraído el aviso flota junto a él en vez de desaparecer. */}
+      {notificacion && (
+        <div className={colapsado ? "pz-aviso-flotante" : "px-3 pb-3"}>
           <div
             role="status"
             aria-live="polite"

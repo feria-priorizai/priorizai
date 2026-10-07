@@ -1047,12 +1047,7 @@ h1, h2, h3, h4, h5 {
 .pz-seg--vistas {
   width: 100%;
   max-width: 28rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-@container (max-width: 26rem) {
-  .pz-seg--vistas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pz-seg--vistas .pz-seg__op:nth-child(3) { border-left: 0; }
-  .pz-seg--vistas .pz-seg__op:nth-child(n+3) { border-top: 2px solid var(--pz-line); }
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .pz-seg--vistas .pz-seg__op { padding: .6rem .35rem; letter-spacing: .04em; }
 .pz-seg--vistas .pz-seg__op.is-on { background: var(--pz-purple-ink); }

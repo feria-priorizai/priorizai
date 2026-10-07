@@ -191,8 +191,6 @@ El médico elige cómo verla, y su elección queda recordada en el navegador:
 - **Palabras.** El texto de la interconsulta con las palabras que más pesaron
   resaltadas, y una lista con las que más empujaron a favor y en contra.
 - **Por campo.** Barras a la derecha (suma) o a la izquierda (resta).
-- **Paso a paso.** Cómo se pasa de la probabilidad con la interconsulta vacía
-  a la final, campo a campo.
 
 El peso de una palabra es **cuánto cambia la probabilidad si se borra solo
 esa palabra**, con el resto de la interconsulta igual. Por eso las palabras de

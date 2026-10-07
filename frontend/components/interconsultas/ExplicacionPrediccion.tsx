@@ -4,15 +4,13 @@
  * Por qué el modelo sugiere la prioridad que sugiere: cuánto empujó cada campo
  * de la interconsulta hacia esa prioridad o en contra, calculado con SHAP.
  *
- * El mismo cálculo se puede ver de cuatro formas, y cada médico elige la suya
+ * El mismo cálculo se puede ver de tres formas, y cada médico elige la suya
  * (queda recordada en su navegador):
  * - Resumen: en palabras, qué empujó a favor y qué en contra, y cuánto.
  * - Palabras: el texto de la interconsulta con las palabras que más pesaron
  *   resaltadas. El peso de una palabra es lo que cambia la probabilidad si se
  *   borra solo esa palabra.
  * - Por campo: barras a la derecha (suma) o a la izquierda (resta).
- * - Paso a paso: cómo se pasa de la probabilidad con la interconsulta vacía a
- *   la confianza final.
  *
  * Se calcula sola, apenas el modelo prioriza la interconsulta (al cargar el
  * archivo), en segundo plano y de a una. El componente pregunta cada pocos
@@ -63,13 +61,12 @@ const ETIQUETAS: Record<CampoModelo, string> = {
   motivo_interconsulta: "Motivo de interconsulta",
 };
 
-type Vista = "resumen" | "palabras" | "campos" | "recorrido";
+type Vista = "resumen" | "palabras" | "campos";
 
 const VISTAS: { id: Vista; etiqueta: string }[] = [
   { id: "resumen", etiqueta: "Resumen" },
   { id: "palabras", etiqueta: "Palabras" },
   { id: "campos", etiqueta: "Por campo" },
-  { id: "recorrido", etiqueta: "Paso a paso" },
 ];
 
 const CLAVE_VISTA = "priorizai:explicacion-vista";
@@ -133,10 +130,6 @@ function mayuscula(clase: NivelPrioridad): string {
 function fuerza(aporte: number) {
   const valor = Math.abs(aporte);
   return FUERZAS.find((f) => valor >= f.desde) ?? FUERZAS[FUERZAS.length - 1];
-}
-
-function limitar(valor: number): number {
-  return Math.min(100, Math.max(0, valor));
 }
 
 /** Por qué un campo no aporta, o null si aporta. */
@@ -351,9 +344,6 @@ export default function ExplicacionPrediccion({
                 {vista === "campos" && (
                   <AportesPorCampo shap={vigente} clase={vigente.clase} />
                 )}
-                {vista === "recorrido" && (
-                  <Recorrido shap={vigente} clase={vigente.clase} />
-                )}
               </div>
               <PieCalculo resultado={vigente} onRecalcular={() => pedir(true)} />
             </>
@@ -455,8 +445,8 @@ function SelectorVista({
         })}
       </div>
       <span className="text-[.76rem] text-[var(--pz-ink-3)]">
-        Resumen, Por campo y Paso a paso muestran el mismo cálculo; Palabras
-        mira dentro de cada campo.
+        Resumen y Por campo muestran el mismo cálculo; Palabras mira dentro
+        de cada campo.
       </span>
     </div>
   );
@@ -600,7 +590,7 @@ function Progreso({
 }
 
 /** Los campos que no aportaron y por qué. Las barras ya lo muestran en su
- *  fila; el resumen y el recorrido lo dicen al pie. */
+ *  fila; el resumen lo dice al pie. */
 function SinEfecto({ campos }: { campos: AporteCampo[] }) {
   const sinEfecto = campos.filter(sinAporte);
   if (sinEfecto.length === 0) return null;
@@ -933,186 +923,6 @@ function Leyenda({ color, texto }: { color: string; texto: string }) {
       />
       <span className="pz-label">{texto}</span>
     </span>
-  );
-}
-
-/* ------------------------------------------------------------- recorrido -- */
-
-/** Columnas del recorrido: campo, eje de 0 a 100% y valor. En angosto el
- *  campo va en su propia línea, sobre el eje y el valor. */
-const COLUMNAS_RECORRIDO =
-  "grid-cols-[minmax(0,1fr)_3.6rem] @md:grid-cols-[minmax(7.5rem,11rem)_minmax(0,1fr)_3.6rem]";
-
-/** Cada paso del recorrido: dónde estaba la probabilidad y dónde queda al
- *  sumar el aporte del campo. */
-function pasosDelRecorrido(shap: ExplicacionShap) {
-  const pasos: { fila: AporteCampo; desde: number; hasta: number }[] = [];
-  for (const fila of porMagnitud(shap.campos)) {
-    const desde = pasos.length ? pasos[pasos.length - 1].hasta : shap.base;
-    pasos.push({ fila, desde, hasta: desde + fila.aporte });
-  }
-  return pasos;
-}
-
-function Recorrido({
-  shap,
-  clase,
-}: {
-  shap: ExplicacionShap;
-  clase: NivelPrioridad;
-}) {
-  const pasos = pasosDelRecorrido(shap);
-  const ultimo = pasos.length ? pasos[pasos.length - 1].hasta : shap.base;
-
-  return (
-    <div className="flex flex-col gap-3 px-[1.4rem] pt-4 pb-4">
-      <p className="text-[.9rem] leading-relaxed text-[var(--pz-ink)]">
-        Cómo se llega de <strong>{porcentaje(shap.base)}</strong> a{" "}
-        <strong>{porcentaje(shap.final)}</strong>: se parte de lo que el modelo
-        le daría a {mayuscula(clase)} con todos los campos vacíos, y cada campo
-        suma o resta lo que aportó.
-      </p>
-
-      <div className="flex flex-col" aria-hidden="true">
-        <FilaRecorrido
-          etiqueta="Interconsulta vacía"
-          detalle="punto de partida"
-          desde={0}
-          hasta={shap.base}
-          color="color-mix(in srgb, var(--pz-ink-3) 40%, transparent)"
-          valor={porcentaje(shap.base)}
-        />
-        {pasos.map(({ fila, desde, hasta }) => (
-          <FilaRecorrido
-            key={fila.campo}
-            etiqueta={ETIQUETAS[fila.campo]}
-            desde={Math.min(desde, hasta)}
-            hasta={Math.max(desde, hasta)}
-            color={fila.aporte > 0 ? "var(--pz-favor)" : "var(--pz-contra)"}
-            valor={conSigno(fila.aporte)}
-            enlace={desde}
-          />
-        ))}
-        <FilaRecorrido
-          etiqueta="Esta interconsulta"
-          detalle="confianza del modelo"
-          desde={0}
-          hasta={shap.final}
-          color="var(--pz-ink-2)"
-          valor={porcentaje(shap.final)}
-          enlace={ultimo}
-          destacada
-        />
-        <div className={`grid ${COLUMNAS_RECORRIDO} gap-3 pt-1`}>
-          <span className="hidden @md:block" />
-          <div className="flex justify-between">
-            <span className="pz-label">0%</span>
-            <span className="pz-label">50%</span>
-            <span className="pz-label">100%</span>
-          </div>
-          <span />
-        </div>
-      </div>
-
-      <table className="sr-only">
-        <caption>
-          Recorrido de la probabilidad de {clase}: parte en{" "}
-          {porcentaje(shap.base)} con la interconsulta vacía y termina en{" "}
-          {porcentaje(shap.final)}.
-        </caption>
-        <tbody>
-          {pasos.map(({ fila, hasta }) => (
-            <tr key={fila.campo}>
-              <th scope="row">{ETIQUETAS[fila.campo]}</th>
-              <td>{conSigno(fila.aporte)} puntos</td>
-              <td>queda en {porcentaje(hasta)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <p className="text-[.8rem] leading-relaxed text-[var(--pz-ink-3)]">
-        Los campos van de mayor a menor aporte solo para leerlos mejor: los
-        aportes suman lo mismo en cualquier orden, así que los valores
-        intermedios no son predicciones del modelo.
-      </p>
-      <SinEfecto campos={shap.campos} />
-    </div>
-  );
-}
-
-function FilaRecorrido({
-  etiqueta,
-  detalle,
-  desde,
-  hasta,
-  color,
-  valor,
-  enlace,
-  destacada = false,
-}: {
-  etiqueta: string;
-  detalle?: string;
-  desde: number;
-  hasta: number;
-  color: string;
-  valor: string;
-  /** Dónde terminó el paso anterior: una línea punteada une los pasos. */
-  enlace?: number;
-  destacada?: boolean;
-}) {
-  const izquierda = limitar(desde);
-  const ancho = Math.max(0, limitar(hasta) - izquierda);
-
-  return (
-    <div
-      className={`grid ${COLUMNAS_RECORRIDO} items-center gap-x-3 gap-y-0.5 py-1`}
-      style={destacada ? { borderTop: "1px solid var(--pz-line)" } : undefined}
-    >
-      <span className="col-span-2 min-w-0 leading-tight @md:col-span-1">
-        <span
-          className={`block truncate text-[.84rem] ${destacada ? "font-semibold text-[var(--pz-ink)]" : "text-[var(--pz-ink-2)]"}`}
-        >
-          {etiqueta}
-        </span>
-        {detalle && (
-          <span className="block truncate text-[.72rem] text-[var(--pz-ink-3)]">
-            {detalle}
-          </span>
-        )}
-      </span>
-      <div className="relative h-[24px]">
-        {[25, 50, 75].map((linea) => (
-          <span
-            key={linea}
-            className="absolute top-0 bottom-0 w-px"
-            style={{ left: `${linea}%`, background: "var(--pz-paper-3)" }}
-          />
-        ))}
-        {enlace !== undefined && (
-          <span
-            className="absolute -top-1 -bottom-1"
-            style={{
-              left: `${limitar(enlace)}%`,
-              borderLeft: "1px dashed var(--pz-ink-3)",
-            }}
-          />
-        )}
-        <span
-          className="absolute top-1/2 h-[14px] -translate-y-1/2 rounded-[3px]"
-          style={{
-            left: `${izquierda}%`,
-            width: `max(3px, ${ancho}%)`,
-            background: color,
-          }}
-        />
-      </div>
-      <span
-        className={`pz-mono text-right text-[.78rem] whitespace-nowrap ${destacada ? "font-semibold text-[var(--pz-ink)]" : "text-[var(--pz-ink-2)]"}`}
-      >
-        {valor}
-      </span>
-    </div>
   );
 }
 

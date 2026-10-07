@@ -730,6 +730,84 @@ h1, h2, h3, h4, h5 {
   .pz-fila-cola__lado { align-items: flex-start; flex-direction: row; }
 }
 
+/* Vista tabular de la cola (HDU-14): el color de prioridad pasa de la zona
+   completa a un canto en la primera celda, para que la tabla se pueda leer
+   de corrido sin perder la urgencia. */
+.pz-tabla-cola > tbody tr { cursor: pointer; }
+.pz-tabla-cola > tbody td:first-child { box-shadow: inset 4px 0 0 var(--pz-canto, var(--pz-line-2)); }
+.pz-tabla-cola__fila--alta  { --pz-canto: var(--pz-alta); }
+.pz-tabla-cola__fila--media { --pz-canto: var(--pz-media); }
+.pz-tabla-cola__fila--baja  { --pz-canto: var(--pz-green-ink); }
+.pz-tabla-cola__dx {
+  font-weight: 600;
+  color: var(--pz-ink) !important;
+  min-width: 11rem;
+}
+.pz-tabla-cola > tbody tr:hover .pz-tabla-cola__dx { text-decoration: underline; }
+.pz-tabla-cola > thead th { white-space: nowrap; }
+.pz-tabla-cola > thead th,
+.pz-tabla-cola > tbody td { padding-inline: .75rem; }
+/* .pz-table fija el cuerpo en --fs-base y le gana a .pz-mono-cell. */
+.pz-tabla-cola > tbody td.pz-mono-cell {
+  font-size: var(--fs-micro);
+  color: var(--pz-ink-3);
+  white-space: nowrap;
+}
+
+/* Selector de vista: dos opciones segmentadas, la activa en tinta. */
+.pz-vista {
+  display: inline-flex;
+  border: 2px solid var(--pz-line-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--pz-paper);
+}
+.pz-vista__op {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .45rem .8rem;
+  font-family: var(--pz-mono);
+  font-size: var(--fs-chip);
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--pz-ink-2);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.pz-vista__op + .pz-vista__op { border-left: 2px solid var(--pz-line); }
+.pz-vista__op svg { width: 15px; height: 15px; flex: none; }
+.pz-vista__op:hover:not(.is-on) { background: var(--pz-paper-2); color: var(--pz-blue-deep); }
+.pz-vista__op.is-on { background: var(--pz-ink); color: #fff; }
+.pz-vista__op:focus-visible { outline: 2px solid var(--pz-blue-deep); outline-offset: -4px; }
+
+/* Navegacion entre interconsultas (HDU-12). */
+.pz-navegador {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.pz-navegador__pos {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--pz-ink-2);
+  text-align: center;
+}
+.pz-navegador__pos strong { color: var(--pz-ink); }
+.pz-navegador__pasos { display: flex; align-items: center; gap: .75rem; }
+.pz-navegador .pz-btn,
+.pz-navegador__pos { white-space: nowrap; }
+@media (max-width: 575.98px) {
+  .pz-navegador__pasos { width: 100%; justify-content: space-between; }
+}
+
 /* ---------- Columna de decision ---------- */
 .pz-decision {
   position: sticky;

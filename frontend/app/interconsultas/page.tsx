@@ -9,6 +9,7 @@ import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
 import { exportarInterconsultas } from "@/utils/exportUtils";
 import EstadoVista from "@/components/ui/EstadoVista";
 import { useSesion } from "@/context/SesionContext";
+import { useVistaLista } from "@/hooks/useVistaLista";
 
 export default function InterconsultasPage() {
   const { usuario } = useSesion();
@@ -24,6 +25,7 @@ export default function InterconsultasPage() {
     hayFiltrosActivos,
   } = useInterconsultas();
   const { config } = useConfiguracionExport();
+  const [vista, setVista] = useVistaLista();
 
   const [modoDescargaMultiple, setModoDescargaMultiple] = useState(false);
   const [seleccionadas, setSeleccionadas] = useState<Set<string>>(new Set());
@@ -110,6 +112,8 @@ export default function InterconsultasPage() {
         formatoDescarga={formatoDescarga}
         onCambiarFormatoDescarga={setFormatoDescarga}
         mensajeVacio={mensajeVacio}
+        vista={vista}
+        onCambiarVista={setVista}
       />
 
       <p className="pz-label">

@@ -10,11 +10,13 @@ import ResumenEstadisticas from "@/components/dashboard/ResumenEstadisticas";
 import ColaInterconsultas from "@/components/interconsultas/ColaInterconsultas";
 import EstadoVista from "@/components/ui/EstadoVista";
 import { useSesion } from "@/context/SesionContext";
+import { useVistaLista } from "@/hooks/useVistaLista";
 
 export default function DashboardPage() {
   const { usuario } = useSesion();
   const { interconsultas, cargando, error, totalInterconsultas } =
     useInterconsultas();
+  const [vista, setVista] = useVistaLista();
 
   if (!usuario) {
     return null; // SesionProvider redirige al login si no hay usuario
@@ -58,6 +60,8 @@ export default function DashboardPage() {
         titulo="Interconsultas recientes"
         subtitulo="Agrupadas por prioridad"
         mostrarBotonDescargaMultiple={false}
+        vista={vista}
+        onCambiarVista={setVista}
       />
     </div>
   );

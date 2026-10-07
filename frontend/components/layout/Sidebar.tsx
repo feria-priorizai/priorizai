@@ -49,7 +49,11 @@ export default function Sidebar() {
   const { usuario, cerrarSesion } = useSesion();
   const [cerrandoSesion, setCerrandoSesion] = useState(false);
   const { camposObligatorios } = useConfiguracionImport();
-  const [colapsado, setColapsado] = useState(false);
+  // En pantallas angostas el menú abierto se comía casi todo el ancho: parte
+  // contraído. Se monta solo con sesión confirmada, así que window existe.
+  const [colapsado, setColapsado] = useState(
+    () => window.matchMedia("(max-width: 991.98px)").matches,
+  );
   const [notificacion, setNotificacion] = useState<Notificacion | null>(null);
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
   const [reevaluando, setReevaluando] = useState(false);

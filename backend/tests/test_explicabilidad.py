@@ -717,6 +717,47 @@ def test_explicacion_de_interconsulta_inexistente(
     assert respuesta.status_code == 404
 
 
+@pytest.mark.parametrize("metodo", ["get", "post"])
+def test_un_medico_no_ve_la_explicacion_de_otra_especialidad(
+    client_explicable: TestClient,
+    guardar_interconsulta: Callable[..., Interconsulta],
+    explicar_controlado: ExplicarControlado,
+    metodo: str,
+) -> None:
+    """La explicacion trae las palabras del texto clinico: lleva el mismo
+    filtro por especialidad que el detalle. El medico de prueba es de
+    Cardiologia."""
+    guardar_interconsulta(
+        id="ic-1",
+        espec_destino="UROLOGIA",
+        prioridad_sugerida_modelo="alta",
+        explicacion=_shap(),
+    )
+
+    respuesta = getattr(client_explicable, metodo)(URL)
+
+    assert respuesta.status_code == 404
+    assert explicar_controlado.llamadas == []
+
+
+def test_el_administrador_ve_la_explicacion_de_cualquier_especialidad(
+    client_admin: TestClient,
+    cola: ColaExplicaciones,
+    guardar_interconsulta: Callable[..., Interconsulta],
+) -> None:
+    guardar_interconsulta(
+        id="ic-1",
+        espec_destino="UROLOGIA",
+        prioridad_sugerida_modelo="alta",
+        explicacion=_shap(),
+    )
+    app.dependency_overrides[get_priorizador] = lambda: ConRecursos()
+    app.dependency_overrides[get_cola] = lambda: cola
+
+    assert client_admin.get(URL).json()["estado"] == "lista"
+    assert client_admin.post(URL).status_code == 200
+
+
 def test_sin_texto_clinico_no_hay_nada_que_explicar(
     client_explicable: TestClient,
     guardar_interconsulta: Callable[..., Interconsulta],

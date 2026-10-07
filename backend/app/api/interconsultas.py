@@ -142,8 +142,15 @@ def _explicacion_vigente(interconsulta: Interconsulta) -> dict[str, Any] | None:
 ColaDependency = Depends(get_cola)
 
 
-def _buscar_o_404(db: Session, interconsulta_id: str) -> Interconsulta:
-    interconsulta = db.get(Interconsulta, interconsulta_id)
+def _buscar_o_404(
+    db: Session, interconsulta_id: str, usuario: Usuario
+) -> Interconsulta:
+    """Con el mismo filtro por especialidad que el detalle: la explicacion trae
+    las palabras del texto clinico, asi que un medico de otra especialidad no
+    la puede pedir ni ver."""
+    stmt = select(Interconsulta).where(Interconsulta.id == interconsulta_id)
+    stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
+    interconsulta = db.scalar(stmt)
     if interconsulta is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -213,7 +220,7 @@ def encolar_explicaciones(
 
 
 def _estado_explicacion(
-    db: Session, interconsulta_id: str, cola: ColaExplicaciones
+    db: Session, interconsulta_id: str, cola: ColaExplicaciones, usuario: Usuario
 ) -> dict[str, Any]:
     """El orden importa: primero la cola, despues la base. La cola guarda el
     resultado en la base y recien entonces olvida el trabajo, asi que si ya no
@@ -221,7 +228,7 @@ def _estado_explicacion(
     lecturas no aparece en ninguna y la pagina deja de preguntar.
     """
     trabajo = cola.estado(interconsulta_id)
-    interconsulta = _buscar_o_404(db, interconsulta_id)
+    interconsulta = _buscar_o_404(db, interconsulta_id, usuario)
     if trabajo is not None:
         return trabajo
     if (vigente := _explicacion_vigente(interconsulta)) is not None:
@@ -245,6 +252,7 @@ def explicar_interconsulta(
     db: Session = DbSession,
     priorizador: PriorizadorRigoBerta = PriorizadorDependency,
     cola: ColaExplicaciones = ColaDependency,
+    usuario: Usuario = UsuarioActual,
 ) -> dict[str, Any]:
     """Pide la explicacion de por que el modelo sugiere la prioridad que
     sugiere: cuanto aporto cada campo, con SHAP.
@@ -252,7 +260,7 @@ def explicar_interconsulta(
     Tarda minutos, asi que no se calcula aca: se encola, se responde 202 y el
     avance se consulta con GET. Si ya hay una guardada y vigente, responde 200.
     """
-    interconsulta = _buscar_o_404(db, interconsulta_id)
+    interconsulta = _buscar_o_404(db, interconsulta_id, usuario)
     if not tiene_informacion_clinica(interconsulta):
         raise HTTPException(
             status_code=422,
@@ -277,7 +285,7 @@ def explicar_interconsulta(
             priorizador,
             _guardar_explicacion(db, interconsulta_id),
         )
-    return _estado_explicacion(db, interconsulta_id, cola)
+    return _estado_explicacion(db, interconsulta_id, cola, usuario)
 
 
 @router.get("/{interconsulta_id}/explicacion", response_model=EstadoExplicacion)
@@ -285,10 +293,11 @@ def estado_explicacion(
     interconsulta_id: str,
     db: Session = DbSession,
     cola: ColaExplicaciones = ColaDependency,
+    usuario: Usuario = UsuarioActual,
 ) -> dict[str, Any]:
     """En que va la explicacion: en cola, calculando (con su avance), lista,
     con error o inexistente."""
-    return _estado_explicacion(db, interconsulta_id, cola)
+    return _estado_explicacion(db, interconsulta_id, cola, usuario)
 
 
 @router.patch("/{interconsulta_id}/prioridad", response_model=InterconsultaResponse)

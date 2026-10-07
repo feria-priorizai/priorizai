@@ -285,8 +285,7 @@ h1, h2, h3, h4, h5 {
 /* ---------- Riel de cifras ----------
    Cada indicador ocupa exactamente el mismo ancho, para que el
    tamano de la cifra sea lo unico que los diferencie. */
-.pz-rail { display: grid; gap: 1rem; }
-@media (min-width: 576px) { .pz-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.pz-rail { display: grid; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (min-width: 992px) { .pz-rail { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 
 .pz-rail__item {
@@ -295,18 +294,23 @@ h1, h2, h3, h4, h5 {
   border-top: 5px solid var(--pz-acento, var(--pz-ink-3));
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
-  padding: 1.15rem 1.25rem 1.3rem;
+  padding: .7rem 1rem;
   min-width: 0;
+  /* Una sola franja: icono y titulo a la izquierda, la cifra a la derecha.
+     Apilados ocupaban 143px y empujaban la lista fuera de la pantalla. */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
   transition: transform .18s ease, box-shadow .18s ease;
 }
+.pz-rail__item .pz-num--lg { font-size: clamp(1.7rem, 2.4vw, 2.1rem); flex: none; }
 .pz-rail__item:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
 
-/* Icono y titulo en la misma linea, arriba; la cifra manda debajo. */
 .pz-rail__cabecera {
   display: flex;
   align-items: center;
   gap: .6rem;
-  margin-bottom: .9rem;
   min-width: 0;
 }
 .pz-rail__icono {
@@ -328,6 +332,13 @@ h1, h2, h3, h4, h5 {
   min-width: 0;
   line-height: 1.25;
   overflow-wrap: anywhere;
+}
+/* En movil las cifras van de a dos y sin icono: apiladas median mas que la pantalla. */
+@media (max-width: 575.98px) {
+  .pz-rail { gap: .5rem; }
+  .pz-rail__item { padding: .55rem .7rem; }
+  .pz-rail__icono { display: none; }
+  .pz-rail__t { font-size: .62rem; letter-spacing: .04em; word-break: normal; overflow-wrap: normal; hyphens: none; }
 }
 
 /* ---------- Chips ---------- */
@@ -789,7 +800,13 @@ h1, h2, h3, h4, h5 {
   flex: none;
 }
 @media (max-width: 767.98px) {
-  .pz-fila-cola { flex-wrap: wrap; }
+  .pz-fila-cola { flex-wrap: wrap; gap: .5rem 1rem; }
+  /* El diagnostico baja a su propia linea: al lado del folio quedaba en una
+     columna de pocos caracteres y se salia de la tarjeta. */
+  .pz-fila-cola__id { width: auto; display: flex; align-items: baseline; gap: .75rem; }
+  .pz-fila-cola__id .pz-label { margin-top: 0 !important; }
+  .pz-fila-cola__cuerpo { flex-basis: 100%; order: 2; }
+  .pz-fila-cola__lado { order: 1; margin-left: auto; }
   .pz-fila-cola__lado { align-items: flex-start; flex-direction: row; }
 }
 

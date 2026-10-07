@@ -13,7 +13,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { ConfiguracionProvider } from "@/context/ConfiguracionContext";
 import { SesionProvider } from "@/context/SesionContext";
-import { ModalErroresCarga } from "@/components/configuracion/ModalErroresCarga";
+import { ModalResultadoCarga } from "@/components/interconsultas/ModalResultadoCarga";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -43,13 +43,13 @@ function AppShellInner({ children }: AppShellProps) {
 
         <div className="flex flex-1 flex-col overflow-hidden">
           <Header />
-          <main className="pz-blueprint custom-scrollbar flex-1 overflow-y-auto p-6">
+          <main className="pz-blueprint custom-scrollbar flex-1 overflow-y-auto p-[1rem] md:p-[1.5rem]">
             {children}
           </main>
         </div>
       </div>
 
-      <ModalErroresCarga />
+      <ModalResultadoCarga />
     </ConfiguracionProvider>
   );
 }

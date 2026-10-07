@@ -295,8 +295,7 @@ h1, h2, h3, h4, h5 {
 /* ---------- Riel de cifras ----------
    Cada indicador ocupa exactamente el mismo ancho, para que el
    tamano de la cifra sea lo unico que los diferencie. */
-.pz-rail { display: grid; gap: 1rem; }
-@media (min-width: 576px) { .pz-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.pz-rail { display: grid; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (min-width: 992px) { .pz-rail { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 
 .pz-rail__item {
@@ -305,18 +304,23 @@ h1, h2, h3, h4, h5 {
   border-top: 5px solid var(--pz-acento, var(--pz-ink-3));
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
-  padding: 1.15rem 1.25rem 1.3rem;
+  padding: .7rem 1rem;
   min-width: 0;
+  /* Una sola franja: icono y titulo a la izquierda, la cifra a la derecha.
+     Apilados ocupaban 143px y empujaban la lista fuera de la pantalla. */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
   transition: transform .18s ease, box-shadow .18s ease;
 }
+.pz-rail__item .pz-num--lg { font-size: clamp(1.7rem, 2.4vw, 2.1rem); flex: none; }
 .pz-rail__item:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
 
-/* Icono y titulo en la misma linea, arriba; la cifra manda debajo. */
 .pz-rail__cabecera {
   display: flex;
   align-items: center;
   gap: .6rem;
-  margin-bottom: .9rem;
   min-width: 0;
 }
 .pz-rail__icono {
@@ -338,6 +342,13 @@ h1, h2, h3, h4, h5 {
   min-width: 0;
   line-height: 1.25;
   overflow-wrap: anywhere;
+}
+/* En movil las cifras van de a dos y sin icono: apiladas median mas que la pantalla. */
+@media (max-width: 575.98px) {
+  .pz-rail { gap: .5rem; }
+  .pz-rail__item { padding: .55rem .7rem; }
+  .pz-rail__icono { display: none; }
+  .pz-rail__t { font-size: .62rem; letter-spacing: .04em; word-break: normal; overflow-wrap: normal; hyphens: none; }
 }
 
 /* ---------- Chips ---------- */
@@ -490,6 +501,74 @@ h1, h2, h3, h4, h5 {
   background: var(--pz-paper);
   border: 1px solid var(--pz-line-2);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Resumen de carga de archivo. */
+.pz-cifras-carga {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .6rem;
+  margin: 0;
+}
+.pz-cifras-carga__item {
+  padding: .8rem 1rem;
+  background: var(--pz-paper-2);
+  border-radius: var(--radius-sm);
+  border-top: 3px solid var(--pz-line-2);
+}
+.pz-cifras-carga__item--verde { border-top-color: var(--pz-green-ink); }
+.pz-cifras-carga__item--alta  { border-top-color: var(--pz-alta); background: var(--pz-alta-bg); }
+.pz-cifras-carga__n {
+  font-family: var(--pz-display);
+  font-variation-settings: "wdth" 88;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--pz-ink);
+  margin: .35rem 0 0;
+}
+.pz-aviso-carga {
+  margin: 0;
+  padding: .7rem .9rem;
+  font-size: var(--fs-sm);
+  color: var(--pz-ink-2);
+  background: var(--pz-media-bg);
+  border-left: 3px solid var(--pz-media);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+/* Informativo, no advertencia: el ámbar significa prioridad media. */
+.pz-aviso-carga--info {
+  background: color-mix(in srgb, var(--pz-purple) 8%, transparent);
+  border-left-color: var(--pz-purple);
+}
+.pz-fila-problema {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  padding: .65rem .9rem;
+  font-size: var(--fs-sm);
+  background: var(--pz-paper-2);
+  border-left: 3px solid var(--pz-alta);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.pz-fila-problema__cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem; }
+@media (max-width: 575.98px) {
+  .pz-cifras-carga { gap: .4rem; }
+  .pz-cifras-carga__item { padding: .55rem .6rem; }
+  .pz-cifras-carga__item .pz-label { font-size: .62rem; letter-spacing: .05em; }
+  .pz-cifras-carga__n { font-size: 1.5rem; }
+}
+
+/* Aviso del sidebar cuando el menú está contraído: flota a su derecha. */
+.pz-aviso-flotante {
+  position: fixed;
+  left: 5.75rem;
+  bottom: 1rem;
+  width: min(20rem, calc(100vw - 7rem));
+  z-index: 40;
+  background: var(--pz-night-2);
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lg);
 }
 
@@ -736,8 +815,180 @@ h1, h2, h3, h4, h5 {
   flex: none;
 }
 @media (max-width: 767.98px) {
-  .pz-fila-cola { flex-wrap: wrap; }
+  .pz-fila-cola { flex-wrap: wrap; gap: .5rem 1rem; }
+  /* El diagnostico baja a su propia linea: al lado del folio quedaba en una
+     columna de pocos caracteres y se salia de la tarjeta. */
+  .pz-fila-cola__id { width: auto; display: flex; align-items: baseline; gap: .75rem; }
+  .pz-fila-cola__id .pz-label { margin-top: 0 !important; }
+  .pz-fila-cola__cuerpo { flex-basis: 100%; order: 2; }
+  .pz-fila-cola__lado { order: 1; margin-left: auto; }
   .pz-fila-cola__lado { align-items: flex-start; flex-direction: row; }
+}
+
+/* Vista tabular de la cola (HDU-14), como planilla: una linea por fila,
+   cuadricula completa, encabezado fijo y numero de fila. El color de
+   prioridad pasa de la zona completa al canto de la fila. */
+.pz-planilla {
+  /* Contiene los .visually-hidden de las celdas: sin un ancestro posicionado
+     quedaban fuera del scroll y ensanchaban la pagina en movil. */
+  position: relative;
+  max-height: calc(100vh - 15rem);
+  min-height: 12rem;
+  overflow: auto;
+  border-top: 1px solid var(--pz-line-2);
+}
+.pz-tabla-cola {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--fs-sm);
+}
+.pz-tabla-cola th,
+.pz-tabla-cola td {
+  padding: .32rem .48rem;
+  border-right: 1px solid var(--pz-line);
+  border-bottom: 1px solid var(--pz-line);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.pz-tabla-cola th:last-child,
+.pz-tabla-cola td:last-child { border-right: 0; }
+.pz-tabla-cola > thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--pz-paper-3);
+  border-bottom: 2px solid var(--pz-line-2);
+  font-family: var(--pz-mono);
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--pz-ink-2);
+}
+.pz-tabla-cola > tbody tr { cursor: pointer; }
+.pz-tabla-cola > tbody tr:nth-child(even) > td { background: #F6F9FE; }
+.pz-tabla-cola > tbody tr:hover > td { background: #E3EDFC; }
+.pz-tabla-cola > tbody tr.is-sel > td { background: #DCE8FC; }
+.pz-tabla-cola > tbody tr:hover .pz-tabla-cola__dx { text-decoration: underline; }
+
+/* Columna de numero, como los encabezados de fila de una planilla. */
+.pz-tabla-cola__n {
+  width: 1%;
+  text-align: right;
+  font-family: var(--pz-mono);
+  font-size: .7rem;
+  color: var(--pz-ink-3);
+}
+.pz-tabla-cola > tbody tr > td.pz-tabla-cola__n {
+  background: var(--pz-paper-2);
+  box-shadow: inset 4px 0 0 var(--pz-canto, var(--pz-line-2));
+  padding-left: .9rem;
+}
+.pz-tabla-cola__fila--alta  { --pz-canto: var(--pz-alta); }
+.pz-tabla-cola__fila--media { --pz-canto: var(--pz-media); }
+.pz-tabla-cola__fila--baja  { --pz-canto: var(--pz-green-ink); }
+
+.pz-tabla-cola__folio {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--pz-blue-deep);
+}
+.pz-tabla-cola__dx {
+  display: block;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: var(--pz-ink);
+}
+.pz-tabla-cola__dato {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  color: var(--pz-ink-2);
+}
+/* Chips a escala de celda. */
+.pz-tabla-cola .pz-chip { padding: .12rem .45rem; font-size: .62rem; }
+
+/* Encabezado ordenable. */
+.pz-orden {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.pz-orden:hover, .pz-orden.is-on { color: var(--pz-blue-deep); }
+.pz-orden__flecha { font-size: .6rem; opacity: .45; }
+.pz-orden.is-on .pz-orden__flecha { opacity: 1; }
+.pz-orden:focus-visible { outline: 2px solid var(--pz-blue-deep); outline-offset: 2px; }
+
+/* Filtros compactos: una sola franja sobre la lista. */
+.pz-filtros > .pz-panel__body { padding: .85rem 1.1rem; }
+.pz-filtros .form-label { margin-bottom: .3rem; }
+.pz-filtros.pz-form .form-control,
+.pz-filtros.pz-form .form-select { padding-top: .45rem; padding-bottom: .45rem; font-size: var(--fs-sm); }
+
+/* Selector de vista: dos opciones segmentadas, la activa en tinta. */
+.pz-vista {
+  display: inline-flex;
+  border: 2px solid var(--pz-line-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--pz-paper);
+}
+.pz-vista__op {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .45rem .8rem;
+  font-family: var(--pz-mono);
+  font-size: var(--fs-chip);
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--pz-ink-2);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.pz-vista__op + .pz-vista__op { border-left: 2px solid var(--pz-line); }
+.pz-vista__op svg { width: 15px; height: 15px; flex: none; }
+.pz-vista__op:hover:not(.is-on) { background: var(--pz-paper-2); color: var(--pz-blue-deep); }
+.pz-vista__op.is-on { background: var(--pz-ink); color: #fff; }
+.pz-vista__op:focus-visible { outline: 2px solid var(--pz-blue-deep); outline-offset: -4px; }
+
+/* Navegacion entre interconsultas (HDU-12). */
+.pz-navegador {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.pz-navegador__pos {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--pz-ink-2);
+  text-align: center;
+}
+.pz-navegador__pos strong { color: var(--pz-ink); }
+.pz-navegador__pasos { display: flex; align-items: center; gap: .75rem; }
+.pz-navegador .pz-btn,
+.pz-navegador__pos { white-space: nowrap; }
+@media (max-width: 575.98px) {
+  .pz-navegador__pasos { width: 100%; justify-content: space-between; }
 }
 
 /* ---------- Columna de decision ---------- */

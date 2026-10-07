@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, type MouseEvent } from "react";
+import { useEffect, useId, useState, type MouseEvent } from "react";
 import type { Interconsulta } from "@/types";
 import BadgeEstado from "@/components/ui/BadgeEstado";
 import BadgePrioridad from "@/components/ui/BadgePrioridad";
@@ -14,7 +14,10 @@ import {
   agruparPorPrioridad,
   grupoDe,
   guardarOrdenLista,
+  ordenarPorColumna,
   type ClaveGrupo,
+  type ColumnaOrden,
+  type OrdenTabla,
   type VistaLista,
 } from "@/utils/ordenLista";
 
@@ -86,11 +89,28 @@ export default function ColaInterconsultas({
   const router = useRouter();
   const idBase = useId();
 
-  const porGrupo = agruparPorPrioridad(interconsultas);
-  const ordenIds = porGrupo.flatMap((g) => g.items.map((ic) => ic.id));
-  const claveOrden = ordenIds.join(",");
+  const [ordenTabla, setOrdenTabla] = useState<OrdenTabla | null>(null);
 
-  // El detalle navega por esta misma secuencia, filtros incluidos (HDU-12).
+  const porGrupo = agruparPorPrioridad(interconsultas);
+  const enOrdenDeLista = porGrupo.flatMap((g) => g.items);
+  const filasTabla = ordenTabla
+    ? ordenarPorColumna(enOrdenDeLista, ordenTabla)
+    : enOrdenDeLista;
+  const visibles = vista === "tabla" ? filasTabla : enOrdenDeLista;
+  const claveOrden = visibles.map((ic) => ic.id).join(",");
+
+  // Primer clic ordena ascendente, el segundo descendente y el tercero vuelve
+  // al orden de la lista de espera.
+  const alternarOrden = (columna: ColumnaOrden) =>
+    setOrdenTabla((actual) =>
+      actual?.columna !== columna
+        ? { columna, descendente: false }
+        : actual.descendente
+          ? null
+          : { columna, descendente: true },
+    );
+
+  // El detalle navega por la secuencia que se ve, filtros y orden incluidos (HDU-12).
   useEffect(() => {
     guardarOrdenLista(claveOrden ? claveOrden.split(",") : []);
   }, [claveOrden]);
@@ -126,9 +146,15 @@ export default function ColaInterconsultas({
     <div className="pz-panel">
       <div className="pz-panel__head flex flex-wrap items-start justify-between gap-3">
         <div>
-          <span className="pz-eyebrow">Lista de espera</span>
+          {titulo !== "Lista de espera" && (
+            <span className="pz-eyebrow">Lista de espera</span>
+          )}
           <h2 className="pz-panel__title">{titulo}</h2>
-          <p className="pz-panel__sub">{subtitulo}</p>
+          <p className="pz-panel__sub">
+            {vista === "tabla"
+              ? "Haz clic en un encabezado para ordenar; un tercer clic vuelve al orden de la lista"
+              : subtitulo}
+          </p>
         </div>
 
         <div className="pz-form flex flex-wrap items-center gap-2">
@@ -195,7 +221,9 @@ export default function ColaInterconsultas({
         </div>
       ) : vista === "tabla" ? (
         <TablaCola
-          grupos={porGrupo}
+          filas={filasTabla}
+          orden={ordenTabla}
+          onOrdenar={alternarOrden}
           modoDescargaMultiple={modoDescargaMultiple}
           seleccionadas={seleccionadas}
           onAlternar={alternarSeleccion}
@@ -319,109 +347,153 @@ const ETIQUETA_SIN_PRIORIDAD: Partial<Record<ClaveGrupo, string>> = {
   invalida: "No priorizable",
 };
 
+const COLUMNAS: { clave: ColumnaOrden; titulo: string; derecha?: boolean }[] = [
+  { clave: "folio", titulo: "Folio" },
+  { clave: "prioridad", titulo: "Prioridad" },
+  { clave: "diagnostico", titulo: "Diagnóstico" },
+  { clave: "edad", titulo: "Edad", derecha: true },
+  { clave: "origen", titulo: "Origen" },
+  { clave: "destino", titulo: "Destino" },
+  { clave: "emision", titulo: "Emisión" },
+  { clave: "certeza", titulo: "Certeza", derecha: true },
+  { clave: "estado", titulo: "Estado" },
+];
+
+/**
+ * Vista de planilla: una línea por interconsulta, cuadrícula, encabezado fijo
+ * y orden por columna. El color de prioridad queda en el canto de la fila.
+ */
 function TablaCola({
-  grupos,
+  filas,
+  orden,
+  onOrdenar,
   modoDescargaMultiple,
   seleccionadas,
   onAlternar,
   onClickFila,
 }: {
-  grupos: ReturnType<typeof agruparPorPrioridad>;
+  filas: Interconsulta[];
+  orden: OrdenTabla | null;
+  onOrdenar: (columna: ColumnaOrden) => void;
   modoDescargaMultiple: boolean;
   seleccionadas: Set<string>;
   onAlternar: (id: string) => void;
   onClickFila: (e: MouseEvent<HTMLElement>, id: string) => void;
 }) {
   return (
-    <div className="table-responsive custom-scrollbar">
-      <table className="table pz-table pz-tabla-cola">
+    <div className="pz-planilla custom-scrollbar">
+      <table className="pz-tabla-cola">
         <thead>
           <tr>
+            <th scope="col" className="pz-tabla-cola__n">
+              <span className="visually-hidden">Posición</span>#
+            </th>
             {modoDescargaMultiple && (
               <th scope="col">
                 <span className="visually-hidden">Selección</span>
               </th>
             )}
-            <th scope="col">Folio</th>
-            <th scope="col">Prioridad</th>
-            <th scope="col">Diagnóstico</th>
-            <th scope="col">Origen → destino</th>
-            <th scope="col">Emisión</th>
-            <th scope="col" className="text-end">Certeza</th>
-            <th scope="col">Estado</th>
+            {COLUMNAS.map((col) => {
+              const activa = orden?.columna === col.clave;
+              return (
+                <th
+                  key={col.clave}
+                  scope="col"
+                  aria-sort={
+                    activa ? (orden.descendente ? "descending" : "ascending") : undefined
+                  }
+                  className={col.derecha ? "text-end" : undefined}
+                >
+                  <button
+                    type="button"
+                    className={`pz-orden${activa ? " is-on" : ""}`}
+                    onClick={() => onOrdenar(col.clave)}
+                    title={`Ordenar por ${col.titulo.toLowerCase()}`}
+                  >
+                    {col.titulo}
+                    <span aria-hidden="true" className="pz-orden__flecha">
+                      {activa ? (orden.descendente ? "▼" : "▲") : "↕"}
+                    </span>
+                  </button>
+                </th>
+              );
+            })}
+            <th scope="col" title="Bandera roja">
+              <span aria-hidden="true">⚑</span>
+              <span className="visually-hidden">Bandera roja</span>
+            </th>
           </tr>
         </thead>
         <tbody>
-          {grupos.flatMap((grupo) =>
-            grupo.items.map((ic) => {
-              const clave = grupoDe(ic);
-              return (
-                <tr
-                  key={ic.id}
-                  className={`pz-tabla-cola__fila pz-tabla-cola__fila--${zonaDe(clave)}`}
-                  onClick={(e) => onClickFila(e, ic.id)}
-                >
-                  {modoDescargaMultiple && (
-                    <td>
-                      <input
-                        type="checkbox"
-                        className="form-check-input"
-                        checked={seleccionadas.has(ic.id)}
-                        onChange={() => onAlternar(ic.id)}
-                        aria-label={`Seleccionar ${ic.id.slice(0, 8)}`}
-                      />
-                    </td>
-                  )}
+          {filas.map((ic, i) => {
+            const clave = grupoDe(ic);
+            return (
+              <tr
+                key={ic.id}
+                className={`pz-tabla-cola__fila--${zonaDe(clave)}${
+                  seleccionadas.has(ic.id) ? " is-sel" : ""
+                }`}
+                onClick={(e) => onClickFila(e, ic.id)}
+              >
+                <td className="pz-tabla-cola__n">{i + 1}</td>
+                {modoDescargaMultiple && (
                   <td>
-                    <Link
-                      href={`/interconsultas/${ic.id}`}
-                      className="pz-mono font-bold tracking-[.04em] text-[var(--pz-blue-deep)]"
-                      style={{ fontSize: "var(--fs-sm)" }}
-                    >
-                      {ic.id.slice(0, 8).toUpperCase()}
-                    </Link>
-                    <span className="pz-label d-block mt-1">
-                      {ic.pacienteEdad} años
+                    <input
+                      type="checkbox"
+                      className="form-check-input m-0"
+                      checked={seleccionadas.has(ic.id)}
+                      onChange={() => onAlternar(ic.id)}
+                      aria-label={`Seleccionar ${ic.id.slice(0, 8)}`}
+                    />
+                  </td>
+                )}
+                <td>
+                  <Link href={`/interconsultas/${ic.id}`} className="pz-tabla-cola__folio">
+                    {ic.id.slice(0, 8).toUpperCase()}
+                  </Link>
+                </td>
+                <td>
+                  {ETIQUETA_SIN_PRIORIDAD[clave] ? (
+                    <span className="pz-chip pz-chip--neutral">
+                      {ETIQUETA_SIN_PRIORIDAD[clave]}
                     </span>
-                  </td>
-                  <td>
-                    {ETIQUETA_SIN_PRIORIDAD[clave] ? (
-                      <span className="pz-chip pz-chip--neutral">
-                        {ETIQUETA_SIN_PRIORIDAD[clave]}
+                  ) : (
+                    <BadgePrioridad prioridad={ic.prioridadActual} />
+                  )}
+                </td>
+                <td title={ic.diagnostico}>
+                  {/* max-width no recorta una celda; recorta a su contenido. */}
+                  <span className="pz-tabla-cola__dx">{ic.diagnostico}</span>
+                </td>
+                <td className="pz-tabla-cola__dato text-end">
+                  {ic.pacienteEdad}
+                  {ic.sexo ? ` ${ic.sexo.charAt(0).toUpperCase()}` : ""}
+                </td>
+                <td className="pz-tabla-cola__dato">{ic.centroOrigen}</td>
+                <td className="pz-tabla-cola__dato">{ic.especialidad}</td>
+                <td className="pz-tabla-cola__dato">{fechaDe(ic)}</td>
+                <td className="pz-tabla-cola__dato text-end">
+                  {ic.prioridadForzadaPorRegla ? "regla" : (certezaDe(ic) ?? "—")}
+                </td>
+                <td>
+                  <BadgeEstado estado={ic.estado} />
+                </td>
+                <td>
+                  {ic.banderaRoja && (
+                    <span
+                      className="pz-chip pz-chip--flag"
+                      title={ic.terminosBanderaRoja.join(", ") || "Bandera roja detectada"}
+                    >
+                      ⚑
+                      <span className="visually-hidden">
+                        {" "}Bandera roja: {ic.terminosBanderaRoja.join(", ") || "detectada"}
                       </span>
-                    ) : (
-                      <BadgePrioridad prioridad={ic.prioridadActual} />
-                    )}
-                  </td>
-                  <td className="pz-tabla-cola__dx">
-                    {ic.diagnostico}
-                    {ic.banderaRoja && (
-                      <span
-                        className="pz-chip pz-chip--flag ms-2"
-                        title={
-                          ic.terminosBanderaRoja.join(", ") ||
-                          "Bandera roja detectada"
-                        }
-                      >
-                        ⚑ {ic.terminosBanderaRoja[0] ?? "bandera roja"}
-                      </span>
-                    )}
-                  </td>
-                  <td className="pz-mono-cell">
-                    {ic.centroOrigen}
-                    <span className="d-block">→ {ic.especialidad}</span>
-                  </td>
-                  <td className="pz-mono-cell text-nowrap">{fechaDe(ic)}</td>
-                  <td className="pz-mono-cell text-end text-nowrap">
-                    {certezaDe(ic) ?? "—"}
-                  </td>
-                  <td>
-                    <BadgeEstado estado={ic.estado} />
-                  </td>
-                </tr>
-              );
-            }),
-          )}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

@@ -793,29 +793,117 @@ h1, h2, h3, h4, h5 {
   .pz-fila-cola__lado { align-items: flex-start; flex-direction: row; }
 }
 
-/* Vista tabular de la cola (HDU-14): el color de prioridad pasa de la zona
-   completa a un canto en la primera celda, para que la tabla se pueda leer
-   de corrido sin perder la urgencia. */
+/* Vista tabular de la cola (HDU-14), como planilla: una linea por fila,
+   cuadricula completa, encabezado fijo y numero de fila. El color de
+   prioridad pasa de la zona completa al canto de la fila. */
+.pz-planilla {
+  /* Contiene los .visually-hidden de las celdas: sin un ancestro posicionado
+     quedaban fuera del scroll y ensanchaban la pagina en movil. */
+  position: relative;
+  max-height: calc(100vh - 15rem);
+  min-height: 12rem;
+  overflow: auto;
+  border-top: 1px solid var(--pz-line-2);
+}
+.pz-tabla-cola {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--fs-sm);
+}
+.pz-tabla-cola th,
+.pz-tabla-cola td {
+  padding: .32rem .48rem;
+  border-right: 1px solid var(--pz-line);
+  border-bottom: 1px solid var(--pz-line);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.pz-tabla-cola th:last-child,
+.pz-tabla-cola td:last-child { border-right: 0; }
+.pz-tabla-cola > thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--pz-paper-3);
+  border-bottom: 2px solid var(--pz-line-2);
+  font-family: var(--pz-mono);
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--pz-ink-2);
+}
 .pz-tabla-cola > tbody tr { cursor: pointer; }
-.pz-tabla-cola > tbody td:first-child { box-shadow: inset 4px 0 0 var(--pz-canto, var(--pz-line-2)); }
+.pz-tabla-cola > tbody tr:nth-child(even) > td { background: #F6F9FE; }
+.pz-tabla-cola > tbody tr:hover > td { background: #E3EDFC; }
+.pz-tabla-cola > tbody tr.is-sel > td { background: #DCE8FC; }
+.pz-tabla-cola > tbody tr:hover .pz-tabla-cola__dx { text-decoration: underline; }
+
+/* Columna de numero, como los encabezados de fila de una planilla. */
+.pz-tabla-cola__n {
+  width: 1%;
+  text-align: right;
+  font-family: var(--pz-mono);
+  font-size: .7rem;
+  color: var(--pz-ink-3);
+}
+.pz-tabla-cola > tbody tr > td.pz-tabla-cola__n {
+  background: var(--pz-paper-2);
+  box-shadow: inset 4px 0 0 var(--pz-canto, var(--pz-line-2));
+  padding-left: .9rem;
+}
 .pz-tabla-cola__fila--alta  { --pz-canto: var(--pz-alta); }
 .pz-tabla-cola__fila--media { --pz-canto: var(--pz-media); }
 .pz-tabla-cola__fila--baja  { --pz-canto: var(--pz-green-ink); }
-.pz-tabla-cola__dx {
-  font-weight: 600;
-  color: var(--pz-ink) !important;
-  min-width: 11rem;
-}
-.pz-tabla-cola > tbody tr:hover .pz-tabla-cola__dx { text-decoration: underline; }
-.pz-tabla-cola > thead th { white-space: nowrap; }
-.pz-tabla-cola > thead th,
-.pz-tabla-cola > tbody td { padding-inline: .75rem; }
-/* .pz-table fija el cuerpo en --fs-base y le gana a .pz-mono-cell. */
-.pz-tabla-cola > tbody td.pz-mono-cell {
+
+.pz-tabla-cola__folio {
+  font-family: var(--pz-mono);
   font-size: var(--fs-micro);
-  color: var(--pz-ink-3);
-  white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--pz-blue-deep);
 }
+.pz-tabla-cola__dx {
+  display: block;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: var(--pz-ink);
+}
+.pz-tabla-cola__dato {
+  font-family: var(--pz-mono);
+  font-size: var(--fs-micro);
+  color: var(--pz-ink-2);
+}
+/* Chips a escala de celda. */
+.pz-tabla-cola .pz-chip { padding: .12rem .45rem; font-size: .62rem; }
+
+/* Encabezado ordenable. */
+.pz-orden {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.pz-orden:hover, .pz-orden.is-on { color: var(--pz-blue-deep); }
+.pz-orden__flecha { font-size: .6rem; opacity: .45; }
+.pz-orden.is-on .pz-orden__flecha { opacity: 1; }
+.pz-orden:focus-visible { outline: 2px solid var(--pz-blue-deep); outline-offset: 2px; }
+
+/* Filtros compactos: una sola franja sobre la lista. */
+.pz-filtros > .pz-panel__body { padding: .85rem 1.1rem; }
+.pz-filtros .form-label { margin-bottom: .3rem; }
+.pz-filtros.pz-form .form-control,
+.pz-filtros.pz-form .form-select { padding-top: .45rem; padding-bottom: .45rem; font-size: var(--fs-sm); }
 
 /* Selector de vista: dos opciones segmentadas, la activa en tinta. */
 .pz-vista {

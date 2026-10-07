@@ -34,9 +34,71 @@ export function agruparPorPrioridad(interconsultas: Interconsulta[]) {
   })).filter((g) => g.items.length > 0);
 }
 
-/** El orden exacto en que la lista muestra las interconsultas, en ambas vistas. */
-export function ordenarComoLista(interconsultas: Interconsulta[]): Interconsulta[] {
-  return agruparPorPrioridad(interconsultas).flatMap((g) => g.items);
+/** Columnas por las que se puede reordenar la vista tabular. */
+export type ColumnaOrden =
+  | "folio"
+  | "prioridad"
+  | "diagnostico"
+  | "edad"
+  | "origen"
+  | "destino"
+  | "emision"
+  | "certeza"
+  | "estado";
+
+export interface OrdenTabla {
+  columna: ColumnaOrden;
+  descendente: boolean;
+}
+
+const RANGO_GRUPO: Record<ClaveGrupo, number> = {
+  alta: 0,
+  media: 1,
+  baja: 2,
+  sin: 3,
+  invalida: 4,
+};
+
+function valorOrden(ic: Interconsulta, columna: ColumnaOrden): string | number {
+  switch (columna) {
+    case "folio":
+      return ic.id;
+    case "prioridad":
+      return RANGO_GRUPO[grupoDe(ic)];
+    case "diagnostico":
+      return ic.diagnostico.toLocaleLowerCase("es");
+    case "edad":
+      return ic.pacienteEdad;
+    case "origen":
+      return ic.centroOrigen.toLocaleLowerCase("es");
+    case "destino":
+      return ic.especialidad.toLocaleLowerCase("es");
+    case "emision":
+      return ic.fechaEmision ?? ic.fechaIngreso;
+    case "certeza":
+      // Una regla clínica pesa más que cualquier certeza del modelo.
+      if (ic.prioridadForzadaPorRegla) return 101;
+      return (ic.priorizacionIA.priorizada ?? true) ? ic.priorizacionIA.confianza : -1;
+    case "estado":
+      return ic.estado;
+  }
+}
+
+/**
+ * Reordena por una columna. El sort es estable, así que a igual valor se
+ * conserva el orden de la lista de espera.
+ */
+export function ordenarPorColumna(
+  interconsultas: Interconsulta[],
+  { columna, descendente }: OrdenTabla,
+): Interconsulta[] {
+  const signo = descendente ? -1 : 1;
+  return [...interconsultas].sort((a, b) => {
+    const va = valorOrden(a, columna);
+    const vb = valorOrden(b, columna);
+    if (va === vb) return 0;
+    return (va < vb ? -1 : 1) * signo;
+  });
 }
 
 // El almacenamiento puede no existir o lanzar (modo privado, cuota llena):

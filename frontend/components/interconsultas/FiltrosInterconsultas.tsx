@@ -22,7 +22,7 @@ export default function FiltrosInterconsultas({
   total,
 }: FiltrosInterconsultasProps) {
   return (
-    <div className="pz-panel pz-form">
+    <div className="pz-panel pz-form pz-filtros">
       <div className="pz-panel__body">
         <div className="row g-3 align-items-end">
           <div className="col-12 col-lg-6">

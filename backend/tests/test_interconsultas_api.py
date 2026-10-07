@@ -312,3 +312,388 @@ def test_motivo_en_el_limite_se_acepta(
     )
 
     assert response.status_code == 200
+
+
+# --- Tests para filtrado por especialidad (HDU-5) ---
+
+
+def test_listado_filtra_por_especialidad_del_medico(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """El medico solo ve interconsultas de su especialidad (Cardiologia)."""
+    # Una de su especialidad
+    guardar_interconsulta(id="ic-cardio", espec_destino="Cardiologia")
+    # De otra especialidad
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia")
+
+    response = client.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["id"] == "ic-cardio"
+    assert body[0]["espec_destino"] == "Cardiologia"
+    # Total count en cabecera tambien debe reflejar el filtro
+    assert response.headers["X-Total-Count"] == "1"
+
+
+def test_listado_admin_ve_todas_las_especialidades(
+    client_admin: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """El administrador ve interconsultas de todas las especialidades."""
+    guardar_interconsulta(id="ic-cardio", espec_destino="Cardiologia")
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia")
+    guardar_interconsulta(id="ic-derma", espec_destino="Dermatologia")
+
+    response = client_admin.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 3
+    assert response.headers["X-Total-Count"] == "3"
+
+
+def test_medico_no_ve_interconsulta_de_otra_especialidad_devuelve_404(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """GET /api/interconsultas/{id} devuelve 404 si la especialidad no coincide."""
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia")
+
+    response = client.get("/api/interconsultas/ic-neuro")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Interconsulta no encontrada"
+
+
+def test_admin_ve_interconsulta_de_cualquier_especialidad(
+    client_admin: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """GET /api/interconsultas/{id} funciona para admin sin importar especialidad."""
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia")
+
+    response = client_admin.get("/api/interconsultas/ic-neuro")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == "ic-neuro"
+
+
+def test_medico_no_puede_modificar_prioridad_de_otra_especialidad(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """PATCH /prioridad devuelve 404 si la especialidad no coincide."""
+    guardar_interconsulta(
+        id="ic-neuro", espec_destino="Neurologia", prioridad_actual="media"
+    )
+
+    response = client.patch(
+        "/api/interconsultas/ic-neuro/prioridad",
+        json={"prioridad": "alta", "motivo": "Motivo valido"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Interconsulta no encontrada"
+
+
+def test_admin_puede_modificar_prioridad_de_cualquier_especialidad(
+    client_admin: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """PATCH /prioridad funciona para admin sin importar especialidad."""
+    guardar_interconsulta(
+        id="ic-neuro", espec_destino="Neurologia", prioridad_actual="media"
+    )
+
+    response = client_admin.patch(
+        "/api/interconsultas/ic-neuro/prioridad",
+        json={"prioridad": "alta", "motivo": "Motivo valido"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["prioridad_actual"] == "alta"
+
+
+def test_medico_no_puede_modificar_estado_de_otra_especialidad(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """PATCH /estado devuelve 404 si la especialidad no coincide."""
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia", estado="pendiente")
+
+    response = client.patch(
+        "/api/interconsultas/ic-neuro/estado",
+        json={"estado": "revisada"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Interconsulta no encontrada"
+
+
+def test_admin_puede_modificar_estado_de_cualquier_especialidad(
+    client_admin: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """PATCH /estado funciona para admin sin importar especialidad."""
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia", estado="pendiente")
+
+    response = client_admin.patch(
+        "/api/interconsultas/ic-neuro/estado",
+        json={"estado": "revisada"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["estado"] == "revisada"
+
+
+def test_listado_coincide_independiente_de_mayusculas_o_tildes(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """El medico (Cardiologia) debe ver interconsultas con 'CARDIOLOGÍA' o 'Cardiología'."""
+    guardar_interconsulta(id="ic-mayus-tilde", espec_destino="CARDIOLOGÍA")
+
+    response = client.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["id"] == "ic-mayus-tilde"
+
+
+def test_medico_sin_especialidad_no_ve_interconsultas(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """Si un medico no tiene especialidad asignada, no debe ver interconsultas ajenas."""
+    guardar_interconsulta(id="ic-cardio", espec_destino="Cardiologia")
+    from app.api.auth import usuario_actual
+    from app.main import app
+    from app.models.usuario import Usuario
+
+    medico_sin_esp = Usuario(
+        id="usr-sin-esp",
+        alias="sin_esp",
+        nombre="Dr. Sin Especialidad",
+        rol="medico",
+        especialidad=None,
+        password_hash="",
+        debe_cambiar_password=False,
+    )
+    app.dependency_overrides[usuario_actual] = lambda: medico_sin_esp
+    try:
+        response = client.get("/api/interconsultas")
+        assert response.status_code == 200
+        assert len(response.json()) == 0
+    finally:
+        from tests.conftest import USUARIO_DE_PRUEBA
+
+        app.dependency_overrides[usuario_actual] = lambda: USUARIO_DE_PRUEBA
+
+
+# --- Tests para coincidencia parcial por especialidad (HDU-5 extension) ---
+
+
+def test_listado_coincide_prefijo_especialidad(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """El medico (Cardiologia) ve interconsultas con 'Cardiología adulto', 'Cardiología infantil'."""
+    # Exacta
+    guardar_interconsulta(id="ic-exacta", espec_destino="Cardiologia")
+    # Prefijo con descriptor adicional
+    guardar_interconsulta(id="ic-adulto", espec_destino="Cardiologia adulto")
+    guardar_interconsulta(id="ic-infantil", espec_destino="Cardiologia infantil")
+    guardar_interconsulta(
+        id="ic-consulta", espec_destino="Cardiologia - consulta externa"
+    )
+    # Otra especialidad - no debe aparecer
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia")
+
+    response = client.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 4
+    ids = {item["id"] for item in body}
+    assert ids == {"ic-exacta", "ic-adulto", "ic-infantil", "ic-consulta"}
+    assert response.headers["X-Total-Count"] == "4"
+
+
+def test_listado_coincide_sufijo_especialidad(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """El medico (Pediatria) ve interconsultas con 'Pediatria general', 'Neonatologia y pediatria' (solo si configura relacion)."""
+    # Cambiar la especialidad del usuario de prueba a Pediatria
+    from app.api.auth import usuario_actual
+    from app.main import app
+    from app.models.usuario import Usuario
+    from tests.conftest import USUARIO_DE_PRUEBA
+
+    medico_pedia = Usuario(
+        id=USUARIO_DE_PRUEBA.id,
+        alias=USUARIO_DE_PRUEBA.alias,
+        nombre=USUARIO_DE_PRUEBA.nombre,
+        rol=USUARIO_DE_PRUEBA.rol,
+        especialidad="Pediatria",
+        password_hash=USUARIO_DE_PRUEBA.password_hash,
+        debe_cambiar_password=USUARIO_DE_PRUEBA.debe_cambiar_password,
+    )
+    app.dependency_overrides[usuario_actual] = lambda: medico_pedia
+    try:
+        # Nota: 'Neonatologia y pediatria' contiene 'pediatria' como sufijo
+        guardar_interconsulta(id="ic-pedia", espec_destino="Pediatria")
+        guardar_interconsulta(id="ic-pedia-general", espec_destino="Pediatria general")
+        guardar_interconsulta(
+            id="ic-pedia-neonato", espec_destino="Neonatologia y pediatria"
+        )
+
+        response = client.get("/api/interconsultas")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body) == 3
+        ids = {item["id"] for item in body}
+        assert ids == {"ic-pedia", "ic-pedia-general", "ic-pedia-neonato"}
+    finally:
+        app.dependency_overrides[usuario_actual] = lambda: USUARIO_DE_PRUEBA
+
+
+def test_listado_coincide_en_medio_de_cadena(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """El medico ve interconsultas donde su especialidad esta en medio de la cadena."""
+    guardar_interconsulta(id="ic-1", espec_destino="Consulta Cardiologia prioritaria")
+    guardar_interconsulta(id="ic-2", espec_destino="Urgencia Cardiologia roja")
+    guardar_interconsulta(id="ic-otra", espec_destino="Cardiologia")
+
+    response = client.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 3
+
+
+def test_listado_no_coincide_especialidad_distinta(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """Especialidades similares pero distintas no coinciden."""
+    guardar_interconsulta(id="ic-cardio", espec_destino="Cardiologia")
+    guardar_interconsulta(
+        id="ic-cardiovascular", espec_destino="Cirugia cardiovascular"
+    )
+    guardar_interconsulta(
+        id="ic-cardio-pedia", espec_destino="Cardiopatologia congenita"
+    )
+
+    response = client.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    body = response.json()
+    # Solo la exacta debe coincidir (Cardiologia no esta en 'Cirugia cardiovascular' ni 'Cardiopatologia congenita')
+    assert len(body) == 1
+    assert body[0]["id"] == "ic-cardio"
+
+
+def test_listado_case_insensitive_substring(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """Coincidencia case-insensitive para subcadenas."""
+    guardar_interconsulta(id="ic-1", espec_destino="CARDIOLOGIA ADULTO")
+    guardar_interconsulta(id="ic-2", espec_destino="cardiologia infantil")
+    guardar_interconsulta(id="ic-3", espec_destino="Cardiologia Consulta Externa")
+
+    response = client.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 3
+
+
+def test_listado_tilde_insensitive_substring(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """Coincidencia tilde-insensitive para subcadenas."""
+    # Medico tiene especialidad "Cardiologia" (sin tilde en test fixture)
+    # pero en ESPECIALIDADES esta "Cardiología" (con tilde)
+    guardar_interconsulta(id="ic-1", espec_destino="Cardiología adulto")
+    guardar_interconsulta(id="ic-2", espec_destino="CARDIOLOGÍA INFANTIL")
+    guardar_interconsulta(id="ic-3", espec_destino="Cardiologia consulta")
+
+    response = client.get("/api/interconsultas")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 3
+
+
+def test_detalle_coincide_parcial(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """GET /api/interconsultas/{id} con coincidencia parcial funciona."""
+    guardar_interconsulta(id="ic-detalle-adulto", espec_destino="Cardiologia adulto")
+
+    response = client.get("/api/interconsultas/ic-detalle-adulto")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == "ic-detalle-adulto"
+
+
+def test_detalle_no_coincide_parcial_devuelve_404(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """GET /api/interconsultas/{id} devuelve 404 si no hay coincidencia parcial."""
+    guardar_interconsulta(id="ic-neuro", espec_destino="Neurologia adulto")
+
+    response = client.get("/api/interconsultas/ic-neuro")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Interconsulta no encontrada"
+
+
+def test_modificar_prioridad_coincide_parcial(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """PATCH /prioridad con coincidencia parcial funciona."""
+    guardar_interconsulta(
+        id="ic-prio-adulto",
+        espec_destino="Cardiologia adulto",
+        prioridad_actual="media",
+    )
+
+    response = client.patch(
+        "/api/interconsultas/ic-prio-adulto/prioridad",
+        json={"prioridad": "alta", "motivo": "Empeora cuadro clinico"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["prioridad_actual"] == "alta"
+
+
+def test_modificar_estado_coincide_parcial(
+    client: TestClient,
+    guardar_interconsulta: CrearInterconsulta,
+) -> None:
+    """PATCH /estado con coincidencia parcial funciona."""
+    guardar_interconsulta(
+        id="ic-estado-adulto", espec_destino="Cardiologia adulto", estado="pendiente"
+    )
+
+    response = client.patch(
+        "/api/interconsultas/ic-estado-adulto/estado",
+        json={"estado": "revisada"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["estado"] == "revisada"

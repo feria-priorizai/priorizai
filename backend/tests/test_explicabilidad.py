@@ -783,16 +783,18 @@ CSV = (
 
 @pytest.fixture
 def carga_con_modelo(
-    client: TestClient,
+    client_admin: TestClient,
     session_factory: Any,
     cola: ColaExplicaciones,
     monkeypatch: pytest.MonkeyPatch,
 ) -> TestClient:
+    """Con el administrador: el CSV trae interconsultas de varias
+    especialidades y el test abre el detalle de todas."""
     monkeypatch.setattr(main_module, "SessionLocal", session_factory)
     monkeypatch.setattr(main_module, "get_priorizador", PriorizadorConModelo)
     monkeypatch.setattr(main_module, "get_cola", lambda: cola)
     monkeypatch.setattr(main_module, "get_extractor_ner", lambda: None)
-    return client
+    return client_admin
 
 
 def test_al_cargar_se_prioriza_y_se_encola_la_explicacion_alta_primero(

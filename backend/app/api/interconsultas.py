@@ -25,8 +25,12 @@ from app.schemas.priorizacion import (
     ResultadoPriorizacion,
 )
 from app.services import explicabilidad
+from app.services.auth import ROL_MEDICO
 from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
 from app.services.cola_explicaciones import ColaExplicaciones, get_cola
+from app.services.especialidades import (
+    filtrar_por_especialidad_si_medico as _filtrar_por_especialidad_si_medico,
+)
 from app.services.priorizador import (
     PriorizadorRigoBerta,
     aplicar_resultado,
@@ -69,12 +73,20 @@ def listar_interconsultas(
     limit: int = Query(default=LIMITE_LISTADO, ge=1, le=500),
     offset: int = 0,
     db: Session = DbSession,
+    usuario: Usuario = UsuarioActual,
 ) -> list[Interconsulta]:
     """El total va en la cabecera `X-Total-Count`: sin el, el cliente no puede
     distinguir 'no hay mas' de 'la pagina se lleno' y termina mostrando como total
-    lo que entro en la primera pagina."""
-    total = db.scalar(select(func.count()).select_from(Interconsulta)) or 0
+    lo que entro en la primera pagina.
+
+    Para medicos: filtra por espec_destino == especialidad del usuario.
+    Para administradores: muestra todas las interconsultas.
+    """
+    base_query = select(func.count()).select_from(Interconsulta)
+    base_query = _filtrar_por_especialidad_si_medico(base_query, usuario)
+    total = db.scalar(base_query) or 0
     response.headers["X-Total-Count"] = str(total)
+
     stmt = (
         select(Interconsulta)
         .options(selectinload(Interconsulta.modificaciones))
@@ -86,6 +98,7 @@ def listar_interconsultas(
         .offset(offset)
         .limit(limit)
     )
+    stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
     return list(db.scalars(stmt).all())
 
 
@@ -93,12 +106,15 @@ def listar_interconsultas(
 def obtener_interconsulta(
     interconsulta_id: str,
     db: Session = DbSession,
+    usuario: Usuario = UsuarioActual,
 ) -> Interconsulta:
-    interconsulta = db.scalar(
+    stmt = (
         select(Interconsulta)
         .options(selectinload(Interconsulta.modificaciones))
         .where(Interconsulta.id == interconsulta_id)
     )
+    stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
+    interconsulta: Interconsulta | None = db.scalar(stmt)
     if interconsulta is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -297,11 +313,13 @@ def modificar_prioridad_interconsulta(
                 f"{MOTIVO_MINIMO} caracteres"
             ),
         )
-    interconsulta = db.scalar(
+    stmt = (
         select(Interconsulta)
         .options(selectinload(Interconsulta.modificaciones))
         .where(Interconsulta.id == interconsulta_id)
     )
+    stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
+    interconsulta = db.scalar(stmt)
     if interconsulta is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -335,13 +353,16 @@ def modificar_estado_interconsulta(
     interconsulta_id: str,
     payload: ModificarEstadoRequest,
     db: Session = DbSession,
+    usuario: Usuario = ClinicoActual,
 ) -> Interconsulta:
     nuevo_estado = _normalizar_estado(payload.estado)
-    interconsulta = db.scalar(
+    stmt = (
         select(Interconsulta)
         .options(selectinload(Interconsulta.modificaciones))
         .where(Interconsulta.id == interconsulta_id)
     )
+    stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
+    interconsulta = db.scalar(stmt)
     if interconsulta is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -403,8 +424,23 @@ def priorizar_interconsultas(
     db: Session = DbSession,
     priorizador: PriorizadorRigoBerta = PriorizadorDependency,
     cola: ColaExplicaciones = ColaDependency,
+    usuario: Usuario = UsuarioActual,
 ) -> PriorizarInterconsultasResponse:
+    # Retrieve requested interconsultas
     interconsultas = _buscar_interconsultas(db, payload.ids)
+    # Apply specialty filter for doctors
+    if usuario.rol == ROL_MEDICO:
+        # Build a query to find allowed IDs
+        stmt = select(Interconsulta.id).where(Interconsulta.id.in_(payload.ids))
+        stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
+        allowed_ids = {row for row in db.scalars(stmt)}
+        # Verify all requested interconsultas are allowed
+        disallowed = [ic.id for ic in interconsultas if ic.id not in allowed_ids]
+        if disallowed:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"interconsultas_no_permitidas": disallowed},
+            )
     _validar_interconsultas_para_prediccion(interconsultas)
     resultados = _predecir_o_503(priorizador, interconsultas)
     _guardar_resultados(db, interconsultas, resultados)

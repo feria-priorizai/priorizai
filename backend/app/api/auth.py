@@ -1,3 +1,5 @@
+import unicodedata
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
@@ -7,6 +9,7 @@ from app.core.database import get_db
 from app.models.usuario import Usuario
 from app.schemas.auth import CambiarPasswordRequest, LoginRequest, UsuarioResponse
 from app.services.auth import (
+    ESPECIALIDADES,
     ROL_ADMINISTRADOR,
     ROL_MEDICO,
     CredencialesInvalidasError,
@@ -82,6 +85,30 @@ def clinico_actual(usuario: Usuario = UsuarioActual) -> Usuario:
 
 
 ClinicoActual = Depends(clinico_actual)
+
+
+def _quitar_tildes(texto: str) -> str:
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", texto) if not unicodedata.combining(c)
+    )
+
+
+def _variantes_especialidad(especialidad: str) -> set[str]:
+    base = especialidad.strip()
+    sin_tilde = _quitar_tildes(base)
+    formas = {base, sin_tilde}
+    for esp in ESPECIALIDADES:
+        if _quitar_tildes(esp).strip().lower() == sin_tilde.strip().lower():
+            formas.add(esp.strip())
+            formas.add(_quitar_tildes(esp).strip())
+
+    variantes: set[str] = set()
+    for f in formas:
+        for variante in (f.lower(), f.upper(), f.capitalize()):
+            variantes.add(variante)
+            # SQLite LOWER() solo convierte caracteres ASCII:
+            variantes.add("".join(c.lower() if c.isascii() else c for c in variante))
+    return variantes
 
 
 def _error_bloqueo(error: UsuarioBloqueadoError) -> HTTPException:

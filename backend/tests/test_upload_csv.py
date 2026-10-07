@@ -83,14 +83,16 @@ def session_dummy(
     return session
 
 
-def test_upload_csv_success(client: TestClient, session_dummy: DummySession) -> None:
+def test_upload_csv_success(
+    client_admin: TestClient, session_dummy: DummySession
+) -> None:
     csv_content = (
         HEADER
         + "MEDICINA GENERAL,46,FEMENINO,RESPIRATORIO ADULTO,ALTA,"
         + "CANCER PULMONAR,Paciente estable.,,CONTROL DE ESPECIALIDAD\n"
     )
 
-    response = client.post(
+    response = client_admin.post(
         "/upload-csv",
         files={"file": ("test.csv", csv_content, "text/csv")},
     )
@@ -115,7 +117,7 @@ def test_upload_csv_success(client: TestClient, session_dummy: DummySession) -> 
 
 
 def test_upload_csv_success_with_semicolon_delimiter(
-    client: TestClient,
+    client_admin: TestClient,
     session_dummy: DummySession,
 ) -> None:
     csv_content = (
@@ -124,7 +126,7 @@ def test_upload_csv_success_with_semicolon_delimiter(
         + "CANCER PULMONAR;Paciente estable;;CONTROL DE ESPECIALIDAD\n"
     )
 
-    response = client.post(
+    response = client_admin.post(
         "/upload-csv",
         files={"file": ("test.csv", csv_content, "text/csv")},
     )
@@ -140,7 +142,7 @@ def test_upload_csv_success_with_semicolon_delimiter(
 
 
 def test_upload_xlsx_success_with_commas_and_newlines(
-    client: TestClient,
+    client_admin: TestClient,
     session_dummy: DummySession,
 ) -> None:
     workbook = Workbook()
@@ -162,7 +164,7 @@ def test_upload_xlsx_success_with_commas_and_newlines(
     buffer = BytesIO()
     workbook.save(buffer)
 
-    response = client.post(
+    response = client_admin.post(
         "/upload-csv",
         files={
             "file": (
@@ -188,7 +190,7 @@ def test_upload_xlsx_success_with_commas_and_newlines(
 
 
 def test_upload_csv_quoted_newline_field(
-    client: TestClient,
+    client_admin: TestClient,
     session_dummy: DummySession,
 ) -> None:
     csv_content = (
@@ -198,7 +200,7 @@ def test_upload_csv_quoted_newline_field(
         + 'Se evalua evolucion posterior.",,CONTROL DE ESPECIALIDAD\n'
     )
 
-    response = client.post(
+    response = client_admin.post(
         "/upload-csv",
         files={"file": ("test.csv", csv_content, "text/csv")},
     )
@@ -212,7 +214,7 @@ def test_upload_csv_quoted_newline_field(
 
 
 def test_upload_csv_rechaza_solo_la_fila_con_columnas_de_mas(
-    client: TestClient,
+    client_admin: TestClient,
     session_dummy: DummySession,
 ) -> None:
     """Una coma de mas en una fila no puede tumbar el archivo entero."""
@@ -222,7 +224,7 @@ def test_upload_csv_rechaza_solo_la_fila_con_columnas_de_mas(
         + "HIPOACUSIA,HTA,EXAMEN BASE,CONTROL DE ESPECIALIDAD,con coma extra\n"
     )
 
-    response = client.post(
+    response = client_admin.post(
         "/upload-csv",
         files={"file": ("test.csv", csv_content, "text/csv")},
     )
@@ -237,14 +239,14 @@ def test_upload_csv_rechaza_solo_la_fila_con_columnas_de_mas(
     assert session_dummy.executed == []
 
 
-def test_upload_csv_rejects_wrong_extension(client: TestClient) -> None:
+def test_upload_csv_rejects_wrong_extension(client_admin: TestClient) -> None:
     csv_content = (
         HEADER
         + "MEDICINA GENERAL,46,FEMENINO,RESPIRATORIO ADULTO,ALTA,"
         + "CANCER PULMONAR,Paciente estable.,,CONTROL DE ESPECIALIDAD\n"
     )
 
-    response = client.post(
+    response = client_admin.post(
         "/upload-csv",
         files={"file": ("test.txt", csv_content, "text/plain")},
     )
@@ -254,7 +256,7 @@ def test_upload_csv_rejects_wrong_extension(client: TestClient) -> None:
 
 
 def test_upload_file_empty_edad_returns_error(
-    client: TestClient,
+    client_admin: TestClient,
     session_dummy: DummySession,
 ) -> None:
     csv_content = (
@@ -265,7 +267,7 @@ def test_upload_file_empty_edad_returns_error(
         + "CANCER PULMONAR,Paciente estable.,,CONTROL DE ESPECIALIDAD\n"
     )
 
-    response = client.post(
+    response = client_admin.post(
         "/upload-csv",
         files={"file": ("test.csv", csv_content, "text/csv")},
     )
@@ -278,3 +280,24 @@ def test_upload_file_empty_edad_returns_error(
     assert body["rejected"][0]["fila"] == 3
     assert body["rejected"][0]["campos_faltantes"] == ["EDAD"]
     assert len(session_dummy.executed) == 1
+
+
+def test_upload_csv_medico_puede_subir(
+    client: TestClient, session_dummy: DummySession
+) -> None:
+    """Un usuario con rol medico puede subir CSV: el endpoint admite medico y admin."""
+    csv_content = (
+        HEADER
+        + "MEDICINA GENERAL,46,FEMENINO,RESPIRATORIO ADULTO,ALTA,"
+        + "CANCER PULMONAR,Paciente estable.,,CONTROL DE ESPECIALIDAD\n"
+    )
+
+    response = client.post(
+        "/upload-csv",
+        files={"file": ("test.csv", csv_content, "text/csv")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["inserted"] == 1
+    assert body["stored"] == 1

@@ -16,6 +16,10 @@ export default function DashboardPage() {
   const { interconsultas, cargando, error, totalInterconsultas } =
     useInterconsultas();
 
+  if (!usuario) {
+    return null; // SesionProvider redirige al login si no hay usuario
+  }
+
   if (cargando) {
     return <EstadoVista tipo="cargando" texto="Cargando interconsultas…" />;
   }

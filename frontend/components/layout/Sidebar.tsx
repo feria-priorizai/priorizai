@@ -97,6 +97,7 @@ export default function Sidebar() {
         archivo: archivo.name,
         guardadas: respuesta.stored ?? respuesta.inserted,
         priorizadas: respuesta.prioritized ?? 0,
+        explicaciones: respuesta.explanations_queued ?? 0,
         rechazadas: respuesta.rejected ?? [],
       };
       window.dispatchEvent(new Event(EVENTO_INTERCONSULTAS_ACTUALIZADAS));

@@ -27,6 +27,16 @@
   --pz-purple:     #744FC6;
   --pz-purple-ink: #472A8C;
 
+  /* ---------- Explicabilidad ----------
+     A favor / en contra de la sugerencia del modelo. Morado y teal a
+     proposito: rojo, ambar y verde ya significan prioridad, y una palabra
+     resaltada en rojo se leeria como "urgente". El morado es ademas el
+     color que en esta interfaz ya significa "lo hizo el modelo".
+     Validados contra el blanco del panel: daltonismo (deutan) ΔE 12,4,
+     vision normal ΔE 19,8. */
+  --pz-favor:  #744FC6;
+  --pz-contra: #008A9E;
+
   /* ---------- Lienzo y superficies ----------
      El lienzo es azul, no blanco: contra el, una tarjeta blanca se
      lee como un objeto y no como un hueco. */
@@ -526,6 +536,11 @@ h1, h2, h3, h4, h5 {
   background: var(--pz-media-bg);
   border-left: 3px solid var(--pz-media);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+/* Informativo, no advertencia: el ámbar significa prioridad media. */
+.pz-aviso-carga--info {
+  background: color-mix(in srgb, var(--pz-purple) 8%, transparent);
+  border-left-color: var(--pz-purple);
 }
 .pz-fila-problema {
   display: flex;
@@ -1027,6 +1042,20 @@ h1, h2, h3, h4, h5 {
 .pz-seg__op.is-on[data-nivel="media"] { background: var(--pz-media); }
 .pz-seg__op.is-on[data-nivel="baja"]  { background: var(--pz-green-ink); }
 
+/* El mismo selector para elegir la vista de la explicacion. Morado y no un
+   color de prioridad: elegir una vista no es elegir una prioridad. */
+.pz-seg--vistas {
+  width: 100%;
+  max-width: 28rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.pz-seg--vistas .pz-seg__op { padding: .6rem .35rem; letter-spacing: .04em; }
+.pz-seg--vistas .pz-seg__op.is-on { background: var(--pz-purple-ink); }
+.pz-seg--vistas .pz-seg__op:focus-visible {
+  outline: 2px solid var(--pz-purple);
+  outline-offset: -4px;
+}
+
 .pz-decision__seccion {
   padding: 1.3rem 1.4rem;
   border-top: 2px solid var(--pz-line);
@@ -1145,9 +1174,22 @@ h1, h2, h3, h4, h5 {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--pz-ink-3); background-clip: content-box; }
 
+/* Progreso sin porcentaje conocido: mientras la explicacion espera en cola o
+   se prepara el modelo no hay avance que contar, asi que no se finge uno. */
+.pz-meter__fill--indeterminado {
+  width: 35%;
+  background: var(--pz-favor);
+  animation: pz-indeterminado 1.6s ease-in-out infinite;
+}
+@keyframes pz-indeterminado {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(290%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pz-btn, .pz-meter__fill, .pz-navlink, .pz-rail__item,
   .pz-table > tbody tr, .pz-fila-cola { transition: none; }
   .pz-btn:hover:not(:disabled), .pz-rail__item:hover,
   .pz-fila-cola:hover { transform: none; }
+  .pz-meter__fill--indeterminado { animation: none; width: 100%; opacity: .5; }
 }

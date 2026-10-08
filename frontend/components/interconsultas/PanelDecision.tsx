@@ -198,6 +198,14 @@ function Procedencia({ interconsulta: ic }: { interconsulta: Interconsulta }) {
           Forzada por el catálogo de términos de alarma, no por el modelo. La
           certeza no aplica.
         </p>
+        {ic.priorizacionIA.priorizada && (
+          <a
+            href="#explicacion"
+            className="mt-2 inline-block text-[.8rem] font-semibold text-[var(--pz-purple-ink)] underline underline-offset-2"
+          >
+            El modelo sugería {ic.priorizacionIA.nivelSugerido}: ver por qué
+          </a>
+        )}
       </div>
     );
   }
@@ -248,6 +256,13 @@ function Procedencia({ interconsulta: ic }: { interconsulta: Interconsulta }) {
           El modelo sugirió {ic.priorizacionIA.nivelSugerido}
         </p>
       )}
+
+      <a
+        href="#explicacion"
+        className="self-start text-[.8rem] font-semibold text-[var(--pz-purple-ink)] underline underline-offset-2"
+      >
+        ¿Por qué sugirió {ic.priorizacionIA.nivelSugerido}?
+      </a>
     </div>
   );
 }

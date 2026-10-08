@@ -1,7 +1,9 @@
 from datetime import datetime
+from typing import Any
 
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, computed_field, field_validator
 
+from app.schemas.explicacion import VERSION_EXPLICACION, ExplicacionShap
 from app.services.banderas_rojas import nombres_de_terminos
 
 
@@ -79,3 +81,19 @@ class InterconsultaResponse(BaseModel):
         return nombres_de_terminos(self.terminos_bandera_roja)
 
     model_config = {"from_attributes": True}
+
+
+class InterconsultaDetalleResponse(InterconsultaResponse):
+    """El detalle agrega la explicacion. No va en el listado, que trae cientos
+    de interconsultas y no la muestra."""
+
+    explicacion: ExplicacionShap | None = None
+
+    @field_validator("explicacion", mode="before")
+    @classmethod
+    def _descartar_version_anterior(cls, valor: Any) -> Any:
+        """Una explicacion guardada con otro formato se trata como inexistente:
+        el frontend ofrece calcularla de nuevo en vez de fallar al leerla."""
+        if isinstance(valor, dict) and valor.get("version") == VERSION_EXPLICACION:
+            return valor
+        return None

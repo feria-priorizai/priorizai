@@ -4,6 +4,7 @@ import type {
   Interconsulta,
   NivelPrioridad,
 } from "@/types/interconsulta";
+import type { EstadoExplicacion, ExplicacionShap } from "@/types/explicacion";
 import { apiFetch, obtenerMensajeError } from "@/services/api";
 
 export const EVENTO_INTERCONSULTAS_ACTUALIZADAS =
@@ -24,6 +25,8 @@ export type ResultadoCarga =
       archivo: string;
       guardadas: number;
       priorizadas: number;
+      /** Explicaciones que quedaron calculándose en segundo plano. */
+      explicaciones: number;
       rechazadas: FilaRechazada[];
     }
   | { archivo: string; error: string };
@@ -58,6 +61,7 @@ interface InterconsultaApi {
   updated_at: string;
   entidades?: EntidadesPorCampo | null;
   entidades_error?: string | null;
+  explicacion?: ExplicacionShap | null;
   modificaciones?: ModificacionPrioridadApi[];
 }
 
@@ -146,6 +150,52 @@ export async function obtenerInterconsultaPorId(
 
   const data = (await respuesta.json()) as InterconsultaApi;
   return mapearInterconsulta(data);
+}
+
+async function leerEstadoExplicacion(
+  respuesta: Response,
+  fallback: string,
+): Promise<EstadoExplicacion> {
+  if (!respuesta.ok) {
+    const error = await respuesta.json().catch(() => null);
+    throw new Error(obtenerMensajeError(error?.detail, fallback));
+  }
+  return respuesta.json();
+}
+
+/**
+ * Pide la explicación de la sugerencia del modelo: cuánto aportó cada campo,
+ * con SHAP.
+ *
+ * El backend no la calcula dentro de la petición: tarda minutos, más de lo que
+ * aguanta el proxy. La encola y responde al tiro; el avance se consulta con
+ * `consultarExplicacion`. Si ya hay una guardada y vigente, viene lista.
+ * `forzar` recalcula de todas formas.
+ */
+export async function pedirExplicacion(
+  id: string,
+  forzar = false,
+): Promise<EstadoExplicacion> {
+  const respuesta = await apiFetch(
+    `/api/interconsultas/${id}/explicacion${forzar ? "?forzar=true" : ""}`,
+    { method: "POST" },
+  );
+  return leerEstadoExplicacion(respuesta, "No se pudo pedir la explicación");
+}
+
+/** En qué va la explicación: en cola, calculando (con avance), lista o error. */
+export async function consultarExplicacion(
+  id: string,
+  signal?: AbortSignal,
+): Promise<EstadoExplicacion> {
+  const respuesta = await apiFetch(`/api/interconsultas/${id}/explicacion`, {
+    cache: "no-store",
+    signal,
+  });
+  return leerEstadoExplicacion(
+    respuesta,
+    "No se pudo consultar el estado de la explicación",
+  );
 }
 
 /** Ejecuta el modelo predictivo para una sola interconsulta. */
@@ -262,6 +312,8 @@ export async function subirCsvInterconsultas(
   prioritized: number;
   prioritization_status: string;
   ids: string[];
+  /** Explicaciones encoladas al cargar. 0 sin el modelo en el backend. */
+  explanations_queued?: number;
   rejected: FilaRechazada[];
   rejected_count: number;
 }> {
@@ -353,6 +405,8 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
     prioridadOriginalCsv: api.prioridad_original_csv,
     entidades: api.entidades ?? null,
     entidadesError: api.entidades_error ?? null,
+    motivoOriginal: api.motivo_interconsulta ?? "",
+    explicacion: api.explicacion ?? null,
   };
 }
 

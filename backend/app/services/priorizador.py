@@ -26,6 +26,19 @@ class ModeloConfiguracion:
     labels: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class RecursosModelo:
+    """El modelo ya cargado, para quien necesita algo mas que predecir (la
+    explicabilidad, por ejemplo). `labels` es el orden resuelto de las clases:
+    usar otro asignaria cada atribucion a la prioridad equivocada."""
+
+    tokenizer: Any
+    model: Any
+    device: Any
+    labels: tuple[str, ...]
+    max_length: int
+
+
 def normalizar_clase(texto: str) -> str:
     texto = unicodedata.normalize("NFKD", str(texto))
     texto = "".join(c for c in texto if not unicodedata.combining(c))
@@ -108,6 +121,17 @@ class PriorizadorRigoBerta:
         for interconsulta, probs in zip(interconsultas, probabilidades, strict=True):
             resultados.append(self._crear_resultado(interconsulta.id, probs))
         return resultados
+
+    def recursos(self) -> RecursosModelo:
+        self._cargar_modelo()
+        assert self._label_names is not None
+        return RecursosModelo(
+            tokenizer=self._tokenizer,
+            model=self._model,
+            device=self._device,
+            labels=tuple(self._label_names),
+            max_length=self.config.max_length,
+        )
 
     def _cargar_modelo(self) -> None:
         if self._model is not None and self._tokenizer is not None:

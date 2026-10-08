@@ -8,6 +8,7 @@ import PanelDecision from "@/components/interconsultas/PanelDecision";
 import DetalleInterconsulta from "@/components/interconsultas/DetalleInterconsulta";
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
+import ExplicacionPrediccion from "@/components/interconsultas/ExplicacionPrediccion";
 import TablaEntidades from "@/components/interconsultas/TablaEntidades";
 import NavegacionInterconsultas from "@/components/interconsultas/NavegacionInterconsultas";
 import EstadoVista from "@/components/ui/EstadoVista";
@@ -107,6 +108,7 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
         <div className="flex flex-col gap-4">
           <DetalleInterconsulta interconsulta={interconsulta} />
           <ResumenClinico interconsulta={interconsulta} />
+          <ExplicacionPrediccion interconsulta={interconsulta} />
           <TablaEntidades
             entidades={interconsulta.entidades}
             error={interconsulta.entidadesError}

@@ -1,5 +1,6 @@
 import csv
 import io
+import logging
 import math
 from collections.abc import AsyncIterator, Iterable, Sequence
 from contextlib import asynccontextmanager
@@ -18,6 +19,7 @@ from starlette.middleware.base import RequestResponseEndpoint
 
 from app.api.auth import UsuarioActual
 from app.api.auth import router as auth_router
+from app.api.interconsultas import encolar_explicaciones
 from app.api.interconsultas import router as interconsultas_router
 from app.api.usuarios import router as usuarios_router
 from app.core.config import settings
@@ -26,6 +28,7 @@ from app.models import Base, Interconsulta
 from app.models.usuario import Usuario
 from app.services.auth import ROL_MEDICO, ROLES, asegurar_admin_inicial
 from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
+from app.services.cola_explicaciones import get_cola
 from app.services.ner import get_extractor_ner
 from app.services.priorizador import (
     aplicar_resultado,
@@ -78,6 +81,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     _crear_admin_inicial()
     yield
 
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(lifespan=lifespan)
 
@@ -432,6 +437,7 @@ def _guardar_interconsultas(
 
         priorizadas = _priorizar_interconsultas_insertadas(session, ids_insertados)
         session.commit()
+        explicaciones = _encolar_explicaciones(session, ids_insertados)
         return {
             "inserted": len(filas_json),
             "stored": len(filas_json),
@@ -442,6 +448,7 @@ def _guardar_interconsultas(
                 priorizadas=priorizadas,
             ),
             "ids": ids_insertados,
+            "explanations_queued": explicaciones,
         }
     except HTTPException:
         session.rollback()
@@ -465,6 +472,7 @@ COLUMNAS_NUEVAS = {
     "prioridad_forzada_por_regla": "BOOLEAN DEFAULT false NOT NULL",
     "entidades": "JSON",
     "entidades_error": "TEXT",
+    "explicacion": "JSON",
 }
 
 
@@ -535,6 +543,29 @@ def _priorizar_interconsultas_insertadas(session: Session, ids: list[str]) -> in
         aplicar_resultado(por_id[resultado.id], resultado)
 
     return len(resultados)
+
+
+def _encolar_explicaciones(session: Session, ids: list[str]) -> int:
+    """La explicacion de cada interconsulta priorizada se encola al cargarla,
+    despues del commit: la cola la calcula en otro hilo y la guarda con su
+    propia sesion, asi que la interconsulta tiene que estar ya en la base.
+
+    Igual que con el NER y el priorizador, un fallo aca no tumba la carga: las
+    interconsultas ya quedaron guardadas y priorizadas, y la explicacion se
+    puede pedir despues desde el detalle.
+    """
+    try:
+        interconsultas = list(
+            session.scalars(
+                select(Interconsulta).where(Interconsulta.id.in_(ids)),
+            ).all(),
+        )
+        return encolar_explicaciones(
+            session, interconsultas, get_priorizador(), get_cola()
+        )
+    except Exception:
+        logger.exception("No se pudieron encolar las explicaciones de la carga")
+        return 0
 
 
 def _extraer_entidades(interconsultas: list[Interconsulta]) -> int:

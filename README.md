@@ -173,6 +173,71 @@ una advertencia en el log. Ese orden debe verificarse contra el `LabelEncoder`
 del entrenamiento: si no coincide, las probabilidades quedan asignadas a la
 clase equivocada sin ningún síntoma visible.
 
+### Explicabilidad
+
+Desde el detalle de una interconsulta se puede ver por qué el modelo sugirió
+la prioridad que sugirió: **cuánto empujó cada uno de los ocho campos** hacia
+esa prioridad o en contra, calculado con SHAP. Con ocho campos hay 2⁸ = 256
+combinaciones, así que el valor de Shapley se calcula exacto y no por muestreo:
+dos ejecuciones dan lo mismo, y los aportes suman justo la diferencia entre la
+probabilidad con la interconsulta vacía y la final. La final es la confianza
+del modelo, la misma que muestra el panel de decisión.
+
+El médico elige cómo verla, y su elección queda recordada en el navegador:
+
+- **Resumen.** En palabras: qué campos empujaron a favor y cuáles en contra,
+  con "mucho" (10 puntos o más), "algo" (3 a 10) o "poco" (menos de 3), y una
+  nota cuando el contenido de la interconsulta casi no mueve la probabilidad.
+- **Palabras.** El texto de la interconsulta con las palabras que más pesaron
+  resaltadas, y una lista con las que más empujaron a favor y en contra.
+- **Por campo.** Barras a la derecha (suma) o a la izquierda (resta).
+
+El peso de una palabra es **cuánto cambia la probabilidad si se borra solo
+esa palabra**, con el resto de la interconsulta igual. Por eso las palabras de
+un campo no suman su total: si dos dicen lo mismo, borrar una sola cambia poco.
+En un campo de una sola palabra (la edad, el sexo) la palabra es el campo y vale
+su total. Se probó SHAP por palabra (Partition) y se descartó: tardó 3 minutos
+en una interconsulta corta, con grupos de palabras que todavía compartían un
+mismo valor, y lo que sumaban las palabras de cada campo no calzaba con su
+aporte exacto (−10,5 contra −18,8 en una historia clínica).
+
+La explicación **se calcula sola, al mismo tiempo que la priorización**: apenas
+el modelo prioriza una interconsulta (al cargar el archivo, o con
+`/priorizar` y `/priorizar-pendientes`), su explicación entra a una cola, las
+de prioridad alta primero. La carga no la espera: priorizar toma segundos y
+explicar unos minutos por interconsulta en CPU (unos 2,5 los campos y alrededor
+de uno más las palabras), así que corre **en segundo plano**, de a una, y el
+detalle muestra el avance. Un archivo de 12 interconsultas deja la cola
+trabajando unos 40 minutos. La respuesta de `/upload-csv` dice cuántas encoló
+(`explanations_queued`). El botón para pedirla a mano queda para las que no la
+tienen: cargadas antes, o con un cálculo que falló; `POST` encola y `GET`
+consulta el avance. El resultado queda
+guardado en la columna `explicacion` con su versión, clase y fecha, y se
+descarta si la interconsulta se vuelve a priorizar con otro resultado.
+
+Los cálculos corren de a uno: cada uno ocupa toda la CPU. La cola vive en el
+proceso del backend, así que supone un solo worker de uvicorn (como corre hoy);
+si el backend se reinicia a mitad de un cálculo, ese cálculo se pierde y hay
+que volver a pedirlo.
+
+Se explica **lo que el modelo leyó**. Un texto que pasa el límite de tokens se
+trunca al predecir: los campos que quedaron enteros fuera se marcan como «no
+leídos», con aporte cero.
+
+Se probó también Integrated Gradients (Captum) para ver el peso de cada
+palabra, y se descartó: con 128 pasos la integral quedó lejos de converger en
+los casos de prueba (errores de 15%, 30% y 250%), así que las intensidades por
+palabra no eran confiables.
+
+Tres límites que hay que tener presentes:
+
+- **Explica al modelo, no a la clínica.** Un campo puede pesar por un patrón de
+  los datos de entrenamiento y no por su contenido clínico.
+- **Explica la sugerencia del modelo**, aunque la prioridad vigente la haya
+  fijado una bandera roja o un médico. La interfaz lo indica.
+- **Necesita el modelo dentro del backend.** Con `MODEL_SERVICE_URL`, el
+  servicio externo no expone explicaciones y el endpoint responde 503.
+
 ## Ejecutar con Docker
 
 ```bash
@@ -249,6 +314,8 @@ docker compose down -v
 | `GET` | `/api/interconsultas/{id}` | Detalle de una interconsulta |
 | `PATCH` | `/api/interconsultas/{id}/prioridad` | Cambio manual de prioridad con motivo; el responsable sale de la sesión |
 | `PATCH` | `/api/interconsultas/{id}/estado` | Marca la interconsulta como revisada o pendiente |
+| `POST` | `/api/interconsultas/{id}/explicacion` | Encola la explicación de la sugerencia del modelo y responde 202. Si ya hay una vigente responde 200; `?forzar=true` recalcula |
+| `GET` | `/api/interconsultas/{id}/explicacion` | Estado de la explicación: en cola, calculando (con avance), lista o error |
 | `POST` | `/api/interconsultas/priorizar` | Ejecuta el modelo sobre los identificadores indicados |
 | `POST` | `/api/interconsultas/priorizar-pendientes` | Ejecuta el modelo sobre las que aún no tienen prioridad |
 | `POST` | `/api/interconsultas/reevaluar-banderas` | Vuelve a aplicar el catálogo de términos de alarma |

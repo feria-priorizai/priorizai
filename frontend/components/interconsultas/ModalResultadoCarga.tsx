@@ -8,6 +8,10 @@ import {
   type ResultadoCarga,
 } from "@/services/interconsultas";
 
+/** Lo que tarda en promedio la explicación de una interconsulta, en la cola
+ *  del backend, que las calcula de a una. */
+const MINUTOS_POR_EXPLICACION = 3.5;
+
 /**
  * Resumen de cada carga de archivo: cuántas filas se guardaron de cuántas
  * venían, cuántas priorizó el modelo y qué le pasó a cada fila que quedó
@@ -132,7 +136,8 @@ function ResumenCarga({
   cerrarRef: React.RefObject<HTMLButtonElement | null>;
   onCerrar: () => void;
 }) {
-  const { archivo, guardadas, priorizadas, rechazadas } = resultado;
+  const { archivo, guardadas, priorizadas, explicaciones, rechazadas } =
+    resultado;
   const total = guardadas + rechazadas.length;
   const sinPriorizar = guardadas - priorizadas;
 
@@ -180,6 +185,18 @@ function ResumenCarga({
               ? "1 interconsulta guardada quedó sin prioridad sugerida."
               : `${sinPriorizar} interconsultas guardadas quedaron sin prioridad sugerida.`}{" "}
             Aparecen en el grupo «Sin priorizar» y se pueden priorizar desde su detalle.
+          </p>
+        )}
+
+        {explicaciones > 0 && (
+          <p className="pz-aviso-carga pz-aviso-carga--info">
+            {explicaciones === 1
+              ? "La explicación de la prioridad sugerida se calcula"
+              : `Las explicaciones de las ${explicaciones} prioridades sugeridas se calculan`}{" "}
+            en segundo plano, de a una (unos{" "}
+            {Math.max(1, Math.round(explicaciones * MINUTOS_POR_EXPLICACION))}{" "}
+            min). Mientras tanto se puede revisar cada interconsulta: su
+            explicación aparece en el detalle cuando está lista.
           </p>
         )}
 

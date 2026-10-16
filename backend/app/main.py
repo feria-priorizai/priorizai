@@ -153,13 +153,20 @@ def health() -> dict[str, str]:
 
 
 @app.post("/upload-csv", dependencies=[UsuarioActual])
-async def upload_csv(
+def upload_csv(
     file: UploadFile = UPLOAD_FILE,
     campos_obligatorios: str | None = CAMPOS_OBLIGATORIOS_FORM,
 ) -> dict[str, object]:
     """`campos_obligatorios` viene de la pestana de configuracion, separado por
     comas. Sin el se usan los de fabrica: antes la configuracion no salia del
-    navegador y la pestana no tenia ningun efecto sobre la carga."""
+    navegador y la pestana no tenia ningun efecto sobre la carga.
+
+    Es `def` y no `async def` a proposito: leer, validar, priorizar y guardar
+    es trabajo bloqueante (base de datos, modelo, servicio de modelos). Como
+    corrutina corria en el event loop y, mientras duraba una carga, el servidor
+    no atendia ninguna otra peticion: la prueba de carga lo mostro con el p95
+    del listado subiendo de 13 ms a casi 500 ms. Como `def`, FastAPI lo corre
+    en su pool de hilos y el resto de la API sigue respondiendo."""
     filename = (file.filename or "").lower()
     es_csv = filename.endswith(".csv")
     es_xlsx = filename.endswith(".xlsx")
@@ -169,7 +176,7 @@ async def upload_csv(
             detail="El archivo debe ser CSV o XLSX valido",
         )
 
-    contenido = await file.read()
+    contenido = file.file.read()
     if es_xlsx:
         filas = _leer_xlsx(contenido)
         tipo_archivo = "xlsx"

@@ -26,26 +26,14 @@ import pandas as pd
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-# ---------------------------------------------------------------------------
-# Configuración
-# ---------------------------------------------------------------------------
 
-# Ruta de la CARPETA del modelo fine-tuneado. from_pretrained carga desde el
-# directorio (que adentro tiene model.safetensors, config.json y el tokenizer),
-# no desde el archivo .safetensors suelto.
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MODEL_PATH = PROJECT_ROOT / "models"
 
-# Ruta del CSV de entrada (las interconsultas a priorizar).
 INPUT_PATH = PROJECT_ROOT / "ic_historicas_new.xlsx - Sheet 1.csv"
 
-# Ruta del CSV de salida (las predicciones con probabilidades).
 OUTPUT_PATH = PROJECT_ROOT / "data" / "predicciones_ic_historicas.csv"
 
-# Columnas del CSV que se concatenan (en este orden) para formar el texto de
-# entrada del modelo. Son las columnas del dataset de interconsultas.
-# Si tu modelo fue fine-tuneado SOLO con las columnas de texto largo, puedes
-# acotar esta lista (o pasar --text-columns en la línea de comandos).
 TEXT_COLUMNS = [
     "ESPEC_ORIGEN",
     "EDAD",
@@ -57,19 +45,10 @@ TEXT_COLUMNS = [
     "MOTIVO_INTERCONSULTA",
 ]
 
-# Orden canónico de las clases que quieres en la salida.
 PRIORITY_ORDER = ["baja", "media", "alta"]
 
-# Fallback de mapeo índice -> clase, SOLO usado si el config.json del modelo no
-# trae un id2label con nombres reconocibles (p. ej. trae "LABEL_0", "LABEL_1"...).
-# TODO: si tu modelo tiene labels genéricos, ajusta este orden al que usaste al
-# entrenar. Ejemplo: si entrenaste con 0=baja, 1=media, 2=alta, dejalo así.
 FALLBACK_ID2LABEL = {0: "baja", 1: "media", 2: "alta"}
 
-
-# ---------------------------------------------------------------------------
-# Utilidades
-# ---------------------------------------------------------------------------
 
 def validate_model_dir(model_path: Path) -> None:
     """Verifica los archivos minimos antes de cargar Transformers."""
@@ -126,7 +105,6 @@ def resolve_label_names(config, num_labels: int) -> list[str]:
       2. FALLBACK_ID2LABEL si los labels del config son genéricos (LABEL_0, ...).
     """
     id2label = getattr(config, "id2label", None) or {}
-    # Las claves de id2label pueden venir como str ("0") o int (0).
     raw = []
     for i in range(num_labels):
         label = id2label.get(i, id2label.get(str(i)))
@@ -167,7 +145,6 @@ def build_texts(df: pd.DataFrame, columns: list[str]) -> list[str]:
     texts = df[present[0]].fillna("").astype(str)
     for col in present[1:]:
         texts = texts + " " + df[col].fillna("").astype(str)
-    # Colapsa espacios múltiples que aparecen cuando hay celdas vacías.
     return texts.str.replace(r"\s+", " ", regex=True).str.strip().tolist()
 
 
@@ -191,10 +168,6 @@ def predict(texts, model, tokenizer, device, max_length, batch_size):
     print()
     return torch.cat(all_probs, dim=0)
 
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 def parse_args():
     p = argparse.ArgumentParser(
@@ -265,8 +238,6 @@ def main():
     texts = build_texts(df, args.text_columns)
     probs = predict(texts, model, tokenizer, device, args.max_length, args.batch_size)
 
-    # CSV de salida: todas las columnas originales + 'texto' (la concatenación) +
-    # las probabilidades + la predicción.
     out = df.copy()
     out["texto"] = texts
     name_to_idx = {name: i for i, name in enumerate(label_names)}
@@ -275,7 +246,6 @@ def main():
             col_idx = name_to_idx[clase]
             out[f"prob_{clase}_%"] = (probs[:, col_idx] * 100).numpy().round(2)
 
-    # Clase predicha (argmax sobre las clases del modelo).
     pred_idx = probs.argmax(dim=-1).numpy()
     out["prediccion"] = [label_names[i] for i in pred_idx]
 

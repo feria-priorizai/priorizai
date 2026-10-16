@@ -54,7 +54,6 @@ export default function PanelDecision({
 
   return (
     <div className="pz-panel pz-decision">
-      {/* Prioridad vigente y su procedencia */}
       <div className="pz-panel__body">
         <div className="flex items-start justify-between gap-3">
           <span className="pz-eyebrow">Prioridad vigente</span>
@@ -76,7 +75,6 @@ export default function PanelDecision({
         </div>
       </div>
 
-      {/* Cambio manual, o priorización si todavía no tiene ninguna */}
       {esValida && (
         <div className="pz-decision__seccion">
           {tienePrioridad ? (
@@ -91,8 +89,6 @@ export default function PanelDecision({
                 La prioridad solo puede corregirse una vez que el sistema la haya
                 asignado.
               </p>
-              {/* La inferencia tarda: sin bloquear el botón, el segundo
-                  clic dispara una segunda ejecución del modelo. */}
               <button
                 type="button"
                 onClick={async () => {
@@ -114,7 +110,6 @@ export default function PanelDecision({
         </div>
       )}
 
-      {/* Cierre del ciclo: revisar y sacar el resultado */}
       <div className="pz-decision__seccion pz-form flex flex-col gap-2.5">
         {!estaRevisada && (
           <button
@@ -127,7 +122,6 @@ export default function PanelDecision({
           </button>
         )}
 
-        {/* HU13: solo se exporta una interconsulta ya revisada. */}
         <div className="flex gap-2">
           <select
             aria-label="Formato de exportación"
@@ -204,6 +198,14 @@ function Procedencia({ interconsulta: ic }: { interconsulta: Interconsulta }) {
           Forzada por el catálogo de términos de alarma, no por el modelo. La
           certeza no aplica.
         </p>
+        {ic.priorizacionIA.priorizada && (
+          <a
+            href="#explicacion"
+            className="mt-2 inline-block text-[.8rem] font-semibold text-[var(--pz-purple-ink)] underline underline-offset-2"
+          >
+            El modelo sugería {ic.priorizacionIA.nivelSugerido}: ver por qué
+          </a>
+        )}
       </div>
     );
   }
@@ -254,6 +256,13 @@ function Procedencia({ interconsulta: ic }: { interconsulta: Interconsulta }) {
           El modelo sugirió {ic.priorizacionIA.nivelSugerido}
         </p>
       )}
+
+      <a
+        href="#explicacion"
+        className="self-start text-[.8rem] font-semibold text-[var(--pz-purple-ink)] underline underline-offset-2"
+      >
+        ¿Por qué sugirió {ic.priorizacionIA.nivelSugerido}?
+      </a>
     </div>
   );
 }

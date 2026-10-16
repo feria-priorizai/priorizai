@@ -15,9 +15,11 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.main as main_module
+from app.api.auth import usuario_actual
 from app.core.database import Base, get_db
 from app.main import app
 from app.models.interconsulta import Interconsulta
+from app.models.usuario import Usuario
 from app.schemas.priorizacion import ProbabilidadesPrioridad, ResultadoPriorizacion
 from app.services.priorizador import get_priorizador
 
@@ -59,6 +61,24 @@ class PriorizadorCaido:
         interconsultas: list[Interconsulta],
     ) -> list[ResultadoPriorizacion]:
         raise OSError("Modelo no disponible: simulado para el test")
+
+
+USUARIO_DE_PRUEBA = Usuario(
+    id="usr-test",
+    alias="dratest",
+    nombre="Dra. Test",
+    rol="medico",
+    especialidad="Cardiologia",
+    password_hash="",
+)
+
+USUARIO_ADMIN_PRUEBA = Usuario(
+    id="usr-admin-test",
+    alias="admintest",
+    nombre="Admin Test",
+    rol="administrador",
+    password_hash="",
+)
 
 
 @pytest.fixture(scope="session")
@@ -117,6 +137,7 @@ def priorizador_caido() -> PriorizadorCaido:
 def _client_con(
     session_factory: sessionmaker[Session],
     priorizador: object,
+    usuario: Usuario = USUARIO_DE_PRUEBA,
 ) -> Iterator[TestClient]:
     def override_get_db() -> Iterator[Session]:
         sesion = session_factory()
@@ -127,6 +148,7 @@ def _client_con(
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_priorizador] = lambda: priorizador
+    app.dependency_overrides[usuario_actual] = lambda: usuario
     try:
         yield TestClient(app)
     finally:
@@ -149,6 +171,24 @@ def client_sin_modelo(
     priorizador_caido: PriorizadorCaido,
 ) -> Iterator[TestClient]:
     yield from _client_con(session_factory, priorizador_caido)
+
+
+@pytest.fixture
+def client_admin(
+    _sin_overrides: None,
+    session_factory: sessionmaker[Session],
+    priorizador_fake: PriorizadorFake,
+) -> Iterator[TestClient]:
+    yield from _client_con(session_factory, priorizador_fake, USUARIO_ADMIN_PRUEBA)
+
+
+@pytest.fixture
+def client_admin_sin_modelo(
+    _sin_overrides: None,
+    session_factory: sessionmaker[Session],
+    priorizador_caido: PriorizadorCaido,
+) -> Iterator[TestClient]:
+    yield from _client_con(session_factory, priorizador_caido, USUARIO_ADMIN_PRUEBA)
 
 
 @pytest.fixture

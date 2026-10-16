@@ -51,11 +51,6 @@ def _priorizador(
     return priorizador
 
 
-# --------------------------------------------------------------------------
-# normalizar_clase
-# --------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("entrada", "esperado"),
     [
@@ -72,11 +67,6 @@ def test_normalizar_clase_quita_tildes_mayusculas_y_espacios(
     assert normalizar_clase(entrada) == esperado
 
 
-# --------------------------------------------------------------------------
-# _resolver_labels
-# --------------------------------------------------------------------------
-
-
 def test_resolver_labels_usa_los_del_modelo_cuando_son_validos() -> None:
     priorizador = _priorizador({0: "baja", 1: "media", 2: "alta"})
 
@@ -84,9 +74,6 @@ def test_resolver_labels_usa_los_del_modelo_cuando_son_validos() -> None:
 
 
 def test_resolver_labels_respeta_el_orden_del_modelo() -> None:
-    # El caso que importa: si el modelo se entreno con las clases en otro orden,
-    # el mapeo debe seguir ESE orden y no el de PRIORITY_ORDER. Asumir un orden
-    # fijo es lo que asignaria cada probabilidad a la prioridad equivocada.
     priorizador = _priorizador({0: "alta", 1: "baja", 2: "media"})
 
     assert priorizador._resolver_labels() == ["alta", "baja", "media"]
@@ -99,7 +86,6 @@ def test_resolver_labels_normaliza_tildes_y_mayusculas() -> None:
 
 
 def test_resolver_labels_acepta_claves_string() -> None:
-    # transformers serializa id2label con claves string al leer config.json.
     priorizador = _priorizador(
         {"0": "baja", "1": "media", "2": "alta"},
         num_labels=3,
@@ -121,7 +107,6 @@ def test_resolver_labels_cae_al_fallback_sin_id2label() -> None:
 
 
 def test_resolver_labels_cae_al_fallback_con_un_label_desconocido() -> None:
-    # Basta que UNO no sea una prioridad conocida para desconfiar de todos.
     priorizador = _priorizador({0: "baja", 1: "media", 2: "urgentisima"})
 
     assert priorizador._resolver_labels() == ["baja", "media", "alta"]
@@ -136,11 +121,6 @@ def test_resolver_labels_falla_si_el_modelo_no_tiene_tres_clases() -> None:
 
 def test_fallback_id2label_cubre_las_tres_prioridades() -> None:
     assert sorted(FALLBACK_ID2LABEL.values()) == ["alta", "baja", "media"]
-
-
-# --------------------------------------------------------------------------
-# construir_texto
-# --------------------------------------------------------------------------
 
 
 def _interconsulta(**campos: object) -> Interconsulta:
@@ -180,9 +160,6 @@ def test_construir_texto_colapsa_espacios_y_saltos_de_linea() -> None:
 
 
 def test_construir_texto_no_rompe_con_examenes_en_none() -> None:
-    # examenes_complementarios es el unico campo opcional del prompt. Al
-    # reemplazarse por "" queda un espacio doble en el texto que ve el modelo:
-    # comportamiento actual, fijado aca para que cambiarlo sea deliberado.
     texto = construir_texto(_interconsulta(examenes_complementarios=None))
 
     assert texto == "MEDICINA GENERAL 46 FEMENINO CARDIOLOGIA HTA Disnea  Control"
@@ -199,11 +176,6 @@ def test_construir_texto_incluye_la_edad_como_texto() -> None:
     texto = construir_texto(_interconsulta(edad=7))
 
     assert " 7 " in texto
-
-
-# --------------------------------------------------------------------------
-# _crear_resultado
-# --------------------------------------------------------------------------
 
 
 def _con_labels(labels: list[str]) -> PriorizadorRigoBerta:
@@ -223,8 +195,6 @@ def test_crear_resultado_elige_la_clase_mas_probable() -> None:
 
 
 def test_crear_resultado_mapea_por_nombre_y_no_por_posicion() -> None:
-    # Con los labels invertidos, la probabilidad alta esta en la posicion 0.
-    # Si el mapeo fuera posicional, esto devolveria "baja".
     priorizador = _con_labels(["alta", "media", "baja"])
 
     resultado = priorizador._crear_resultado("ic-2", [0.9, 0.07, 0.03])
@@ -247,9 +217,6 @@ def test_crear_resultado_redondea_a_dos_decimales() -> None:
 
 
 def test_crear_resultado_ante_empate_devuelve_la_prioridad_mas_baja() -> None:
-    # Comportamiento actual: `max` sobre PRIORITY_ORDER devuelve el primer
-    # maximo, y PRIORITY_ORDER empieza en "baja". Documentado para que un cambio
-    # de criterio sea deliberado y no un efecto colateral.
     priorizador = _con_labels(["baja", "media", "alta"])
 
     resultado = priorizador._crear_resultado("ic-4", [1 / 3, 1 / 3, 1 / 3])
@@ -258,17 +225,11 @@ def test_crear_resultado_ante_empate_devuelve_la_prioridad_mas_baja() -> None:
 
 
 def test_predecir_sin_interconsultas_no_carga_el_modelo() -> None:
-    # Cortocircuito: sin esto, una lista vacia intentaria bajar el modelo.
     priorizador = PriorizadorRigoBerta(
         ModeloConfiguracion(path="/models", max_length=512, batch_size=16),
     )
 
     assert priorizador.predecir([]) == []
-
-
-# --------------------------------------------------------------------------
-# aplicar_resultado
-# --------------------------------------------------------------------------
 
 
 def _resultado(prioridad: str = "alta") -> ResultadoPriorizacion:
@@ -305,7 +266,6 @@ def test_aplicar_resultado_limpia_el_motivo_sin_prioridad() -> None:
 
 
 def test_aplicar_resultado_no_pisa_la_prioridad_forzada_por_regla() -> None:
-    # D5 / HU5-c3: la regla determinista de banderas rojas manda sobre el modelo.
     interconsulta = _interconsulta(
         id="ic-aplicar",
         prioridad_actual="alta",
@@ -315,13 +275,7 @@ def test_aplicar_resultado_no_pisa_la_prioridad_forzada_por_regla() -> None:
     aplicar_resultado(interconsulta, _resultado(prioridad="baja"))
 
     assert interconsulta.prioridad_actual == "alta"
-    # La sugerencia igual se registra, para que el medico vea ambas.
     assert interconsulta.prioridad_sugerida_modelo == "baja"
-
-
-# --------------------------------------------------------------------------
-# predecir: orquestacion (sin torch)
-# --------------------------------------------------------------------------
 
 
 def test_predecir_arma_un_resultado_por_interconsulta(
@@ -345,22 +299,14 @@ def test_predecir_arma_un_resultado_por_interconsulta(
 
     assert [resultado.id for resultado in resultados] == ["ic-a", "ic-b"]
     assert all(resultado.prioridad == "alta" for resultado in resultados)
-    # El texto que ve el modelo es el que arma construir_texto, en el mismo orden.
     assert textos_vistos == [
         [construir_texto(interconsultas[0]), construir_texto(interconsultas[1])]
     ]
 
 
 def test_get_priorizador_devuelve_siempre_la_misma_instancia() -> None:
-    # Es la dependencia que inyecta FastAPI: si devolviera una instancia nueva por
-    # request, cada request volveria a cargar el modelo.
     assert get_priorizador() is get_priorizador()
     assert isinstance(get_priorizador(), PriorizadorRigoBerta)
-
-
-# --------------------------------------------------------------------------
-# MODEL_LABELS: orden de clases fijado por configuracion
-# --------------------------------------------------------------------------
 
 
 def _priorizador_con_labels(
@@ -440,11 +386,6 @@ def test_el_fallback_avisa_por_log_que_esta_suponiendo_el_orden(
     assert "MODEL_LABELS" in caplog.text
 
 
-# --------------------------------------------------------------------------
-# _predecir_textos: batching y softmax
-# --------------------------------------------------------------------------
-
-
 class TokenizadorFalso:
     """Devuelve el propio lote; lo unico que importa es cuantos textos entraron."""
 
@@ -511,6 +452,5 @@ def test_predecir_textos_devuelve_probabilidades_que_suman_uno() -> None:
     probs = priorizador._predecir_textos(["a", "b"])
 
     assert probs[0].sum().item() == pytest.approx(1.0)
-    # El softmax conserva el orden: el logit mas alto sigue siendo el mayor.
     assert probs[0].argmax().item() == 0
     assert probs[1].argmax().item() == 2

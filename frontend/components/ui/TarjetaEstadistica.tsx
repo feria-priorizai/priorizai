@@ -4,14 +4,13 @@ interface TarjetaEstadisticaProps {
   titulo: string;
   valor: number | string;
   icono: ReactNode;
-  /** Color del acento: filete superior, icono y cifra. */
   acento?: string;
   acentoFondo?: string;
 }
 
 /**
- * Indicador del resumen. El icono y el titulo comparten la primera linea; la
- * cifra manda debajo. Todas las tarjetas ocupan el mismo ancho, asi que lo
+ * Indicador del resumen, en una sola franja: icono y titulo a la izquierda,
+ * la cifra a la derecha. Todas las tarjetas ocupan el mismo ancho, asi que lo
  * unico que las diferencia es el numero.
  */
 export default function TarjetaEstadistica({

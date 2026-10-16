@@ -8,8 +8,11 @@ import ColaInterconsultas from "@/components/interconsultas/ColaInterconsultas";
 import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
 import { exportarInterconsultas } from "@/utils/exportUtils";
 import EstadoVista from "@/components/ui/EstadoVista";
+import { useSesion } from "@/context/SesionContext";
+import { useVistaLista } from "@/hooks/useVistaLista";
 
 export default function InterconsultasPage() {
+  const { usuario } = useSesion();
   const {
     interconsultas,
     cargando,
@@ -22,6 +25,7 @@ export default function InterconsultasPage() {
     hayFiltrosActivos,
   } = useInterconsultas();
   const { config } = useConfiguracionExport();
+  const [vista, setVista] = useVistaLista();
 
   const [modoDescargaMultiple, setModoDescargaMultiple] = useState(false);
   const [seleccionadas, setSeleccionadas] = useState<Set<string>>(new Set());
@@ -29,8 +33,11 @@ export default function InterconsultasPage() {
     useState<FiltrosInterconsulta | null>(null);
   const [formatoDescarga, setFormatoDescarga] = useState<"json" | "csv" | "xlsx">("csv");
 
-  // Cuando se activa el modo descarga múltiple, bloquear filtro a "revisada"
-  // y guardar los filtros previos para restaurarlos al cancelar
+  // Mensaje especializado para medicos cuando no hay interconsultas de su especialidad
+  const mensajeVacio = usuario?.rol === "medico"
+    ? "No existen interconsultas disponibles para su especialidad"
+    : undefined;
+
   const activarDescargaMultiple = useCallback(() => {
     setFiltrosPrevios(filtros);
     actualizarFiltros({ estado: "revisada" });
@@ -63,12 +70,9 @@ export default function InterconsultasPage() {
     if (seleccionadas.size === 0) return;
     const seleccionadasArray = interconsultas.filter((ic) => seleccionadas.has(ic.id));
     exportarInterconsultas(seleccionadasArray, formatoDescarga, config);
-    // Opcional: cancelar modo tras descargar
     cancelarDescargaMultiple();
   }, [seleccionadas, interconsultas, config, cancelarDescargaMultiple, formatoDescarga]);
 
-  // Si estamos en modo descarga múltiple y cambian los filtros (por código),
-  // forzar estado a "revisada"
   useEffect(() => {
     if (modoDescargaMultiple && filtros.estado !== "revisada") {
       actualizarFiltros({ estado: "revisada" });
@@ -107,6 +111,9 @@ export default function InterconsultasPage() {
         onActivarDescargaMultiple={activarDescargaMultiple}
         formatoDescarga={formatoDescarga}
         onCambiarFormatoDescarga={setFormatoDescarga}
+        mensajeVacio={mensajeVacio}
+        vista={vista}
+        onCambiarVista={setVista}
       />
 
       <p className="pz-label">

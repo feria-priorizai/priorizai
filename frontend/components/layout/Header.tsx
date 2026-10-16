@@ -7,25 +7,22 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { usuarioActual } from "@/data/sesion";
+import { ESTABLECIMIENTO } from "@/data/establecimiento";
 
 const titulosPorRuta: Record<string, { seccion: string; titulo: string }> = {
   "/dashboard": { seccion: "Panel", titulo: "Dashboard" },
   "/interconsultas": { seccion: "Lista de espera", titulo: "Interconsultas" },
   "/configuracion": { seccion: "Ajustes", titulo: "Configuración" },
+  "/usuarios": { seccion: "Administración", titulo: "Usuarios" },
+  "/cuenta": { seccion: "Sesión", titulo: "Mi cuenta" },
 };
 
-/** El logo del establecimiento se deja caer en public/img/. Mientras no esté,
- *  se muestra el emblema y el nombre, sin imagen rota. */
 const LOGO_ESTABLECIMIENTO = "/img/hospital-san-juan-de-dios.png";
 
 export default function Header() {
   const pathname = usePathname();
   const [hayLogo, setHayLogo] = useState(false);
 
-  // Se comprueba en memoria antes de montar el <img>: si el establecimiento
-  // todavia no subio su logo, se muestra el emblema y el nombre en vez de una
-  // imagen rota.
   useEffect(() => {
     const prueba = new Image();
     prueba.onload = () => setHayLogo(true);
@@ -43,7 +40,7 @@ export default function Header() {
 
   return (
     <header
-      className="sticky top-0 z-10 flex flex-none items-center justify-between gap-4 px-7"
+      className="sticky top-0 z-10 flex flex-none items-center justify-between gap-4 px-4 md:px-7"
       style={{
         minHeight: "86px",
         background: "rgba(198,215,240,.9)",
@@ -54,7 +51,10 @@ export default function Header() {
     >
       <div className="min-w-0">
         <span className="pz-eyebrow">{seccion}</span>
-        <h1 className="mt-1.5" style={{ fontSize: "var(--fs-xl)" }}>
+        <h1
+          className="mt-1.5"
+          style={{ fontSize: "clamp(1.35rem, 4.5vw, var(--fs-xl))" }}
+        >
           {titulo}
         </h1>
       </div>
@@ -64,8 +64,9 @@ export default function Header() {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={LOGO_ESTABLECIMIENTO}
-            alt={usuarioActual.centroSalud}
-            style={{ height: "56px", width: "auto", display: "block" }}
+            alt={ESTABLECIMIENTO}
+            className="h-10 w-auto md:h-14"
+            style={{ display: "block" }}
           />
         ) : (
           <>
@@ -83,13 +84,13 @@ export default function Header() {
                 <path d="M9.5 2h5v5.5H20v5h-5.5V18h-5v-5.5H4v-5h5.5V2Z" />
               </svg>
             </span>
-            <div className="text-right">
+            <div className="hidden text-right sm:block">
               <span className="pz-label">Establecimiento</span>
               <p
                 className="mt-0.5 mb-0 font-semibold"
                 style={{ fontSize: "var(--fs-sm)", color: "var(--pz-ink)" }}
               >
-                {usuarioActual.centroSalud}
+                {ESTABLECIMIENTO}
               </p>
             </div>
           </>

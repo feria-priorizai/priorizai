@@ -3,7 +3,6 @@ import { Archivo, IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
 
-/** Display de marca. El eje wdth se usa comprimido en cifras y titulares. */
 const archivo = Archivo({
   variable: "--font-display",
   subsets: ["latin"],

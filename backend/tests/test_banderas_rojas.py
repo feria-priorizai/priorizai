@@ -152,16 +152,12 @@ def test_aplicar_banderas_no_pisa_decision_medica_previa() -> None:
 
     assert resultado.bandera_roja is True
     assert resultado.forzar_prioridad_alta is False
-    # La bandera queda visible, pero la prioridad del medico no se toca (D5).
     assert interconsulta.bandera_roja is True
     assert interconsulta.prioridad_actual == "media"
     assert interconsulta.prioridad_forzada_por_regla is not True
 
 
 def test_multicampo_no_deja_que_un_marcador_cruce_de_campo() -> None:
-    # Regresion: un marcador hipotetico en fundamentos_diagnostico ("sospecha de
-    # sindrome coronario") no debe negar/calificar un termino afirmado en
-    # historia_clinica ("dolor toracico"), aunque queden adyacentes al concatenar.
     campos = [
         "Paciente con dolor toracico de inicio subito",
         "Sospecha de sindrome coronario agudo",
@@ -189,8 +185,6 @@ def test_aplicar_banderas_sin_bandera_no_fuerza_nada() -> None:
 
 
 def test_nombres_de_terminos_traduce_ids_al_nombre_clinico() -> None:
-    # El id se persiste por estable, pero la interfaz muestra el termino bien
-    # escrito, con tildes (HU5-c3).
     assert nombres_de_terminos("dolor_toracico") == ["dolor torácico"]
     assert nombres_de_terminos("dolor_toracico,sepsis") == ["dolor torácico", "sepsis"]
 
@@ -198,8 +192,6 @@ def test_nombres_de_terminos_traduce_ids_al_nombre_clinico() -> None:
 def test_nombres_de_terminos_tolera_vacios_e_ids_desconocidos() -> None:
     assert nombres_de_terminos(None) == []
     assert nombres_de_terminos("") == []
-    # Un id que ya no esta en el catalogo se devuelve tal cual, para no perder el
-    # motivo de una bandera guardada antes de editar el catalogo.
     assert nombres_de_terminos("termino_eliminado") == ["termino_eliminado"]
 
 

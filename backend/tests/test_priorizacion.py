@@ -184,8 +184,6 @@ def test_listado_ordena_por_prioridad_y_fecha_de_emision(
     client: TestClient,
     guardar_interconsulta: CrearInterconsulta,
 ) -> None:
-    # HU3-c1: prioridad descendente y, dentro de cada prioridad, fecha de
-    # emision ascendente. HU3-c3: ante empate, orden estable por id.
     casos = [
         ("ic-b", "baja", datetime(2026, 1, 1)),
         ("ic-a2", "alta", datetime(2026, 3, 1)),
@@ -204,7 +202,6 @@ def test_listado_ordena_por_prioridad_y_fecha_de_emision(
 
     assert response.status_code == 200
     ids = [item["id"] for item in response.json()]
-    # alta (mas antigua primero) -> media -> baja
     assert ids == ["ic-a1", "ic-a2", "ic-m", "ic-b"]
 
 
@@ -212,10 +209,6 @@ def test_listado_ignora_la_etiqueta_historica_al_ordenar(
     client: TestClient,
     guardar_interconsulta: CrearInterconsulta,
 ) -> None:
-    # prioridad_original_csv es la etiqueta del corpus historico, no una prioridad
-    # de esta aplicacion. No debe influir en el orden ni sustituir a la prioridad
-    # que produce el sistema: si el modelo no priorizo y el medico no decidio, la
-    # interconsulta no tiene prioridad, venga o no con etiqueta.
     guardar_interconsulta(
         id="ic-etiqueta-alta",
         prioridad_original_csv="ALTA",
@@ -233,8 +226,6 @@ def test_listado_ignora_la_etiqueta_historica_al_ordenar(
 
     assert response.status_code == 200
     ids = [item["id"] for item in response.json()]
-    # La que tiene sugerencia del modelo va primero; la que solo trae etiqueta
-    # historica cuenta como sin prioridad y queda al final.
     assert ids == ["ic-modelo-media", "ic-etiqueta-alta"]
 
 
@@ -257,9 +248,6 @@ def test_priorizar_no_pisa_prioridad_forzada_por_bandera_roja(
     guardar_interconsulta: CrearInterconsulta,
     releer: Releer,
 ) -> None:
-    # Regresion: PriorizadorFake sugiere "alta", pero con una bandera roja la
-    # prioridad forzada debe mantenerse aunque el modelo sugiera otra cosa
-    # (HU5-c3 / D5). La sugerencia del modelo igual queda registrada.
     guardar_interconsulta(
         id="ic-bandera",
         historia_clinica="Paciente con dolor toracico de inicio subito",
@@ -288,8 +276,6 @@ def test_priorizar_limpia_motivo_sin_prioridad_previo(
     guardar_interconsulta: CrearInterconsulta,
     releer: Releer,
 ) -> None:
-    # Si una carga anterior fallo por falta de modelo, el motivo queda guardado.
-    # Al priorizar con exito debe limpiarse para no dejar un mensaje obsoleto.
     guardar_interconsulta(
         id="ic-motivo-obsoleto",
         motivo_sin_prioridad="No se pudo ejecutar el modelo predictivo: simulado",
@@ -320,7 +306,6 @@ def test_modificar_prioridad_persiste_historial(
         json={
             "prioridad": "alta",
             "motivo": "Lesion de rapido crecimiento",
-            "medico_responsable": "Dra. Test",
         },
     )
 
@@ -350,7 +335,6 @@ def test_modificar_prioridad_rechaza_motivo_vacio(
         json={
             "prioridad": "alta",
             "motivo": "   ",
-            "medico_responsable": "Dra. Test",
         },
     )
 

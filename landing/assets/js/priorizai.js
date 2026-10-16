@@ -6,11 +6,9 @@
 
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* ---- Año en el footer ---- */
   var y = document.getElementById('pzYear');
   if (y) y.textContent = new Date().getFullYear();
 
-  /* ---- Navbar: borde al hacer scroll ---- */
   var nav = document.getElementById('pzNavbar');
   var onScroll = function () {
     nav.classList.toggle('is-stuck', window.scrollY > 12);
@@ -18,7 +16,6 @@
   onScroll();
   window.addEventListener('scroll', onScroll, { passive: true });
 
-  /* ---- Cierra el menú móvil al navegar ---- */
   var menu = document.getElementById('pzNavMenu');
   menu.querySelectorAll('a').forEach(function (a) {
     a.addEventListener('click', function () {
@@ -28,10 +25,6 @@
     });
   });
 
-  /* ---- Panel de triage: recorridos medidos, no fijos ----
-     La tarjeta "Alta" tiene que quedar exactamente donde estaba la primera,
-     así que el desplazamiento sale de las alturas reales de las filas (que
-     cambian si el diagnóstico envuelve a dos líneas en anchos angostos). */
   var list = document.querySelector('.pz-triage__list');
   if (list && !reduce) {
     var promote = list.querySelector('.pz-ic--promote');
@@ -48,8 +41,6 @@
          y se desincronizan; con la Web Animations API se les fija el mismo
          startTime. */
       var play = function (forward) {
-        /* Se mide en cada vuelta: el recorrido cambia si la ventana se
-           redimensionó o si un diagnóstico pasó a ocupar dos líneas. */
         var up = promote.offsetTop - first.offsetTop;
         var down = promote.offsetHeight +
                    (parseFloat(getComputedStyle(promote).marginBottom) || 0);
@@ -57,7 +48,7 @@
 
         promote.classList.toggle('is-up', forward);
 
-        if (!waapi) {                       /* respaldo: transición CSS */
+        if (!waapi) {
           shifted.forEach(function (el) {
             el.style.transform = forward ? 'translateY(' + down + 'px)' : '';
           });
@@ -80,7 +71,6 @@
         running = shifted.map(function (el) { return el.animate(frames(down), opts); });
         running.push(promote.animate(frames(-up), opts));
 
-        /* Un único origen temporal: las cuatro filas se mueven al unísono. */
         var tl = running[0].timeline;
         if (tl && tl.currentTime !== null) {
           running.forEach(function (a) { a.startTime = tl.currentTime; });
@@ -97,7 +87,6 @@
         t2 = setTimeout(reset, 3200);
       };
 
-      /* Solo corre mientras el panel está a la vista. */
       var timer = null;
       var start = function () {
         if (timer) return;
@@ -107,7 +96,6 @@
       var stop = function () {
         clearInterval(timer); clearTimeout(t2);
         timer = null;
-        /* Fuera de pantalla vuelve al orden original de golpe, sin animar. */
         running.forEach(function (a) { a.cancel(); });
         running = [];
         shifted.forEach(function (el) { el.style.transform = ''; });
@@ -125,7 +113,6 @@
     }
   }
 
-  /* ---- Revelado al entrar en pantalla ---- */
   var revealables = document.querySelectorAll('.pz-reveal');
 
   if (reduce || !('IntersectionObserver' in window)) {
@@ -149,13 +136,11 @@
 
     revealables.forEach(function (el) { io.observe(el); });
 
-    /* Barras que no viven dentro de un .pz-reveal */
     document.querySelectorAll('.progress-bar[data-w]').forEach(function (b) {
       if (!b.closest('.pz-reveal')) b.style.width = b.dataset.w + '%';
     });
   }
 
-  /* ---- Conteo de las cifras del riel ---- */
   var counters = document.querySelectorAll('[data-count]');
   if (!reduce && 'IntersectionObserver' in window && counters.length) {
     var cio = new IntersectionObserver(function (entries) {
@@ -164,13 +149,11 @@
         var el = e.target;
         cio.unobserve(el);
 
-        /* El número vive en el primer nodo de texto; el <small> («millón»,
-           «min») queda intacto porque solo tocamos ese nodo. */
         var num = el.firstChild;
         if (!num || num.nodeType !== 3) return;
 
         var target = parseFloat(el.dataset.count);
-        var finalText = num.nodeValue;          /* «8», «86,7%», … tal cual va en el HTML */
+        var finalText = num.nodeValue;
         var t0 = null;
         var dur = 900;
         var done = false;
@@ -191,15 +174,12 @@
         };
         requestAnimationFrame(tick);
 
-        /* Red de seguridad: si rAF se detiene (pestaña en segundo plano,
-           ahorro de energía), la cifra real se muestra igual. */
         setTimeout(settle, 1600);
       });
     }, { threshold: 0.6 });
     counters.forEach(function (c) { cio.observe(c); });
   }
 
-  /* ---- Formulario ---- */
   var form = document.getElementById('pzForm');
   var msg = document.getElementById('pzFormMsg');
   if (form) {
@@ -216,8 +196,6 @@
         return;
       }
 
-      /* Sin backend: se abre el cliente de correo con la solicitud armada.
-         Reemplazar por un POST al endpoint real cuando exista. */
       var d = new FormData(form);
       var cuerpo =
         'Nombre: ' + d.get('nombre') + '\n' +

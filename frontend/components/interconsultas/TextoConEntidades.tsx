@@ -31,7 +31,6 @@ export default function TextoConEntidades({
   ordenadas.forEach((entidad, indice) => {
     const { inicio, fin } = entidad;
 
-    // Defensivo: offsets fuera de rango o solapados con lo ya pintado.
     if (inicio < posicion || fin > texto.length || inicio >= fin) {
       return;
     }

@@ -10,10 +10,8 @@ import {
   obtenerInterconsultas,
   priorizarInterconsulta,
 } from "@/services/interconsultas";
-import { usuarioActual } from "@/data/sesion";
 
 export interface FiltrosInterconsulta {
-  /** "sin" busca las que no tienen ninguna prioridad asignada. */
   prioridad: NivelPrioridad | "sin" | "todas";
   estado: EstadoInterconsulta | "todos";
   busqueda: string;
@@ -24,7 +22,6 @@ interface UseInterconsultasReturn {
   cargando: boolean;
   error: string | null;
   totalInterconsultas: number;
-  /** true si el servidor tiene mas de las que se alcanzaron a cargar. */
   listadoTruncado: boolean;
   pendientesPriorizables: number;
   pendientesInvalidas: number;
@@ -44,7 +41,6 @@ interface EstadoListado {
   interconsultas: Interconsulta[];
   cargando: boolean;
   error: string | null;
-  /** Total en el servidor, que puede ser mayor que lo cargado. */
   total: number;
   truncado: boolean;
 }
@@ -174,9 +170,6 @@ export function useInterconsultas(): UseInterconsultasReturn {
   }, [recargar]);
 
   const interconsultasFiltradas = estado.interconsultas.filter((ic) => {
-    // sinPrioridad rellena prioridadActual con "baja" para satisfacer el tipo,
-    // asi que filtrar por nivel debe descartarlas explicitamente o se cuelan
-    // todas en el filtro "Baja".
     if (filtros.prioridad === "sin") {
       if (!ic.sinPrioridad) {
         return false;
@@ -237,7 +230,6 @@ export function useInterconsultas(): UseInterconsultasReturn {
         id,
         nuevaPrioridad,
         motivo,
-        usuarioActual.nombre,
       );
       setEstado((prev) => ({
         ...prev,
@@ -336,7 +328,6 @@ export function useInterconsultaDetalle(id: string) {
         id,
         nuevaPrioridad,
         motivo,
-        usuarioActual.nombre,
       );
       setEstado({ id, interconsulta: actualizada, error: null });
       notificarActualizacion(actualizada);

@@ -1,14 +1,16 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import type { NivelPrioridad } from "@/types";
 import { useInterconsultaDetalle } from "@/hooks/useInterconsultas";
-import { usuarioActual } from "@/data/sesion";
+import { useSesion } from "@/context/SesionContext";
 import PanelDecision from "@/components/interconsultas/PanelDecision";
 import DetalleInterconsulta from "@/components/interconsultas/DetalleInterconsulta";
 import HistorialModificaciones from "@/components/interconsultas/HistorialModificaciones";
 import ResumenClinico from "@/components/interconsultas/ResumenClinico";
+import ExplicacionPrediccion from "@/components/interconsultas/ExplicacionPrediccion";
 import TablaEntidades from "@/components/interconsultas/TablaEntidades";
+import NavegacionInterconsultas from "@/components/interconsultas/NavegacionInterconsultas";
 import EstadoVista from "@/components/ui/EstadoVista";
 import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
 import { exportarInterconsulta } from "@/utils/exportUtils";
@@ -26,6 +28,7 @@ type FormatoExportacion = "json" | "csv" | "xlsx";
  */
 export default function InterconsultaDetallePage({ params }: PageProps) {
   const { id } = use(params);
+  const { usuario } = useSesion();
   const {
     interconsulta,
     cargando,
@@ -34,17 +37,13 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
     cambiarEstado,
     priorizarConIA,
   } = useInterconsultaDetalle(id);
-  const { config, setUsuario } = useConfiguracionExport();
+  const { config } = useConfiguracionExport();
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
   const [formato, setFormato] = useState<FormatoExportacion>("json");
 
-  useEffect(() => {
-    setUsuario({
-      id: usuarioActual.id,
-      nombre: usuarioActual.nombre,
-      rol: "medico",
-    });
-  }, [setUsuario]);
+  if (!usuario) {
+    return null; // SesionProvider redirige al login si no hay usuario
+  }
 
   if (cargando) {
     return <EstadoVista tipo="cargando" texto="Cargando interconsulta…" />;
@@ -85,10 +84,14 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
 
   return (
     <div className="row g-4">
+      <div className="col-12">
+        <NavegacionInterconsultas id={interconsulta.id} />
+      </div>
+
       <div className="col-12 col-lg-5 col-xl-4">
         <PanelDecision
           interconsulta={interconsulta}
-          medicoResponsable={usuarioActual.nombre}
+          medicoResponsable={usuario.nombre}
           actualizandoEstado={actualizandoEstado}
           formato={formato}
           onCambiarFormato={setFormato}
@@ -105,6 +108,7 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
         <div className="flex flex-col gap-4">
           <DetalleInterconsulta interconsulta={interconsulta} />
           <ResumenClinico interconsulta={interconsulta} />
+          <ExplicacionPrediccion interconsulta={interconsulta} />
           <TablaEntidades
             entidades={interconsulta.entidades}
             error={interconsulta.entidadesError}

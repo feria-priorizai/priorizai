@@ -20,10 +20,6 @@ from app.main import (
 from app.models.interconsulta import Interconsulta
 from app.services.priorizador import tiene_informacion_clinica
 
-# --------------------------------------------------------------------------
-# _parsear_fecha_emision
-# --------------------------------------------------------------------------
-
 
 @pytest.mark.parametrize(
     ("entrada", "esperado"),
@@ -56,13 +52,10 @@ def test_parsear_fecha_emision_acepta_los_formatos_conocidos(
 def test_parsear_fecha_emision_devuelve_none_si_no_reconoce_el_formato(
     entrada: object,
 ) -> None:
-    # D18: aun no se conoce el formato real del archivo del sistema hospitalario,
-    # asi que una fecha rara no debe romper la carga completa.
     assert _parsear_fecha_emision(entrada) is None
 
 
 def test_parsear_fecha_emision_distingue_dia_de_mes() -> None:
-    # "%d-%m-%Y" antes que cualquier lectura al reves: 03-04 es 3 de abril.
     assert _parsear_fecha_emision("03-04-2026") == datetime(2026, 4, 3)
 
 
@@ -74,11 +67,6 @@ def test_parsear_fecha_emision_devuelve_una_fecha_sin_zona() -> None:
     assert fecha is not None
     assert fecha.tzinfo is None
     assert (fecha.year, fecha.month, fecha.day) == (2026, 3, 15)
-
-
-# --------------------------------------------------------------------------
-# _normalizar_valor / _normalizar_encabezado
-# --------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -99,8 +87,6 @@ def test_normalizar_valor(entrada: object, esperado: str) -> None:
 
 
 def test_normalizar_valor_convierte_el_float_entero_de_xlsx() -> None:
-    # openpyxl entrega los numeros como float: sin esto EDAD llegaria como "46.0"
-    # y la conversion a int fallaria, rechazando una fila valida.
     assert _normalizar_valor(46.0) == "46"
     assert int(_normalizar_valor(46.0)) == 46
 
@@ -108,11 +94,6 @@ def test_normalizar_valor_convierte_el_float_entero_de_xlsx() -> None:
 def test_normalizar_encabezado_pasa_a_mayusculas() -> None:
     assert _normalizar_encabezado("  espec_origen ") == "ESPEC_ORIGEN"
     assert _normalizar_encabezado("﻿Edad") == "EDAD"
-
-
-# --------------------------------------------------------------------------
-# _texto_o_none
-# --------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -129,11 +110,6 @@ def test_texto_o_none(entrada: object, esperado: str | None) -> None:
     assert _texto_o_none(entrada) == esperado
 
 
-# --------------------------------------------------------------------------
-# _estado_priorizacion
-# --------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("total", "priorizadas", "esperado"),
     [
@@ -146,11 +122,6 @@ def test_texto_o_none(entrada: object, esperado: str | None) -> None:
 )
 def test_estado_priorizacion(total: int, priorizadas: int, esperado: str) -> None:
     assert _estado_priorizacion(total=total, priorizadas=priorizadas) == esperado
-
-
-# --------------------------------------------------------------------------
-# _tiene_informacion_clinica
-# --------------------------------------------------------------------------
 
 
 def _interconsulta(**campos: object) -> Interconsulta:
@@ -201,11 +172,6 @@ def test_tiene_informacion_clinica_tolera_none() -> None:
     assert tiene_informacion_clinica(interconsulta) is False
 
 
-# --------------------------------------------------------------------------
-# _parsear_edad
-# --------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("entrada", "esperado"),
     [
@@ -243,7 +209,6 @@ def test_parsear_edad_no_borra_el_separador_decimal() -> None:
         "12,5,3",
         "abc",
         "-",
-        # Un espacio en medio es un error de tipeo, no una edad de 46.
         "4 6",
     ],
 )

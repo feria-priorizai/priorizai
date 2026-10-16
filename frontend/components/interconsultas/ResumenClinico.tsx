@@ -6,8 +6,6 @@ import TextoConEntidades from "./TextoConEntidades";
 import { CLASES_ENTIDAD, ORDEN_CLASES } from "./entidadesEstilos";
 
 interface ResumenClinicoProps {
-  /** La interconsulta ya cargada por la pagina: trae los cuatro campos
-   *  clinicos, asi que no hay que volver a pedirla al backend. */
   interconsulta: Interconsulta;
 }
 
@@ -27,8 +25,6 @@ export default function ResumenClinico({
 }: ResumenClinicoProps) {
   const entidades = ic.entidades;
 
-  // Misma regla que usa el backend para decidir si la IC es priorizable: si no
-  // hay ningun antecedente utilizable, tampoco hay resumen que mostrar.
   if (ic.esValidaParaPriorizacion === false) {
     return (
       <Contenedor entidades={entidades}>

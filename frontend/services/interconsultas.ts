@@ -4,15 +4,32 @@ import type {
   Interconsulta,
   NivelPrioridad,
 } from "@/types/interconsulta";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ??
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  "http://localhost:8000";
+import type { EstadoExplicacion, ExplicacionShap } from "@/types/explicacion";
+import { apiFetch, obtenerMensajeError } from "@/services/api";
 
 export const EVENTO_INTERCONSULTAS_ACTUALIZADAS =
   "priorizai:interconsultas-actualizadas";
-export const EVENTO_ERRORES_CARGA = "priorizai:errores-carga";
+/** Resumen de una carga de archivo; lo muestra ModalResultadoCarga. */
+export const EVENTO_RESULTADO_CARGA = "priorizai:resultado-carga";
+
+/** Fila del archivo que no se guardó. `campos_faltantes` trae nombres de
+ *  columna o, si el problema fue otro, el motivo en texto. */
+export interface FilaRechazada {
+  fila: number;
+  campos_faltantes: string[];
+  datos_raw: Record<string, unknown>;
+}
+
+export type ResultadoCarga =
+  | {
+      archivo: string;
+      guardadas: number;
+      priorizadas: number;
+      /** Explicaciones que quedaron calculándose en segundo plano. */
+      explicaciones: number;
+      rechazadas: FilaRechazada[];
+    }
+  | { archivo: string; error: string };
 
 type PrioridadApi = string | null | undefined;
 
@@ -38,14 +55,13 @@ interface InterconsultaApi {
   fecha_emision: string | null;
   bandera_roja: boolean;
   terminos_bandera_roja: string | null;
-  /** Los mismos terminos con su nombre clinico, resueltos por el backend contra
-   * el catalogo. Es lo que se muestra; el campo anterior son los ids. */
   terminos_bandera_roja_nombres: string[];
   prioridad_forzada_por_regla: boolean;
   created_at: string;
   updated_at: string;
   entidades?: EntidadesPorCampo | null;
   entidades_error?: string | null;
+  explicacion?: ExplicacionShap | null;
   modificaciones?: ModificacionPrioridadApi[];
 }
 
@@ -68,15 +84,12 @@ interface PriorizarResponse {
   }>;
 }
 
-/** Filas por peticion y tope de lo que el cliente mantiene en memoria. */
 const TAMANO_PAGINA = 100;
 const MAXIMO_EN_MEMORIA = 2000;
 
 export interface ListadoInterconsultas {
   interconsultas: Interconsulta[];
-  /** Total en el servidor, no el largo de lo cargado. */
   total: number;
-  /** true si el servidor tiene mas de las que se pudieron cargar. */
   truncado: boolean;
 }
 
@@ -95,8 +108,8 @@ export async function obtenerInterconsultas(
   let total = 0;
 
   for (let offset = 0; offset < MAXIMO_EN_MEMORIA; offset += TAMANO_PAGINA) {
-    const respuesta = await fetch(
-      `${API_BASE}/api/interconsultas?limit=${TAMANO_PAGINA}&offset=${offset}`,
+    const respuesta = await apiFetch(
+      `/api/interconsultas?limit=${TAMANO_PAGINA}&offset=${offset}`,
       { cache: "no-store", signal }
     );
     if (!respuesta.ok) {
@@ -127,7 +140,7 @@ export async function obtenerInterconsultas(
 export async function obtenerInterconsultaPorId(
   id: string
 ): Promise<Interconsulta | null> {
-  const respuesta = await fetch(`${API_BASE}/api/interconsultas/${id}`, {
+  const respuesta = await apiFetch(`/api/interconsultas/${id}`, {
     cache: "no-store",
   });
   if (respuesta.status === 404) return null;
@@ -139,9 +152,55 @@ export async function obtenerInterconsultaPorId(
   return mapearInterconsulta(data);
 }
 
+async function leerEstadoExplicacion(
+  respuesta: Response,
+  fallback: string,
+): Promise<EstadoExplicacion> {
+  if (!respuesta.ok) {
+    const error = await respuesta.json().catch(() => null);
+    throw new Error(obtenerMensajeError(error?.detail, fallback));
+  }
+  return respuesta.json();
+}
+
+/**
+ * Pide la explicación de la sugerencia del modelo: cuánto aportó cada campo,
+ * con SHAP.
+ *
+ * El backend no la calcula dentro de la petición: tarda minutos, más de lo que
+ * aguanta el proxy. La encola y responde al tiro; el avance se consulta con
+ * `consultarExplicacion`. Si ya hay una guardada y vigente, viene lista.
+ * `forzar` recalcula de todas formas.
+ */
+export async function pedirExplicacion(
+  id: string,
+  forzar = false,
+): Promise<EstadoExplicacion> {
+  const respuesta = await apiFetch(
+    `/api/interconsultas/${id}/explicacion${forzar ? "?forzar=true" : ""}`,
+    { method: "POST" },
+  );
+  return leerEstadoExplicacion(respuesta, "No se pudo pedir la explicación");
+}
+
+/** En qué va la explicación: en cola, calculando (con avance), lista o error. */
+export async function consultarExplicacion(
+  id: string,
+  signal?: AbortSignal,
+): Promise<EstadoExplicacion> {
+  const respuesta = await apiFetch(`/api/interconsultas/${id}/explicacion`, {
+    cache: "no-store",
+    signal,
+  });
+  return leerEstadoExplicacion(
+    respuesta,
+    "No se pudo consultar el estado de la explicación",
+  );
+}
+
 /** Ejecuta el modelo predictivo para una sola interconsulta. */
 export async function priorizarInterconsulta(id: string): Promise<Interconsulta> {
-  const respuesta = await fetch(`${API_BASE}/api/interconsultas/priorizar`, {
+  const respuesta = await apiFetch(`/api/interconsultas/priorizar`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids: [id] }),
@@ -171,8 +230,8 @@ export async function reevaluarBanderasRojas(): Promise<{
   total_evaluadas: number;
   total_con_bandera_roja: number;
 }> {
-  const respuesta = await fetch(
-    `${API_BASE}/api/interconsultas/reevaluar-banderas`,
+  const respuesta = await apiFetch(
+    `/api/interconsultas/reevaluar-banderas`,
     { method: "POST" }
   );
 
@@ -189,22 +248,23 @@ export async function reevaluarBanderasRojas(): Promise<{
   return respuesta.json();
 }
 
-/** Actualiza la prioridad de una interconsulta y guarda el historial (HdU02). */
+/**
+ * Actualiza la prioridad de una interconsulta y guarda el historial (HdU02).
+ * El médico responsable no se envía: el backend lo toma de la sesión.
+ */
 export async function modificarPrioridad(
   interconsultaId: string,
   nuevaPrioridad: NivelPrioridad,
   motivo: string,
-  medicoResponsable: string
 ): Promise<Interconsulta> {
-  const respuesta = await fetch(
-    `${API_BASE}/api/interconsultas/${interconsultaId}/prioridad`,
+  const respuesta = await apiFetch(
+    `/api/interconsultas/${interconsultaId}/prioridad`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         prioridad: nuevaPrioridad,
         motivo,
-        medico_responsable: medicoResponsable,
       }),
     }
   );
@@ -223,8 +283,8 @@ export async function modificarEstadoInterconsulta(
   interconsultaId: string,
   estado: EstadoInterconsulta,
 ): Promise<Interconsulta> {
-  const respuesta = await fetch(
-    `${API_BASE}/api/interconsultas/${interconsultaId}/estado`,
+  const respuesta = await apiFetch(
+    `/api/interconsultas/${interconsultaId}/estado`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -252,18 +312,18 @@ export async function subirCsvInterconsultas(
   prioritized: number;
   prioritization_status: string;
   ids: string[];
-  rejected: Array<{fila: number; campos_faltantes: string[]; datos_raw: Record<string, unknown>}>;
+  /** Explicaciones encoladas al cargar. 0 sin el modelo en el backend. */
+  explanations_queued?: number;
+  rejected: FilaRechazada[];
   rejected_count: number;
 }> {
   const formData = new FormData();
   formData.append("file", archivo);
-  // Sin esto el backend valida contra sus propias listas fijas y la
-  // pestaña de configuración de import no tenía ningún efecto.
   if (camposObligatorios) {
     formData.append("campos_obligatorios", camposObligatorios.join(","));
   }
 
-  const respuesta = await fetch(`${API_BASE}/upload-csv`, {
+  const respuesta = await apiFetch(`/upload-csv`, {
     method: "POST",
     body: formData,
   });
@@ -282,16 +342,8 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
   const prioridadSugerida = normalizarPrioridad(api.prioridad_sugerida_modelo);
   const estaPriorizada = prioridadSugerida !== null;
   const esValidaParaPriorizacion = tieneInformacionClinica(api);
-  // La prioridad que se muestra es la que decidio el medico o, si aun no decidio,
-  // la que sugiere el modelo. NO se cae a prioridad_original_csv: esa es la
-  // etiqueta del corpus historico (la prioridad que ya asigno un especialista) y
-  // mostrarla seria presentar la respuesta como si fuera la salida del sistema.
-  // En produccion las interconsultas llegan sin priorizar y ese campo va vacio.
   const prioridadDisponible =
     normalizarPrioridad(api.prioridad_actual) ?? prioridadSugerida;
-  // HU2-c5: sin prioridad disponible, no se debe defaultear a "baja" (el lado
-  // inseguro). El "baja" de relleno solo satisface el tipo; sinPrioridad=true le
-  // dice a la interfaz que no lo muestre como si fuera una prioridad real.
   const sinPrioridad = prioridadDisponible === null;
   const prioridadActual = prioridadDisponible ?? "baja";
   const confianza = api.confianza_modelo ?? 0;
@@ -343,7 +395,6 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
     fechaIngreso: api.created_at,
     fechaActualizacion: api.updated_at,
 
-    // Campos crudos del backend (para export configurable)
     especOrigen: api.espec_origen,
     especDestino: api.espec_destino,
     sexo: api.sexo,
@@ -354,6 +405,8 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
     prioridadOriginalCsv: api.prioridad_original_csv,
     entidades: api.entidades ?? null,
     entidadesError: api.entidades_error ?? null,
+    motivoOriginal: api.motivo_interconsulta ?? "",
+    explicacion: api.explicacion ?? null,
   };
 }
 
@@ -386,17 +439,4 @@ function primerTextoNoVacio(...valores: Array<string | null | undefined>) {
 
 function normalizarEstado(estado: string): EstadoInterconsulta {
   return estado.trim().toLowerCase() === "revisada" ? "revisada" : "pendiente";
-}
-
-function obtenerMensajeError(detail: unknown, fallback: string): string {
-  if (typeof detail === "string") return detail;
-  if (
-    detail &&
-    typeof detail === "object" &&
-    "message" in detail &&
-    typeof detail.message === "string"
-  ) {
-    return detail.message;
-  }
-  return fallback;
 }

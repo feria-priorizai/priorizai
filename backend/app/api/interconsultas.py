@@ -1,11 +1,19 @@
+import logging
+from collections.abc import Callable
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import case, func, or_, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, sessionmaker
 
+from app.api.auth import ClinicoActual, UsuarioActual
 from app.core.database import get_db
 from app.models.interconsulta import Interconsulta
 from app.models.modificacion_prioridad import ModificacionPrioridad
+from app.models.usuario import Usuario
+from app.schemas.explicacion import VERSION_EXPLICACION, EstadoExplicacion
 from app.schemas.interconsulta import (
+    InterconsultaDetalleResponse,
     InterconsultaResponse,
     ModificarEstadoRequest,
     ModificarPrioridadRequest,
@@ -16,7 +24,13 @@ from app.schemas.priorizacion import (
     PriorizarInterconsultasResponse,
     ResultadoPriorizacion,
 )
+from app.services import explicabilidad
+from app.services.auth import ROL_MEDICO
 from app.services.banderas_rojas import aplicar_banderas_a_interconsulta
+from app.services.cola_explicaciones import ColaExplicaciones, get_cola
+from app.services.especialidades import (
+    filtrar_por_especialidad_si_medico as _filtrar_por_especialidad_si_medico,
+)
 from app.services.priorizador import (
     PriorizadorRigoBerta,
     aplicar_resultado,
@@ -24,27 +38,20 @@ from app.services.priorizador import (
     tiene_informacion_clinica,
 )
 
-router = APIRouter(prefix="/api/interconsultas", tags=["interconsultas"])
+logger = logging.getLogger(__name__)
 
-# Tope de filas por pagina. Sin tope, un `?limit=999999` trae la tabla entera.
+router = APIRouter(
+    prefix="/api/interconsultas",
+    tags=["interconsultas"],
+    dependencies=[UsuarioActual],
+)
+
 LIMITE_LISTADO = 100
 
-# El motivo es el unico registro de por que un medico cambio una prioridad
-# clinica (HdU02). La regla vivia solo en el formulario del frontend, asi que
-# por la API entraba un motivo de un caracter.
 MOTIVO_MINIMO = 10
 DbSession = Depends(get_db)
 PriorizadorDependency = Depends(get_priorizador)
 
-# La prioridad que ve el medico es la que decidio el (prioridad_actual) o, si aun
-# no decidio, la que sugiere el modelo. El orden usa esa misma cadena: ordenar por
-# un valor y mostrar otro hace que una interconsulta que en pantalla dice "Alta"
-# aparezca debajo de una que dice "Baja".
-#
-# prioridad_original_csv queda deliberadamente fuera: es la etiqueta que trae el
-# corpus historico (la prioridad que asigno un especialista), no una prioridad de
-# esta aplicacion. En produccion las interconsultas llegan sin priorizar, asi que
-# usarla ordenaria por la respuesta en vez de por lo que el sistema propone.
 _PRIORIDAD_EFECTIVA = func.lower(
     func.coalesce(
         func.nullif(func.trim(Interconsulta.prioridad_actual), ""),
@@ -52,10 +59,6 @@ _PRIORIDAD_EFECTIVA = func.lower(
     )
 )
 
-# HU3-c1: prioridad descendente (alta > media > baja) y, dentro de cada prioridad,
-# fecha de emision ascendente. La prioridad se guarda como texto, asi que se
-# necesita un CASE explicito para que "alta" no ordene alfabeticamente antes que
-# "baja". Las interconsultas sin prioridad alguna quedan al final.
 _ORDEN_PRIORIDAD = case(
     (_PRIORIDAD_EFECTIVA == "alta", 0),
     (_PRIORIDAD_EFECTIVA == "media", 1),
@@ -70,12 +73,20 @@ def listar_interconsultas(
     limit: int = Query(default=LIMITE_LISTADO, ge=1, le=500),
     offset: int = 0,
     db: Session = DbSession,
+    usuario: Usuario = UsuarioActual,
 ) -> list[Interconsulta]:
     """El total va en la cabecera `X-Total-Count`: sin el, el cliente no puede
     distinguir 'no hay mas' de 'la pagina se lleno' y termina mostrando como total
-    lo que entro en la primera pagina."""
-    total = db.scalar(select(func.count()).select_from(Interconsulta)) or 0
+    lo que entro en la primera pagina.
+
+    Para medicos: filtra por espec_destino == especialidad del usuario.
+    Para administradores: muestra todas las interconsultas.
+    """
+    base_query = select(func.count()).select_from(Interconsulta)
+    base_query = _filtrar_por_especialidad_si_medico(base_query, usuario)
+    total = db.scalar(base_query) or 0
     response.headers["X-Total-Count"] = str(total)
+
     stmt = (
         select(Interconsulta)
         .options(selectinload(Interconsulta.modificaciones))
@@ -87,19 +98,23 @@ def listar_interconsultas(
         .offset(offset)
         .limit(limit)
     )
+    stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
     return list(db.scalars(stmt).all())
 
 
-@router.get("/{interconsulta_id}", response_model=InterconsultaResponse)
+@router.get("/{interconsulta_id}", response_model=InterconsultaDetalleResponse)
 def obtener_interconsulta(
     interconsulta_id: str,
     db: Session = DbSession,
+    usuario: Usuario = UsuarioActual,
 ) -> Interconsulta:
-    interconsulta = db.scalar(
+    stmt = (
         select(Interconsulta)
         .options(selectinload(Interconsulta.modificaciones))
         .where(Interconsulta.id == interconsulta_id)
     )
+    stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
+    interconsulta: Interconsulta | None = db.scalar(stmt)
     if interconsulta is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -108,15 +123,192 @@ def obtener_interconsulta(
     return interconsulta
 
 
+def _explicacion_vigente(interconsulta: Interconsulta) -> dict[str, Any] | None:
+    """La explicacion guardada, si todavia corresponde a la sugerencia actual.
+
+    Queda vieja si cambio su formato o si la interconsulta se volvio a
+    priorizar con otro resultado (por ejemplo, tras corregir MODEL_LABELS):
+    explicaria una prioridad que el modelo ya no sugiere.
+    """
+    guardada = interconsulta.explicacion
+    if not isinstance(guardada, dict) or guardada.get("version") != VERSION_EXPLICACION:
+        return None
+    sugerida = interconsulta.prioridad_sugerida_modelo
+    if sugerida is not None and guardada.get("clase") != sugerida:
+        return None
+    return guardada
+
+
+ColaDependency = Depends(get_cola)
+
+
+def _buscar_o_404(
+    db: Session, interconsulta_id: str, usuario: Usuario
+) -> Interconsulta:
+    """Con el mismo filtro por especialidad que el detalle: la explicacion trae
+    las palabras del texto clinico, asi que un medico de otra especialidad no
+    la puede pedir ni ver."""
+    stmt = select(Interconsulta).where(Interconsulta.id == interconsulta_id)
+    stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
+    interconsulta = db.scalar(stmt)
+    if interconsulta is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interconsulta no encontrada",
+        )
+    return interconsulta
+
+
+def _guardar_explicacion(
+    db: Session, interconsulta_id: str
+) -> Callable[[dict[str, Any]], None]:
+    """Callback para la cola. Abre su propia sesion porque corre en otro hilo,
+    cuando la de esta peticion ya se cerro."""
+    fabrica = sessionmaker(bind=db.get_bind(), autoflush=False)
+
+    def guardar(resultado: dict[str, Any]) -> None:
+        with fabrica() as sesion:
+            interconsulta = sesion.get(Interconsulta, interconsulta_id)
+            if interconsulta is None:
+                return
+            interconsulta.explicacion = resultado
+            sesion.commit()
+
+    return guardar
+
+
+# Las de prioridad alta se explican primero: son las que el medico revisa antes.
+_ORDEN_EXPLICACION = {"alta": 0, "media": 1, "baja": 2}
+
+
+def encolar_explicaciones(
+    db: Session,
+    interconsultas: list[Interconsulta],
+    priorizador: Any,
+    cola: ColaExplicaciones,
+) -> int:
+    """Encola la explicacion de cada interconsulta recien priorizada, en el
+    mismo momento en que se prioriza: el medico la encuentra lista, o en
+    camino, al abrir el detalle, sin tener que pedirla.
+
+    La prediccion no espera a la explicacion. Priorizar toma segundos y
+    explicar minutos por interconsulta, asi que la explicacion corre despues,
+    en la cola, de a una. Sin el modelo en el proceso (MODEL_SERVICE_URL) no
+    hay como explicar y no se encola nada; la carga sigue igual. Las que ya
+    tienen una explicacion vigente no se recalculan.
+    """
+    if not explicabilidad.modelo_disponible(priorizador):
+        return 0
+    pendientes = [
+        interconsulta
+        for interconsulta in interconsultas
+        if interconsulta.prioridad_sugerida_modelo is not None
+        and tiene_informacion_clinica(interconsulta)
+        and _explicacion_vigente(interconsulta) is None
+    ]
+    pendientes.sort(
+        key=lambda ic: _ORDEN_EXPLICACION.get(ic.prioridad_sugerida_modelo or "", 3)
+    )
+    for interconsulta in pendientes:
+        cola.encolar(
+            interconsulta.id,
+            explicabilidad.valores_de_interconsulta(interconsulta),
+            priorizador,
+            _guardar_explicacion(db, interconsulta.id),
+        )
+    return len(pendientes)
+
+
+def _estado_explicacion(
+    db: Session, interconsulta_id: str, cola: ColaExplicaciones, usuario: Usuario
+) -> dict[str, Any]:
+    """El orden importa: primero la cola, despues la base. La cola guarda el
+    resultado en la base y recien entonces olvida el trabajo, asi que si ya no
+    lo tiene, la base si. Al reves, un calculo que termina entre las dos
+    lecturas no aparece en ninguna y la pagina deja de preguntar.
+    """
+    trabajo = cola.estado(interconsulta_id)
+    interconsulta = _buscar_o_404(db, interconsulta_id, usuario)
+    if trabajo is not None:
+        return trabajo
+    if (vigente := _explicacion_vigente(interconsulta)) is not None:
+        return {"estado": "lista", "resultado": vigente}
+    return {"estado": "sin_explicacion"}
+
+
+@router.post(
+    "/{interconsulta_id}/explicacion",
+    response_model=EstadoExplicacion,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={200: {"description": "La explicacion ya estaba lista"}},
+)
+def explicar_interconsulta(
+    interconsulta_id: str,
+    response: Response,
+    forzar: bool = Query(
+        default=False,
+        description="Recalcula aunque haya una explicacion guardada vigente",
+    ),
+    db: Session = DbSession,
+    priorizador: PriorizadorRigoBerta = PriorizadorDependency,
+    cola: ColaExplicaciones = ColaDependency,
+    usuario: Usuario = UsuarioActual,
+) -> dict[str, Any]:
+    """Pide la explicacion de por que el modelo sugiere la prioridad que
+    sugiere: cuanto aporto cada campo, con SHAP.
+
+    Tarda minutos, asi que no se calcula aca: se encola, se responde 202 y el
+    avance se consulta con GET. Si ya hay una guardada y vigente, responde 200.
+    """
+    interconsulta = _buscar_o_404(db, interconsulta_id, usuario)
+    if not tiene_informacion_clinica(interconsulta):
+        raise HTTPException(
+            status_code=422,
+            detail="La interconsulta no tiene texto clínico que explicar",
+        )
+    if not explicabilidad.modelo_disponible(priorizador):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "La explicación necesita el modelo cargado en el backend. Con "
+                "MODEL_SERVICE_URL las predicciones vienen del servicio externo, "
+                "que todavía no expone explicaciones."
+            ),
+        )
+
+    if _explicacion_vigente(interconsulta) is not None and not forzar:
+        response.status_code = status.HTTP_200_OK
+    else:
+        cola.encolar(
+            interconsulta_id,
+            explicabilidad.valores_de_interconsulta(interconsulta),
+            priorizador,
+            _guardar_explicacion(db, interconsulta_id),
+        )
+    return _estado_explicacion(db, interconsulta_id, cola, usuario)
+
+
+@router.get("/{interconsulta_id}/explicacion", response_model=EstadoExplicacion)
+def estado_explicacion(
+    interconsulta_id: str,
+    db: Session = DbSession,
+    cola: ColaExplicaciones = ColaDependency,
+    usuario: Usuario = UsuarioActual,
+) -> dict[str, Any]:
+    """En que va la explicacion: en cola, calculando (con su avance), lista,
+    con error o inexistente."""
+    return _estado_explicacion(db, interconsulta_id, cola, usuario)
+
+
 @router.patch("/{interconsulta_id}/prioridad", response_model=InterconsultaResponse)
 def modificar_prioridad_interconsulta(
     interconsulta_id: str,
     payload: ModificarPrioridadRequest,
     db: Session = DbSession,
+    usuario: Usuario = ClinicoActual,
 ) -> Interconsulta:
     nueva_prioridad = _normalizar_prioridad(payload.prioridad)
     motivo = payload.motivo.strip()
-    medico_responsable = payload.medico_responsable.strip()
     if not motivo:
         raise HTTPException(
             status_code=422,
@@ -130,17 +322,13 @@ def modificar_prioridad_interconsulta(
                 f"{MOTIVO_MINIMO} caracteres"
             ),
         )
-    if not medico_responsable:
-        raise HTTPException(
-            status_code=422,
-            detail="El medico responsable es obligatorio",
-        )
-
-    interconsulta = db.scalar(
+    stmt = (
         select(Interconsulta)
         .options(selectinload(Interconsulta.modificaciones))
         .where(Interconsulta.id == interconsulta_id)
     )
+    stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
+    interconsulta = db.scalar(stmt)
     if interconsulta is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -149,9 +337,6 @@ def modificar_prioridad_interconsulta(
 
     prioridad_anterior = interconsulta.prioridad_actual
     interconsulta.prioridad_actual = nueva_prioridad
-    # D5/D7: una vez que el medico decide, la prioridad ya no vino de la regla de
-    # banderas rojas. La bandera (bandera_roja/terminos_bandera_roja) se mantiene:
-    # sigue siendo informacion valida sobre el texto, solo deja de forzar.
     interconsulta.prioridad_forzada_por_regla = False
     db.add(
         ModificacionPrioridad(
@@ -159,7 +344,7 @@ def modificar_prioridad_interconsulta(
             prioridad_anterior=prioridad_anterior,
             prioridad_nueva=nueva_prioridad,
             motivo=motivo,
-            medico_responsable=medico_responsable,
+            medico_responsable=usuario.nombre,
         )
     )
     db.commit()
@@ -177,13 +362,16 @@ def modificar_estado_interconsulta(
     interconsulta_id: str,
     payload: ModificarEstadoRequest,
     db: Session = DbSession,
+    usuario: Usuario = ClinicoActual,
 ) -> Interconsulta:
     nuevo_estado = _normalizar_estado(payload.estado)
-    interconsulta = db.scalar(
+    stmt = (
         select(Interconsulta)
         .options(selectinload(Interconsulta.modificaciones))
         .where(Interconsulta.id == interconsulta_id)
     )
+    stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
+    interconsulta = db.scalar(stmt)
     if interconsulta is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -244,11 +432,28 @@ def priorizar_interconsultas(
     payload: PriorizarInterconsultasRequest,
     db: Session = DbSession,
     priorizador: PriorizadorRigoBerta = PriorizadorDependency,
+    cola: ColaExplicaciones = ColaDependency,
+    usuario: Usuario = UsuarioActual,
 ) -> PriorizarInterconsultasResponse:
+    # Retrieve requested interconsultas
     interconsultas = _buscar_interconsultas(db, payload.ids)
+    # Apply specialty filter for doctors
+    if usuario.rol == ROL_MEDICO:
+        # Build a query to find allowed IDs
+        stmt = select(Interconsulta.id).where(Interconsulta.id.in_(payload.ids))
+        stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
+        allowed_ids = {row for row in db.scalars(stmt)}
+        # Verify all requested interconsultas are allowed
+        disallowed = [ic.id for ic in interconsultas if ic.id not in allowed_ids]
+        if disallowed:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"interconsultas_no_permitidas": disallowed},
+            )
     _validar_interconsultas_para_prediccion(interconsultas)
     resultados = _predecir_o_503(priorizador, interconsultas)
     _guardar_resultados(db, interconsultas, resultados)
+    encolar_explicaciones(db, interconsultas, priorizador, cola)
     return PriorizarInterconsultasResponse(
         total=len(resultados),
         resultados=resultados,
@@ -260,6 +465,7 @@ def priorizar_interconsultas_pendientes(
     limit: int = Query(default=25, ge=1, le=500),
     db: Session = DbSession,
     priorizador: PriorizadorRigoBerta = PriorizadorDependency,
+    cola: ColaExplicaciones = ColaDependency,
 ) -> PriorizarInterconsultasResponse:
     stmt = (
         select(Interconsulta)
@@ -271,6 +477,7 @@ def priorizar_interconsultas_pendientes(
     interconsultas = list(db.scalars(stmt).all())
     resultados = _predecir_o_503(priorizador, interconsultas)
     _guardar_resultados(db, interconsultas, resultados)
+    encolar_explicaciones(db, interconsultas, priorizador, cola)
     return PriorizarInterconsultasResponse(
         total=len(resultados),
         resultados=resultados,

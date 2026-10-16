@@ -13,10 +13,6 @@ import app.main as main_module
 from app.core.database import get_db
 from app.main import COLUMNAS_NUEVAS, _asegurar_columnas_interconsultas
 
-# --------------------------------------------------------------------------
-# get_db
-# --------------------------------------------------------------------------
-
 
 class SesionEspia:
     def __init__(self) -> None:
@@ -56,10 +52,6 @@ def test_get_db_cierra_la_sesion_aunque_el_consumidor_falle(
 
     assert espia.cerrada is True
 
-
-# --------------------------------------------------------------------------
-# _asegurar_columnas_interconsultas
-# --------------------------------------------------------------------------
 
 TABLA_VIEJA = """
     CREATE TABLE interconsultas (
@@ -103,7 +95,6 @@ def test_asegurar_columnas_es_idempotente(engine_con_tabla_vieja) -> None:
     _asegurar_columnas_interconsultas()
     columnas_tras_la_primera = _columnas(engine_con_tabla_vieja)
 
-    # La segunda corrida no debe intentar un ALTER TABLE ya aplicado.
     _asegurar_columnas_interconsultas()
 
     assert _columnas(engine_con_tabla_vieja) == columnas_tras_la_primera

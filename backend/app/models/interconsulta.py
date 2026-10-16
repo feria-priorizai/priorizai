@@ -38,11 +38,11 @@ class Interconsulta(Base):
     prob_media: Mapped[float | None] = mapped_column(Float, nullable=True)
     prob_alta: Mapped[float | None] = mapped_column(Float, nullable=True)
     prioridad_actual: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    # Entidades clinicas detectadas por el NER, agrupadas por campo:
-    # {"historia_clinica": [{clase, texto, inicio, fin, score}, ...], ...}
-    # Los offsets son sobre el texto de ese campo, para poder resaltarlo.
     entidades: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     entidades_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Explicacion de la sugerencia del modelo (IG + SHAP). Se calcula bajo
+    # demanda y se guarda: recalcularla cuesta minutos.
+    explicacion: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     estado: Mapped[str] = mapped_column(
         String(20),

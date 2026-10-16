@@ -4,19 +4,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
-import { usuarioActual } from "@/data/sesion";
+import { useSesion } from "@/context/SesionContext";
+import { ETIQUETAS_ROL } from "@/types/usuario";
 import {
-  EVENTO_ERRORES_CARGA,
   EVENTO_INTERCONSULTAS_ACTUALIZADAS,
+  EVENTO_RESULTADO_CARGA,
   reevaluarBanderasRojas,
   subirCsvInterconsultas,
+  type ResultadoCarga,
 } from "@/services/interconsultas";
 import { useConfiguracionImport } from "@/hooks/useConfiguracionCampos";
+
+type RolUsuario = "medico" | "administrador";
 
 interface ItemNavegacion {
   nombre: string;
   ruta: string;
-  icono: "dashboard" | "interconsultas" | "configuracion";
+  icono: "dashboard" | "interconsultas" | "configuracion" | "usuarios";
+  roles: RolUsuario[]; // Roles que pueden ver este item
 }
 
 interface Notificacion {
@@ -25,20 +30,37 @@ interface Notificacion {
   detalle: string;
 }
 
+/**
+ * Matriz de visibilidad de items de navegación por rol.
+ * Cada item define explícitamente qué roles pueden verlo.
+ */
 const itemsNavegacion: ItemNavegacion[] = [
-  { nombre: "Dashboard", ruta: "/dashboard", icono: "dashboard" },
-  { nombre: "Interconsultas", ruta: "/interconsultas", icono: "interconsultas" },
-  { nombre: "Configuración", ruta: "/configuracion", icono: "configuracion" },
+  { nombre: "Dashboard", ruta: "/dashboard", icono: "dashboard", roles: ["medico", "administrador"] },
+  { nombre: "Interconsultas", ruta: "/interconsultas", icono: "interconsultas", roles: ["medico", "administrador"] },
+  { nombre: "Configuración", ruta: "/configuracion", icono: "configuracion", roles: ["administrador"] },
+  { nombre: "Usuarios", ruta: "/usuarios", icono: "usuarios", roles: ["administrador"] },
 ];
+
+function filtrarItemsPorRol(items: ItemNavegacion[], rol: RolUsuario): ItemNavegacion[] {
+  return items.filter((item) => item.roles.includes(rol));
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { usuario, cerrarSesion } = useSesion();
+  const [cerrandoSesion, setCerrandoSesion] = useState(false);
   const { camposObligatorios } = useConfiguracionImport();
-  const [colapsado, setColapsado] = useState(false);
+  // En pantallas angostas el menú abierto se comía casi todo el ancho: parte
+  // contraído. Se monta solo con sesión confirmada, así que window existe.
+  const [colapsado, setColapsado] = useState(
+    () => window.matchMedia("(max-width: 991.98px)").matches,
+  );
   const [notificacion, setNotificacion] = useState<Notificacion | null>(null);
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
   const [reevaluando, setReevaluando] = useState(false);
   const inputArchivoRef = useRef<HTMLInputElement | null>(null);
+
+  const items = filtrarItemsPorRol(itemsNavegacion, usuario?.rol ?? "medico");
 
   const esRutaActiva = (ruta: string) => pathname.startsWith(ruta);
 
@@ -52,64 +74,48 @@ export default function Sidebar() {
 
     const nombreArchivo = archivo.name.toLowerCase();
     if (!nombreArchivo.endsWith(".csv") && !nombreArchivo.endsWith(".xlsx")) {
-      setNotificacion({
-        tipo: "error",
-        titulo: "Archivo no valido",
-        detalle: "Sube un archivo CSV o XLSX.",
-      });
+      const resultado: ResultadoCarga = {
+        archivo: archivo.name,
+        error: "El archivo debe ser CSV o XLSX.",
+      };
+      window.dispatchEvent(
+        new CustomEvent(EVENTO_RESULTADO_CARGA, { detail: resultado }),
+      );
       return;
     }
 
     setSubiendoArchivo(true);
     setNotificacion(null);
 
+    let resultado: ResultadoCarga;
     try {
-      const resultado = await subirCsvInterconsultas(
+      const respuesta = await subirCsvInterconsultas(
         archivo,
         camposObligatorios,
       );
-      const total = resultado.stored ?? resultado.inserted;
-      const priorizadas = resultado.prioritized ?? 0;
-      const rechazadas = resultado.rejected_count ?? 0;
-
-      // HU13-RF1: las filas incompletas no detienen la carga; el detalle de que
-      // le falto a cada una se muestra en el modal del area principal.
-      if (rechazadas > 0) {
-        window.dispatchEvent(
-          new CustomEvent(EVENTO_ERRORES_CARGA, {
-            detail: {
-              rejected: resultado.rejected,
-              rejected_count: rechazadas,
-            },
-          }),
-        );
-      }
-
+      resultado = {
+        archivo: archivo.name,
+        guardadas: respuesta.stored ?? respuesta.inserted,
+        priorizadas: respuesta.prioritized ?? 0,
+        explicaciones: respuesta.explanations_queued ?? 0,
+        rechazadas: respuesta.rejected ?? [],
+      };
       window.dispatchEvent(new Event(EVENTO_INTERCONSULTAS_ACTUALIZADAS));
-
-      let detalle = `${archivo.name}: ${total} guardada${total !== 1 ? "s" : ""}`;
-      if (priorizadas > 0) {
-        detalle += `, ${priorizadas} priorizada${priorizadas !== 1 ? "s" : ""} con IA`;
-      }
-      if (rechazadas > 0) {
-        detalle += `, ${rechazadas} incompleta${rechazadas !== 1 ? "s" : ""} no guardada${
-          rechazadas !== 1 ? "s" : ""
-        }`;
-      }
-
-      setNotificacion({ tipo: "success", titulo: "Carga completada", detalle });
     } catch (error) {
-      setNotificacion({
-        tipo: "error",
-        titulo: "No se pudo cargar",
-        detalle:
+      resultado = {
+        archivo: archivo.name,
+        error:
           error instanceof Error
             ? error.message
             : "Revisa el archivo e intenta nuevamente.",
-      });
+      };
     } finally {
       setSubiendoArchivo(false);
     }
+
+    window.dispatchEvent(
+      new CustomEvent(EVENTO_RESULTADO_CARGA, { detail: resultado }),
+    );
   };
 
   const manejarReevaluarBanderas = async () => {
@@ -149,7 +155,16 @@ export default function Sidebar() {
     return () => window.clearTimeout(timeoutId);
   }, [notificacion]);
 
-  const iniciales = usuarioActual.nombre
+  const manejarCerrarSesion = async () => {
+    setCerrandoSesion(true);
+    await cerrarSesion();
+  };
+
+  if (!usuario) {
+    return null; // SesionProvider redirige al login si no hay usuario
+  }
+
+  const iniciales = usuario.nombre
     .split(" ")
     .map((n) => n[0])
     .slice(0, 2)
@@ -161,7 +176,6 @@ export default function Sidebar() {
         colapsado ? "pz-sidebar--colapsado" : ""
       }`}
     >
-      {/* Cabecera: marca y control de colapso */}
       <div
         className={`flex items-center gap-2 px-4 py-4 ${
           colapsado ? "justify-center" : "justify-between"
@@ -204,11 +218,10 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* Navegación */}
       <nav className="px-3 pt-4">
         {!colapsado && <span className="pz-nav-group">Navegación</span>}
         <ul className="flex flex-col gap-1.5">
-          {itemsNavegacion.map((item) => (
+          {items.map((item) => (
             <li key={item.ruta}>
               <Link
                 href={item.ruta}
@@ -226,7 +239,6 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      {/* Acciones sobre el conjunto de interconsultas */}
       <div className="px-3 pt-6">
         {!colapsado && <span className="pz-nav-group">Acciones</span>}
         <input
@@ -267,8 +279,9 @@ export default function Sidebar() {
 
       <div className="flex-1" />
 
-      {notificacion && !colapsado && (
-        <div className="px-3 pb-3">
+      {/* Con el menú contraído el aviso flota junto a él en vez de desaparecer. */}
+      {notificacion && (
+        <div className={colapsado ? "pz-aviso-flotante" : "px-3 pb-3"}>
           <div
             role="status"
             aria-live="polite"
@@ -318,7 +331,6 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Sesión */}
       <div
         className={`flex items-center gap-3 px-4 py-4 ${
           colapsado ? "justify-center" : ""
@@ -334,7 +346,7 @@ export default function Sidebar() {
             fontSize: "var(--fs-sm)",
             letterSpacing: ".04em",
           }}
-          title={colapsado ? usuarioActual.nombre : undefined}
+          title={colapsado ? usuario.nombre : undefined}
         >
           {iniciales}
         </div>
@@ -344,7 +356,7 @@ export default function Sidebar() {
               className="mb-0 truncate font-semibold text-white"
               style={{ fontSize: "var(--fs-base)" }}
             >
-              {usuarioActual.nombre}
+              {usuario.nombre}
             </p>
             <p
               className="pz-mono mb-0 truncate uppercase"
@@ -354,10 +366,38 @@ export default function Sidebar() {
                 letterSpacing: ".1em",
               }}
             >
-              {usuarioActual.especialidad}
+              {usuario.especialidad ?? ETIQUETAS_ROL[usuario.rol]}
             </p>
           </div>
         )}
+      </div>
+
+      <div className="flex flex-col gap-1.5 px-3 pb-4">
+        <Link
+          href="/cuenta"
+          title={colapsado ? "Mi cuenta" : undefined}
+          aria-label={colapsado ? "Mi cuenta" : undefined}
+          aria-current={esRutaActiva("/cuenta") ? "page" : undefined}
+          className={`pz-btn pz-btn--nav pz-btn--block ${
+            colapsado ? "pz-btn--icono" : ""
+          }`}
+        >
+          <IconoCuenta />
+          {!colapsado && "Mi cuenta"}
+        </Link>
+        <button
+          type="button"
+          onClick={manejarCerrarSesion}
+          disabled={cerrandoSesion}
+          title={colapsado ? "Cerrar sesión" : undefined}
+          aria-label={colapsado ? "Cerrar sesión" : undefined}
+          className={`pz-btn pz-btn--nav pz-btn--block ${
+            colapsado ? "pz-btn--icono" : ""
+          }`}
+        >
+          <IconoSalir />
+          {!colapsado && (cerrandoSesion ? "Cerrando…" : "Cerrar sesión")}
+        </button>
       </div>
     </aside>
   );
@@ -371,6 +411,17 @@ function IconoNavegacion({ tipo }: { tipo: ItemNavegacion["icono"] }) {
         <rect x="14" y="3" width="7" height="7" />
         <rect x="3" y="14" width="7" height="7" />
         <rect x="14" y="14" width="7" height="7" />
+      </IconoBase>
+    );
+  }
+
+  if (tipo === "usuarios") {
+    return (
+      <IconoBase>
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
+        <path d="M16 4.5a3.5 3.5 0 0 1 0 7" />
+        <path d="M18 14.3c2.1.7 3.5 2.8 3.5 5.7" />
       </IconoBase>
     );
   }
@@ -400,6 +451,25 @@ function IconoSubir() {
       <path d="M12 16V4" />
       <path d="m7 9 5-5 5 5" />
       <path d="M4 17v3h16v-3" />
+    </IconoBase>
+  );
+}
+
+function IconoCuenta() {
+  return (
+    <IconoBase>
+      <rect x="5" y="10" width="14" height="11" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </IconoBase>
+  );
+}
+
+function IconoSalir() {
+  return (
+    <IconoBase>
+      <path d="M14 4h5v16h-5" />
+      <path d="M10 8l-4 4 4 4" />
+      <path d="M6 12h10" />
     </IconoBase>
   );
 }

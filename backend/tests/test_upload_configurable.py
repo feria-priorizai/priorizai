@@ -35,11 +35,6 @@ def _subir(client: TestClient, contenido: str, campos: str | None = None):
     )
 
 
-# --------------------------------------------------------------------------
-# _resolver_obligatorias
-# --------------------------------------------------------------------------
-
-
 def test_sin_configuracion_se_usan_los_de_fabrica() -> None:
     assert _resolver_obligatorias(None) == COLUMNAS_OBLIGATORIAS_POR_FILA
 
@@ -77,16 +72,11 @@ def test_se_normalizan_minusculas_y_espacios() -> None:
     ]
 
 
-# --------------------------------------------------------------------------
-# Efecto sobre la carga
-# --------------------------------------------------------------------------
-
-
 def test_sin_configuracion_la_fila_sin_motivo_se_rechaza(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
-    response = _subir(client, HEADER + SIN_MOTIVO)
+    response = _subir(client_admin, HEADER + SIN_MOTIVO)
 
     assert response.status_code == 200
     body = response.json()
@@ -95,11 +85,11 @@ def test_sin_configuracion_la_fila_sin_motivo_se_rechaza(
 
 
 def test_si_el_motivo_deja_de_ser_obligatorio_la_fila_entra(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     response = _subir(
-        client,
+        client_admin,
         HEADER + SIN_MOTIVO,
         campos="ESPEC_ORIGEN,SEXO,ESPEC_DESTINO,HISTORIA_CLINICA",
     )
@@ -111,12 +101,12 @@ def test_si_el_motivo_deja_de_ser_obligatorio_la_fila_entra(
 
 
 def test_la_edad_sigue_siendo_obligatoria_aunque_no_se_configure(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     sin_edad = FILA.replace(",46,", ",,")
 
-    response = _subir(client, HEADER + sin_edad, campos="ESPEC_ORIGEN")
+    response = _subir(client_admin, HEADER + sin_edad, campos="ESPEC_ORIGEN")
 
     assert response.status_code == 200
     body = response.json()
@@ -125,7 +115,7 @@ def test_la_edad_sigue_siendo_obligatoria_aunque_no_se_configure(
 
 
 def test_el_encabezado_se_exige_segun_la_configuracion(
-    client: TestClient,
+    client_admin: TestClient,
     ingesta_con_modelo: object,
 ) -> None:
     """Un archivo sin la columna de motivo entra si el motivo no es obligatorio."""
@@ -135,12 +125,12 @@ def test_el_encabezado_se_exige_segun_la_configuracion(
     )
     fila = "MEDICINA GENERAL,46,FEMENINO,RESPIRATORIO ADULTO,CANCER,Estable.\n"
 
-    rechazado = _subir(client, header + fila)
+    rechazado = _subir(client_admin, header + fila)
     assert rechazado.status_code == 400
     assert "MOTIVO_INTERCONSULTA" in rechazado.json()["detail"]
 
     aceptado = _subir(
-        client,
+        client_admin,
         header + fila,
         campos="ESPEC_ORIGEN,SEXO,ESPEC_DESTINO,HISTORIA_CLINICA",
     )

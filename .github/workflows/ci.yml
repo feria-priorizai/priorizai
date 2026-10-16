@@ -16,8 +16,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Las capas quedan en la caché de GitHub Actions: el pip install con torch
+      # (unos 3,5 GB con las librerías CUDA) solo se repite si cambia
+      # requirements.txt, en vez de descargarse en cada ejecución.
       - name: Build backend image
-        run: docker build -t priorizai-backend ./backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          tags: priorizai-backend
+          load: true
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend
 
       - name: Ruff
         run: docker run --rm priorizai-backend ruff check .
@@ -45,7 +57,13 @@ jobs:
           if-no-files-found: warn
 
       - name: Build frontend image
-        run: docker build -t priorizai-frontend ./frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          tags: priorizai-frontend
+          load: true
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend
 
       - name: Frontend lint
         run: docker run --rm priorizai-frontend npm run lint
@@ -83,8 +101,40 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Mismas imágenes que docker-compose.qa.yml, construidas con caché.
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          tags: priorizai-backend
+          load: true
+          cache-from: type=gha,scope=backend
+
+      - name: Build QA frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile.prod
+          build-args: API_URL=http://backend:8000
+          tags: priorizai-qa-frontend
+          load: true
+          cache-from: type=gha,scope=frontend-prod
+          cache-to: type=gha,scope=frontend-prod
+
+      - name: Build fake model service image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./qa/modelos-falsos
+          tags: priorizai-qa-modelos-falsos
+          load: true
+          cache-from: type=gha,scope=modelos-falsos
+          cache-to: type=gha,scope=modelos-falsos
+
       - name: Deploy QA environment
-        run: $COMPOSE up -d --build --wait --wait-timeout 300
+        run: $COMPOSE up -d --no-build --wait --wait-timeout 300
 
       - name: E2E tests
         run: $COMPOSE run --rm -e CI=true e2e

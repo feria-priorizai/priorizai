@@ -34,6 +34,9 @@ services:
       retries: 20
 
   modelos-falsos:
+    # Nombre fijo: el CI construye las imágenes con caché y levanta con
+    # --no-build, así que compose tiene que reconocerlas por su nombre.
+    image: priorizai-qa-modelos-falsos
     build: ./qa/modelos-falsos
     environment:
       MODEL_SERVICE_API_KEY: qa-modelos-2026
@@ -44,6 +47,7 @@ services:
       retries: 20
 
   backend:
+    image: priorizai-backend
     build: ./backend
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     depends_on:
@@ -74,6 +78,7 @@ services:
       retries: 40
 
   frontend:
+    image: priorizai-qa-frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod

@@ -442,6 +442,10 @@ GitHub Actions ejecuta el pipeline en cada push y pull request contra `develop`
   publica sus reportes como artefactos.
 - `secret-scan`: gitleaks sobre todo el historial (`.gitleaks.toml`).
 
+Las imágenes se construyen con Buildx y guardan sus capas en la caché de GitHub
+Actions: la instalación de dependencias del backend (`torch` con sus librerías
+CUDA, unos 3,5 GB) solo se repite cuando cambia `requirements.txt`.
+
 Además, CodeQL (`.github/workflows/codeql.yml`) analiza el código Python y
 TypeScript en cada pull request y cada semana; los hallazgos aparecen en la
 pestaña Security del repositorio.

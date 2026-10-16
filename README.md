@@ -108,8 +108,18 @@ equipos.
   ```bash
   docker compose logs backend | grep AUDITORIA
   ```
-- El rol se guarda pero todavía no restringe funciones, salvo la gestión de
-  cuentas, que es solo de administradores.
+
+Cada rol ve y hace cosas distintas:
+
+| | Médico | Administrador |
+| --- | --- | --- |
+| Interconsultas | Solo las de su especialidad: las demás no aparecen en el listado, su detalle responde 404 y no puede cambiarles la prioridad ni el estado | Todas |
+| Carga de archivos, revisión y exportación | Sí | Sí |
+| Configuración de campos (`/configuracion`) | No | Sí |
+| Gestión de cuentas (`/usuarios`) | No | Sí |
+
+El menú lateral solo muestra lo que el rol puede usar, pero quien hace cumplir
+las restricciones es la API.
 
 El navegador nunca llama al backend directamente: el servidor de Next reenvía
 `/api/*` y `/upload-csv` a `API_URL` (`frontend/next.config.ts`). Así la cookie
@@ -281,8 +291,9 @@ docker compose down -v
 1. **Carga.** Se sube un archivo CSV o XLSX desde el panel lateral de la
    aplicación.
 2. **Validación por fila.** Las filas a las que les falta un campo obligatorio
-   se descartan sin detener el resto del archivo, y se listan en un aviso con el
-   número de fila y los campos que faltaban.
+   se descartan sin detener el resto del archivo. Al terminar, un resumen de la
+   carga muestra cuántas filas se guardaron, cuántas se priorizaron y cuáles no
+   se guardaron, con su número de fila y los campos que faltaban.
 3. **Extracción de entidades.** Sobre los cuatro campos clínicos se ejecuta el
    NER, que reconoce enfermedades, síntomas, fármacos y siglas. Las entidades
    quedan resaltadas sobre el texto en el detalle de cada interconsulta.
@@ -292,7 +303,9 @@ docker compose down -v
    término afirmado fuerza la prioridad alta y la interfaz lo indica como regla
    clínica en lugar de mostrar una certeza del modelo.
 6. **Revisión médica.** El médico confirma o corrige la prioridad. Toda
-   corrección exige un motivo y queda en el historial de la interconsulta.
+   corrección exige un motivo y queda en el historial de la interconsulta. Desde
+   el detalle se pasa a la anterior o la siguiente en el mismo orden y con los
+   mismos filtros de la lista.
 7. **Exportación.** Las interconsultas revisadas se descargan en JSON, CSV o
    XLSX, con los campos que defina la configuración.
 
@@ -311,7 +324,7 @@ docker compose down -v
 | `PATCH` | `/api/usuarios/{id}/estado` | Bloquea o desbloquea una cuenta (solo administrador) |
 | `DELETE` | `/api/usuarios/{id}` | Elimina una cuenta (solo administrador) |
 | `POST` | `/upload-csv` | Ingesta de un archivo CSV o XLSX |
-| `GET` | `/api/interconsultas` | Listado paginado (`limit` de 1 a 500, `offset`); el total va en la cabecera `X-Total-Count` |
+| `GET` | `/api/interconsultas` | Listado paginado (`limit` de 1 a 500, `offset`); el total va en la cabecera `X-Total-Count`. Un médico solo recibe las de su especialidad |
 | `GET` | `/api/interconsultas/{id}` | Detalle de una interconsulta |
 | `PATCH` | `/api/interconsultas/{id}/prioridad` | Cambio manual de prioridad con motivo; el responsable sale de la sesión |
 | `PATCH` | `/api/interconsultas/{id}/estado` | Marca la interconsulta como revisada o pendiente |
@@ -331,9 +344,9 @@ Next.js 16 con App Router, React 19, Bootstrap 5 y Tailwind CSS 4.
 | Ruta | Vista |
 | --- | --- |
 | `/dashboard` | Resumen de la lista de espera y cola agrupada por prioridad |
-| `/interconsultas` | Lista de espera completa, con filtros y descarga múltiple |
-| `/interconsultas/[id]` | Detalle: columna de decisión fija y sustento clínico al lado |
-| `/configuracion` | Campos exigidos al importar y campos incluidos al exportar |
+| `/interconsultas` | Lista de espera completa, en tarjetas agrupadas por prioridad o en tabla ordenable por columna, con filtros y descarga múltiple |
+| `/interconsultas/[id]` | Detalle: columna de decisión fija, sustento clínico y explicación de la sugerencia al lado, y navegación a la anterior y la siguiente |
+| `/configuracion` | Campos exigidos al importar y campos incluidos al exportar (solo administrador) |
 | `/login` | Inicio de sesión |
 | `/cuenta` | Datos de la sesión y cambio de contraseña |
 | `/usuarios` | Gestión de cuentas: alta, edición, bloqueo y eliminación (solo administrador) |
@@ -391,6 +404,14 @@ docker compose exec frontend npm run build
 Library, en `frontend/tests/unit`). `npm run test:coverage` además mide la
 cobertura de utilidades, servicios de la API y formularios, y falla si baja del
 90 %; el reporte HTML queda en `frontend/coverage/`.
+
+Si el contenedor del frontend venía levantado de antes de que se agregaran las
+pruebas, `npm test` no encuentra Vitest: las dependencias viven en un volumen
+de la imagen. Se resuelve reconstruyéndola:
+
+```bash
+docker compose up --build -d -V frontend
+```
 
 ## Ambiente QA, pruebas E2E y de carga
 
@@ -450,8 +471,9 @@ Además, CodeQL (`.github/workflows/codeql.yml`) analiza el código Python y
 TypeScript en cada pull request y cada semana; los hallazgos aparecen en la
 pestaña Security del repositorio.
 
-Jenkins ejecuta el mismo pipeline (`Jenkinsfile`) y corre por separado:
-`docker compose up` no lo inicia.
+Jenkins ejecuta las mismas etapas del job `backend-quality` (`Jenkinsfile`);
+el ambiente QA y el escaneo de secretos corren solo en GitHub Actions. Jenkins
+corre por separado: `docker compose up` no lo inicia.
 
 ```bash
 docker compose -f docker-compose.jenkins.yml up --build -d
@@ -496,7 +518,12 @@ alineadas.
   de un proxy intermedio.
 - **El esquema se actualiza con `ALTER TABLE` al importar la aplicación.** No hay
   herramienta de migraciones, historial de versiones ni rollback.
-- **El frontend no tiene pruebas automatizadas.** La CI solo corre lint y build.
+- **Las páginas del frontend no tienen pruebas unitarias.** Las pruebas de Vitest
+  cubren utilidades, servicios y formularios; las páginas solo las recorren las
+  pruebas E2E.
+- **Las pruebas E2E no usan el modelo real.** En el ambiente QA el servicio de
+  modelos es un doble con reglas fijas, así que no validan la calidad de la
+  priorización ni del NER.
 
 ## Documentación
 

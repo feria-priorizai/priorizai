@@ -17,6 +17,12 @@ on:
     # Lunes 06:00 UTC: detecta vulnerabilidades nuevas en código sin cambios.
     - cron: "0 6 * * 1"
 
+# Un commit nuevo en un pull request cancela la ejecución anterior del mismo
+# PR, que ya quedó obsoleta. En develop, main y el análisis semanal no se cancela.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
   security-events: write

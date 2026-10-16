@@ -9,6 +9,12 @@ on:
     branches:
       - develop
 
+# Un commit nuevo en un pull request cancela la ejecución anterior del mismo
+# PR, que ya quedó obsoleta. En develop no se cancela: cada merge se valida.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   backend-quality:
     runs-on: ubuntu-latest
@@ -91,8 +97,9 @@ jobs:
 
   # Despliega el sistema completo en un ambiente QA desechable dentro del
   # runner (docker-compose.qa.yml) y corre contra él las pruebas E2E y de carga.
+  # Corre en paralelo con backend-quality: esperarlo duplicaba el tiempo total
+  # del pipeline.
   qa:
-    needs: backend-quality
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

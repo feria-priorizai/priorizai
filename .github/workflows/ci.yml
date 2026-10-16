@@ -50,13 +50,15 @@ jobs:
       - name: Frontend lint
         run: docker run --rm priorizai-frontend npm run lint
 
+      # Vitest borra y recrea coverage/, así que no puede ser el punto de
+      # montaje: se monta otra ruta y el reporte se copia al terminar.
       - name: Frontend tests
         run: |
           mkdir -p frontend-coverage
           docker run --rm \
-            -v "${{ github.workspace }}/frontend-coverage:/app/coverage" \
+            -v "${{ github.workspace }}/frontend-coverage:/reportes" \
             priorizai-frontend \
-            npm run test:coverage
+            sh -c 'npm run test:coverage; estado=$?; cp -r coverage/. /reportes/; exit $estado'
 
       - name: Upload frontend coverage report
         if: always()

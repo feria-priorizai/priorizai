@@ -5,6 +5,7 @@ arma `_guardar_interconsultas`: los parametros exactos con los que cada fila del
 archivo llega a la base.
 """
 
+import inspect
 from io import BytesIO
 from typing import cast
 
@@ -301,3 +302,10 @@ def test_upload_csv_medico_puede_subir(
     body = response.json()
     assert body["inserted"] == 1
     assert body["stored"] == 1
+
+
+def test_upload_csv_no_bloquea_el_event_loop() -> None:
+    """La carga hace trabajo bloqueante (base, modelo). Como corrutina corria
+    en el event loop y ninguna otra peticion se atendia mientras duraba; como
+    funcion normal, FastAPI la ejecuta en su pool de hilos."""
+    assert not inspect.iscoroutinefunction(main_module.upload_csv)

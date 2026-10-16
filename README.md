@@ -16,6 +16,7 @@ El sistema está diseñado para ejecutarse dentro de la red del establecimiento.
 | `frontend/` | Aplicación web en Next.js (App Router) que consume la API |
 | `landing/` | Sitio estático de presentación del producto |
 | `scripts/` | Priorización por lotes fuera de la aplicación |
+| `qa/` | Ambiente de pruebas: E2E (Playwright), carga (k6), datos sintéticos y servicio de modelos falso |
 | `docker/` | Imagen de Jenkins |
 | `docs/` | Documentación técnica y revisiones |
 
@@ -363,7 +364,7 @@ Si falla Black, aplicar el formato con:
 docker compose exec backend black .
 ```
 
-`pytest` mide cobertura en cada corrida y falla si baja del 82 %. Para una
+`pytest` mide cobertura en cada corrida y falla si baja del 95 %. Para una
 corrida parcial (un archivo, o un `-k`) hay que desactivar el umbral, porque si
 no la cobertura del subconjunto lo hace fallar aunque los tests pasen:
 
@@ -382,14 +383,68 @@ Validar el frontend:
 
 ```bash
 docker compose exec frontend npm run lint
+docker compose exec frontend npm test
 docker compose exec frontend npm run build
+```
+
+`npm test` corre las pruebas unitarias y de componentes (Vitest y React Testing
+Library, en `frontend/tests/unit`). `npm run test:coverage` además mide la
+cobertura de utilidades, servicios de la API y formularios, y falla si baja del
+90 %; el reporte HTML queda en `frontend/coverage/`.
+
+## Ambiente QA, pruebas E2E y de carga
+
+`docker-compose.qa.yml` levanta el sistema completo como en producción: el
+frontend compilado (`next build`), el backend con `DEBUG=false`, PostgreSQL vacío
+y un servicio de modelos falso (`qa/modelos-falsos`) que prioriza con reglas fijas,
+para que las pruebas no dependan de los pesos del modelo ni de Google Cloud. Es
+independiente del ambiente de desarrollo y usa el puerto 3100.
+
+```bash
+docker compose -f docker-compose.qa.yml up -d --build --wait
+docker compose -f docker-compose.qa.yml run --rm e2e
+docker compose -f docker-compose.qa.yml run --rm carga
+docker compose -f docker-compose.qa.yml --profile pruebas down -v
+```
+
+- **E2E** (`qa/e2e`): Playwright en Chromium headless sobre los flujos críticos:
+  login y bloqueo, primer ingreso, carga de archivos, alertas clínicas, revisión
+  de prioridad con motivo, exportación y perfiles. Los selectores usan
+  `data-testid`. El reporte HTML queda en `qa/e2e/reportes/html` y, si una prueba
+  falla, también la captura, el video y la traza.
+- **Carga** (`qa/carga`): k6 con usuarios concurrentes sobre el listado y el
+  detalle, mientras se cargan archivos de 100 filas. Falla si el p95 del listado
+  supera 500 ms o el de una carga supera 5 s. Se ajusta con `USUARIOS`,
+  `DURACION` y `VOLUMEN_BASE`.
+
+Las cuentas y los datos son sintéticos y solo existen en este ambiente: la base
+vive en memoria (`tmpfs`) y se pierde al bajarlo.
+
+Con el ambiente levantado, la aplicación queda en http://localhost:3100
+(usuario `qa-admin`, contraseña `qa-admin-definitiva-2026` después de la primera
+corrida de las pruebas). Para correr las E2E desde el equipo, sin Docker:
+
+```bash
+cd qa/e2e
+npm ci
+npx playwright install chromium
+npx playwright test
 ```
 
 ## Integración continua
 
 GitHub Actions ejecuta el pipeline en cada push y pull request contra `develop`
-(`.github/workflows/ci.yml`): Ruff, Black, Mypy y Pytest con reporte de
-cobertura en el backend, y lint y build en el frontend.
+(`.github/workflows/ci.yml`), con tres jobs:
+
+- `backend-quality`: Ruff, Black, Mypy y Pytest con reporte de cobertura en el
+  backend; lint, pruebas unitarias con cobertura y build en el frontend.
+- `qa`: despliega el ambiente QA en el runner, corre las pruebas E2E y de carga, y
+  publica sus reportes como artefactos.
+- `secret-scan`: gitleaks sobre todo el historial (`.gitleaks.toml`).
+
+Además, CodeQL (`.github/workflows/codeql.yml`) analiza el código Python y
+TypeScript en cada pull request y cada semana; los hallazgos aparecen en la
+pestaña Security del repositorio.
 
 Jenkins ejecuta el mismo pipeline (`Jenkinsfile`) y corre por separado:
 `docker compose up` no lo inicia.

@@ -37,13 +37,16 @@ arrancar el servidor (`npm run dev` o `npm run start`), no desde el navegador.
 ## Comandos
 
 ```bash
-npm run dev     # servidor de desarrollo
-npm run build   # build de producción
-npm run lint    # eslint
+npm run dev            # servidor de desarrollo
+npm run build          # build de producción
+npm run lint           # eslint
+npm test               # pruebas unitarias y de componentes
+npm run test:coverage  # pruebas con reporte de cobertura
 ```
 
-No hay tests todavia: falta instalar un runner y cubrir la logica de
-`services/interconsultas.ts`, que es donde vive el mapeo de la API.
+`Dockerfile` es la imagen de desarrollo (`next dev`, la que usa
+`docker compose up`); `Dockerfile.prod` compila la aplicación (`next build` y
+`next start`) y es la que usa el ambiente QA.
 
 ## Estructura
 
@@ -52,14 +55,15 @@ No hay tests todavia: falta instalar un runner y cubrir la logica de
 | `app/` | Rutas del App Router (`login`, `dashboard`, `interconsultas`, `interconsultas/[id]`, `configuracion`, `usuarios`, `cuenta`) y el sistema de diseño en `globals.css` |
 | `components/auth/` | Cambio de contraseña, incluida la pantalla obligatoria del primer ingreso |
 | `components/layout/` | Contenedor de la aplicación, barra lateral y encabezado |
-| `components/interconsultas/` | Cola agrupada, detalle, panel de decisión, resumen clínico y entidades |
-| `components/configuracion/` | Matriz de campos de importación y exportación, y aviso de filas rechazadas |
+| `components/interconsultas/` | Lista de espera en tarjetas o tabla, detalle, panel de decisión, navegación entre interconsultas, resumen clínico, entidades, explicación de la sugerencia y resumen de cada carga de archivo |
+| `components/configuracion/` | Matriz de campos de importación y exportación |
 | `components/dashboard/`, `components/ui/` | Indicadores del resumen y piezas compartidas |
 | `services/` | Llamadas a la API (`api.ts` centraliza el fetch y el manejo del 401), sesión y mapeo de las respuestas al modelo del front |
-| `hooks/`, `context/` | Estado del listado, de la sesión (`SesionContext`) y de la configuración de campos |
+| `hooks/`, `context/` | Estado del listado y de la vista preferida, de la sesión (`SesionContext`) y de la configuración de campos |
 | `types/` | Tipos compartidos del dominio |
-| `utils/` | Formato de fechas y exportación a los distintos formatos |
+| `utils/` | Formato de fechas, orden de la lista de espera y exportación a los distintos formatos |
 | `data/` | Datos fijos de la instalación, como el nombre del establecimiento |
+| `tests/` | Pruebas unitarias y de componentes (`tests/unit`) y su configuración |
 
 ## Sistema de diseño
 
@@ -96,7 +100,23 @@ muestra un emblema junto al nombre del centro en lugar de una imagen rota.
 
 ## Pruebas
 
-No hay pruebas automatizadas. La CI solo ejecuta `npm run lint` y
-`npm run build`. La lógica sin cobertura, en orden de riesgo, está detallada en
-[`../docs/revision-tecnica-completa.md`](../docs/revision-tecnica-completa.md),
-sección T2.
+Las pruebas usan Vitest con jsdom y React Testing Library, y viven en
+`tests/unit`. Cubren las utilidades (exportación a CSV, JSON y XLSX, incluida la
+neutralización de fórmulas; orden de la lista; fechas), los servicios de la API
+(con `fetch` simulado) y los formularios de cambio de prioridad y de contraseña.
+
+```bash
+npm test
+npm run test:coverage
+```
+
+La cobertura se mide sobre `utils/`, `services/`, `components/ui/` y esos dos
+formularios, y la corrida falla si cualquiera de sus medidas (líneas, ramas,
+funciones o sentencias) baja del 90 %. El reporte HTML queda en `coverage/`.
+Las páginas y los componentes que dependen del router de Next no se prueban
+aquí: los recorren las pruebas E2E del ambiente QA (`../qa/e2e`), que los
+encuentran por sus atributos `data-testid`. Al cambiar uno de esos atributos hay
+que actualizar también las pruebas E2E.
+
+La CI ejecuta `npm run lint`, `npm run test:coverage` y `npm run build` en cada
+pull request.

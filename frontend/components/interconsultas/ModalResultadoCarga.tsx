@@ -96,6 +96,7 @@ export function ModalResultadoCarga() {
         ref={dialogoRef}
         className="pz-modal"
         role="dialog"
+        data-testid="resultado-carga"
         aria-modal="true"
         aria-labelledby="titulo-resultado-carga"
       >
@@ -118,7 +119,12 @@ export function ModalResultadoCarga() {
               Ver lista de espera
             </button>
           )}
-          <button type="button" onClick={cerrar} className="pz-btn pz-btn--azul">
+          <button
+            type="button"
+            data-testid="cerrar-resultado-carga"
+            onClick={cerrar}
+            className="pz-btn pz-btn--azul"
+          >
             Entendido
           </button>
         </div>

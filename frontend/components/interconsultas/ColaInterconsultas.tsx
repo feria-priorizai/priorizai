@@ -167,6 +167,7 @@ export default function ColaInterconsultas({
                 <input
                   type="checkbox"
                   className="form-check-input"
+                  data-testid="seleccionar-todas"
                   checked={todasSeleccionadas}
                   onChange={onToggleSeleccionarTodas}
                   disabled={interconsultas.length === 0}
@@ -175,6 +176,7 @@ export default function ColaInterconsultas({
               </label>
               <select
                 aria-label="Formato de descarga"
+                data-testid="formato-descarga"
                 className="form-select pz-select--mini"
                 value={formatoDescarga}
                 onChange={(e) =>
@@ -187,6 +189,7 @@ export default function ColaInterconsultas({
               </select>
               <button
                 type="button"
+                data-testid="descargar-seleccion"
                 onClick={onDescargarSeleccion}
                 disabled={seleccionadas.size === 0}
                 className="pz-btn pz-btn--azul pz-btn--mini"
@@ -204,6 +207,7 @@ export default function ColaInterconsultas({
           ) : mostrarBotonDescargaMultiple && onActivarDescargaMultiple ? (
             <button
               type="button"
+              data-testid="descarga-multiple"
               onClick={onActivarDescargaMultiple}
               className="pz-btn pz-btn--morado pz-btn--mini"
             >
@@ -248,6 +252,8 @@ export default function ColaInterconsultas({
               <div
                 key={ic.id}
                 className="pz-fila-cola"
+                data-testid="fila-interconsulta"
+                data-id={ic.id}
                 onClick={(e) => alClickearFila(e, ic.id)}
               >
                 {modoDescargaMultiple && (
@@ -286,6 +292,7 @@ export default function ColaInterconsultas({
                   {ic.banderaRoja && (
                     <span
                       className="pz-chip pz-chip--flag"
+                      data-testid="bandera-roja"
                       title={
                         ic.terminosBanderaRoja.join(", ") ||
                         "Bandera roja detectada"
@@ -324,6 +331,7 @@ function SelectorVista({
           type="button"
           className={`pz-vista__op${vista === op.valor ? " is-on" : ""}`}
           aria-pressed={vista === op.valor}
+          data-testid={`vista-${op.valor}`}
           onClick={() => onCambiar(op.valor)}
         >
           <svg
@@ -433,6 +441,8 @@ function TablaCola({
                 className={`pz-tabla-cola__fila--${zonaDe(clave)}${
                   seleccionadas.has(ic.id) ? " is-sel" : ""
                 }`}
+                data-testid="fila-interconsulta"
+                data-id={ic.id}
                 onClick={(e) => onClickFila(e, ic.id)}
               >
                 <td className="pz-tabla-cola__n">{i + 1}</td>
@@ -482,6 +492,7 @@ function TablaCola({
                   {ic.banderaRoja && (
                     <span
                       className="pz-chip pz-chip--flag"
+                      data-testid="bandera-roja"
                       title={ic.terminosBanderaRoja.join(", ") || "Bandera roja detectada"}
                     >
                       ⚑

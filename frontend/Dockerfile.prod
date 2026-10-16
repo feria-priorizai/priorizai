@@ -1,0 +1,36 @@
+# Imagen de producción del frontend: `next build` + `next start`.
+# La de desarrollo (Dockerfile) corre `next dev`; esta es la que se prueba en
+# el ambiente QA, para que las pruebas E2E vean lo mismo que verá el usuario.
+FROM node:22-alpine AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+# Next fija los rewrites de /api al compilar, así que la URL del backend se
+# necesita aquí y no solo al arrancar.
+ARG API_URL=http://backend:8000
+ENV API_URL=${API_URL}
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build && npm prune --omit=dev
+
+FROM node:22-alpine
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+COPY --from=build --chown=node:node /app/package.json ./
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/.next ./.next
+COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /app/next.config.ts ./
+
+USER node
+
+EXPOSE 3000
+
+CMD ["npx", "next", "start", "--hostname", "0.0.0.0", "--port", "3000"]

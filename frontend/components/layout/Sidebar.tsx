@@ -243,6 +243,7 @@ export default function Sidebar() {
         {!colapsado && <span className="pz-nav-group">Acciones</span>}
         <input
           ref={inputArchivoRef}
+          data-testid="input-archivo"
           type="file"
           accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           className="hidden"
@@ -251,6 +252,7 @@ export default function Sidebar() {
         <div className="flex flex-col gap-1.5">
           <button
             type="button"
+            data-testid="cargar-archivo"
             onClick={() => inputArchivoRef.current?.click()}
             disabled={subiendoArchivo}
             title={colapsado ? "Cargar archivo" : undefined}
@@ -353,6 +355,7 @@ export default function Sidebar() {
         {!colapsado && (
           <div className="min-w-0">
             <p
+              data-testid="usuario-nombre"
               className="mb-0 truncate font-semibold text-white"
               style={{ fontSize: "var(--fs-base)" }}
             >
@@ -387,6 +390,7 @@ export default function Sidebar() {
         </Link>
         <button
           type="button"
+          data-testid="cerrar-sesion"
           onClick={manejarCerrarSesion}
           disabled={cerrandoSesion}
           title={colapsado ? "Cerrar sesión" : undefined}

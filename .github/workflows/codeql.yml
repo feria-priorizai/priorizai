@@ -1,0 +1,53 @@
+name: CodeQL
+
+# Análisis estático de seguridad del backend (Python) y del frontend
+# (TypeScript). Los hallazgos quedan en la pestaña Security del repositorio.
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+
+  push:
+    branches:
+      - develop
+      - main
+
+  schedule:
+    # Lunes 06:00 UTC: detecta vulnerabilidades nuevas en código sin cambios.
+    - cron: "0 6 * * 1"
+
+# Un commit nuevo en un pull request cancela la ejecución anterior del mismo
+# PR, que ya quedó obsoleta. En develop, main y el análisis semanal no se cancela.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - python
+          - javascript-typescript
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

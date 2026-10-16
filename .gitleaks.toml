@@ -1,0 +1,15 @@
+# Escaneo de secretos (plan de calidad, sección de seguridad).
+# Usa todas las reglas por defecto de gitleaks; solo se excluyen las rutas de
+# pruebas, cuyas contraseñas son sintéticas y existen únicamente dentro de los
+# tests o del ambiente QA desechable (docker-compose.qa.yml).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Credenciales sintéticas de pruebas y del ambiente QA"
+paths = [
+  '''^backend/tests/''',
+  '''^frontend/tests/''',
+  '''^qa/''',
+  '''^docker-compose\.qa\.yml$''',
+]

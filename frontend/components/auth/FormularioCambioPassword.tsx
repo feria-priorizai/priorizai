@@ -68,6 +68,7 @@ export default function FormularioCambioPassword({
         </label>
         <input
           id="password-actual"
+          data-testid="password-actual"
           type="password"
           className="form-control"
           autoComplete="current-password"
@@ -83,6 +84,7 @@ export default function FormularioCambioPassword({
         </label>
         <input
           id="password-nueva"
+          data-testid="password-nueva"
           type="password"
           className="form-control"
           autoComplete="new-password"
@@ -108,6 +110,7 @@ export default function FormularioCambioPassword({
         </label>
         <input
           id="password-confirmacion"
+          data-testid="password-confirmacion"
           type="password"
           className="form-control"
           autoComplete="new-password"
@@ -136,6 +139,7 @@ export default function FormularioCambioPassword({
 
       <button
         type="submit"
+        data-testid="cambio-password-submit"
         className="pz-btn pz-btn--verde pz-btn--block mt-1"
         disabled={enviando}
       >

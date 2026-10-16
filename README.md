@@ -17,7 +17,7 @@ El sistema está diseñado para ejecutarse dentro de la red del establecimiento.
 | `landing/` | Sitio estático de presentación del producto |
 | `scripts/` | Priorización por lotes fuera de la aplicación |
 | `docker/` | Imagen de Jenkins |
-| `docs/` | Documentación técnica y revisiones |
+| `docs/` | Documentación técnica |
 
 ## Requisitos
 
@@ -439,14 +439,9 @@ alineadas.
   herramienta de migraciones, historial de versiones ni rollback.
 - **El frontend no tiene pruebas automatizadas.** La CI solo corre lint y build.
 
-El detalle de estas y otras observaciones está en
-[`docs/revision-tecnica-completa.md`](docs/revision-tecnica-completa.md).
-
 ## Documentación
 
 | Archivo | Contenido |
 | --- | --- |
 | [`docs/arquitectura.md`](docs/arquitectura.md) | Decisiones de stack |
-| [`docs/revision-tecnica.md`](docs/revision-tecnica.md) | Primera revisión técnica |
-| [`docs/revision-tecnica-completa.md`](docs/revision-tecnica-completa.md) | Revisión completa del repositorio, con estado de cada hallazgo |
 | [`frontend/README.md`](frontend/README.md) | Detalle del frontend |

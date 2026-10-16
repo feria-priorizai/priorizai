@@ -97,6 +97,4 @@ muestra un emblema junto al nombre del centro en lugar de una imagen rota.
 ## Pruebas
 
 No hay pruebas automatizadas. La CI solo ejecuta `npm run lint` y
-`npm run build`. La lógica sin cobertura, en orden de riesgo, está detallada en
-[`../docs/revision-tecnica-completa.md`](../docs/revision-tecnica-completa.md),
-sección T2.
+`npm run build`.

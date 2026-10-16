@@ -50,5 +50,82 @@ jobs:
       - name: Frontend lint
         run: docker run --rm priorizai-frontend npm run lint
 
+      - name: Frontend tests
+        run: |
+          mkdir -p frontend-coverage
+          docker run --rm \
+            -v "${{ github.workspace }}/frontend-coverage:/app/coverage" \
+            priorizai-frontend \
+            npm run test:coverage
+
+      - name: Upload frontend coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend-coverage/
+          if-no-files-found: warn
+
       - name: Frontend build
         run: docker run --rm priorizai-frontend npm run build
+
+  # Despliega el sistema completo en un ambiente QA desechable dentro del
+  # runner (docker-compose.qa.yml) y corre contra él las pruebas E2E y de carga.
+  qa:
+    needs: backend-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COMPOSE: docker compose -f docker-compose.qa.yml
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy QA environment
+        run: $COMPOSE up -d --build --wait --wait-timeout 300
+
+      - name: E2E tests
+        run: $COMPOSE run --rm -e CI=true e2e
+
+      - name: Load tests
+        run: |
+          mkdir -p qa/carga/resultados
+          $COMPOSE run --rm carga
+
+      - name: QA environment logs
+        if: failure()
+        run: $COMPOSE logs --no-color --tail=200 backend frontend modelos-falsos
+
+      - name: Upload E2E report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: qa/e2e/reportes/
+          if-no-files-found: warn
+
+      - name: Upload load test summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-summary
+          path: qa/carga/resultados/
+          if-no-files-found: warn
+
+      - name: Tear down QA environment
+        if: always()
+        run: $COMPOSE --profile pruebas down -v --remove-orphans
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/repo" -w /repo \
+            zricethezav/gitleaks:v8.28.0 \
+            git . --config .gitleaks.toml --redact --no-banner --verbose

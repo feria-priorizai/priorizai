@@ -58,6 +58,26 @@ pipeline {
             }
         }
 
+        stage('Frontend tests') {
+            steps {
+                sh '''
+                    set +e
+                    docker run --name priorizai-front-cov-${BUILD_NUMBER} \
+                        priorizai-frontend \
+                        npm run test:coverage
+                    status=$?
+                    docker cp priorizai-front-cov-${BUILD_NUMBER}:/app/coverage frontend-coverage || true
+                    docker rm -f priorizai-front-cov-${BUILD_NUMBER} >/dev/null 2>&1 || true
+                    exit $status
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'frontend-coverage/**', allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Frontend build') {
             steps {
                 sh 'docker run --rm priorizai-frontend npm run build'

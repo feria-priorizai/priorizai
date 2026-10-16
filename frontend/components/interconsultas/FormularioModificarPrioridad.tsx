@@ -108,6 +108,7 @@ export default function FormularioModificarPrioridad({
               key={nivel}
               type="button"
               data-nivel={nivel}
+              data-testid={`nueva-prioridad-${nivel}`}
               aria-pressed={nuevaPrioridad === nivel}
               disabled={confirmando || enviando}
               onClick={() => setNuevaPrioridad(nivel)}
@@ -125,6 +126,7 @@ export default function FormularioModificarPrioridad({
         </label>
         <textarea
           id="motivo-modificacion"
+          data-testid="motivo-modificacion"
           className="form-control"
           value={motivo}
           disabled={confirmando || enviando}
@@ -144,6 +146,7 @@ export default function FormularioModificarPrioridad({
       {mensaje && (
         <div
           role={mensaje.tipo === "error" ? "alert" : "status"}
+          data-testid="mensaje-modificacion"
           aria-live="polite"
           className="px-3 py-2.5 text-[.82rem]"
           style={{
@@ -182,6 +185,7 @@ export default function FormularioModificarPrioridad({
           <div className="flex gap-2">
             <button
               type="button"
+              data-testid="confirmar-modificacion"
               onClick={confirmarModificacion}
               disabled={enviando}
               className="pz-btn pz-btn--verde flex-1"
@@ -201,6 +205,7 @@ export default function FormularioModificarPrioridad({
       ) : (
         <button
           type="submit"
+          data-testid="solicitar-cambio-prioridad"
           disabled={!hayCambio}
           className="pz-btn pz-btn--verde pz-btn--block"
         >

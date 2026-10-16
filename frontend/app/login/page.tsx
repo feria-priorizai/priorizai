@@ -83,6 +83,7 @@ export default function LoginPage() {
               </label>
               <input
                 id="alias"
+                data-testid="login-alias"
                 name="username"
                 className="form-control"
                 autoComplete="username"
@@ -103,6 +104,7 @@ export default function LoginPage() {
               </label>
               <input
                 id="password"
+                data-testid="login-password"
                 name="password"
                 type="password"
                 className="form-control"
@@ -118,6 +120,7 @@ export default function LoginPage() {
             {error && (
               <p
                 role="alert"
+                data-testid="login-error"
                 className="mb-0 px-3 py-2.5"
                 style={{
                   fontSize: "var(--fs-sm)",
@@ -133,6 +136,7 @@ export default function LoginPage() {
 
             <button
               type="submit"
+              data-testid="login-submit"
               className="pz-btn pz-btn--verde pz-btn--block pz-btn--lg mt-1"
               disabled={enviando}
             >

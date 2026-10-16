@@ -61,7 +61,10 @@ export default function PanelDecision({
         </div>
 
         {esValida && tienePrioridad ? (
-          <span className={`pz-vigente pz-vigente--${ic.prioridadActual} mt-3`}>
+          <span
+            className={`pz-vigente pz-vigente--${ic.prioridadActual} mt-3`}
+            data-testid="prioridad-vigente"
+          >
             {ic.prioridadActual}
           </span>
         ) : (
@@ -114,6 +117,7 @@ export default function PanelDecision({
         {!estaRevisada && (
           <button
             type="button"
+            data-testid="marcar-revisada"
             onClick={onMarcarRevisada}
             disabled={actualizandoEstado}
             className="pz-btn pz-btn--verde pz-btn--block"
@@ -125,6 +129,7 @@ export default function PanelDecision({
         <div className="flex gap-2">
           <select
             aria-label="Formato de exportación"
+            data-testid="formato-exportacion"
             className="form-select"
             value={formato}
             disabled={!estaRevisada}
@@ -139,6 +144,7 @@ export default function PanelDecision({
           </select>
           <button
             type="button"
+            data-testid="exportar"
             onClick={onExportar}
             disabled={!estaRevisada}
             title={

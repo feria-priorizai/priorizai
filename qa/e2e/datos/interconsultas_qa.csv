@@ -1,0 +1,9 @@
+ESPEC_ORIGEN,EDAD,SEXO,ESPEC_DESTINO,HISTORIA_CLINICA,FUNDAMENTOS_DIAGNOSTICO,EXAMENES_COMPLEMENTARIOS,MOTIVO_INTERCONSULTA,FECHA_EMISION
+MEDICINA GENERAL,58,MASCULINO,CARDIOLOGIA,Paciente con dolor toracico opresivo de inicio subito,Sindrome coronario en estudio,ECG con cambios del ST,Evaluacion cardiologica,2026-09-01
+MEDICINA GENERAL,44,FEMENINO,CARDIOLOGIA,Paciente sin dolor toracico ni disnea,Hipertension en control con losartan,,Control de especialidad,2026-09-02
+MEDICINA GENERAL,63,MASCULINO,CARDIOLOGIA,Palpitaciones ocasionales al esfuerzo,Arritmia en estudio,Holter pendiente,Evaluacion por especialista,2026-09-03
+MEDICINA GENERAL,71,FEMENINO,NEUROLOGIA,Episodio de convulsiones tonico clonicas ayer,Crisis epileptica de reciente comienzo,,Evaluacion neurologica,2026-09-04
+MEDICINA GENERAL,36,FEMENINO,DERMATOLOGIA,Lesion pigmentada en dorso sin cambios,Nevus en seguimiento,,Control de lunares,2026-09-05
+MEDICINA GENERAL,49,MASCULINO,ENDOCRINOLOGIA,Diabetes tipo 2 en tratamiento con metformina,Diabetes descompensada,HbA1c 9.1,Ajuste de tratamiento,2026-09-06
+MEDICINA GENERAL,67,MASCULINO,MEDICINA INTERNA,Antecedente de sepsis resuelta en 2019,Actualmente estable sin fiebre,,Control de especialidad,2026-09-07
+MEDICINA GENERAL,,MASCULINO,CARDIOLOGIA,Fila sin edad para probar el rechazo,Dato incompleto,,Evaluacion,2026-09-08

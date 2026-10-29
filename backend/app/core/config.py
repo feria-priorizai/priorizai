@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 CREDENCIALES_POR_DEFECTO = {
     "database_user": "priorizai_user",
@@ -38,6 +39,25 @@ class Settings:
     )
     model_max_length: int = int(os.getenv("MODEL_MAX_LENGTH", "512"))
     model_batch_size: int = int(os.getenv("MODEL_BATCH_SIZE", "16"))
+
+    # Reentrenamiento. Las versiones nuevas se guardan en el disco del servidor
+    # que hostea la app, junto al modelo inicial: los datos del hospital y los
+    # modelos entrenados con ellos no salen de ahi.
+    modelos_versiones_dir: str = os.getenv("MODELOS_VERSIONES_DIR", "") or str(
+        Path(model_path).parent / "versiones"
+    )
+    # Punto de partida de cada reentrenamiento: un id de Hugging Face (se
+    # descarga la primera vez) o una carpeta local, para servidores sin
+    # internet.
+    reentrenamiento_modelo_base: str = os.getenv(
+        "REENTRENAMIENTO_MODELO_BASE", "PlanTL-GOB-ES/bsc-bio-ehr-es"
+    )
+    # Bajo este numero de interconsultas revisadas no se deja reentrenar: con
+    # pocas, el modelo nuevo sale peor y la comparacion no dice nada.
+    reentrenamiento_minimo: int = int(os.getenv("REENTRENAMIENTO_MINIMO", "100"))
+    modelo_subido_max_mb: int = int(os.getenv("MODELO_SUBIDO_MAX_MB", "3000"))
+    # Archivos con interconsultas ya priorizadas para reentrenar.
+    datos_subidos_max_mb: int = int(os.getenv("DATOS_SUBIDOS_MAX_MB", "50"))
 
     # Servicio de modelos externo. Vacio = cargar los modelos en este mismo
     # proceso, como hasta ahora. Con URL, el backend deja de necesitar torch.

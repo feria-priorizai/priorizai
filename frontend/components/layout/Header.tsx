@@ -14,6 +14,7 @@ const titulosPorRuta: Record<string, { seccion: string; titulo: string }> = {
   "/interconsultas": { seccion: "Lista de espera", titulo: "Interconsultas" },
   "/configuracion": { seccion: "Ajustes", titulo: "Configuración" },
   "/usuarios": { seccion: "Administración", titulo: "Usuarios" },
+  "/reentrenamiento": { seccion: "Administración", titulo: "Reentrenamiento" },
   "/cuenta": { seccion: "Sesión", titulo: "Mi cuenta" },
 };
 

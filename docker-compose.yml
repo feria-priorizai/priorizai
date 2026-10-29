@@ -30,7 +30,16 @@ services:
       MODEL_SERVICE_TIMEOUT: ${MODEL_SERVICE_TIMEOUT:-300}
       MODEL_SERVICE_API_KEY: ${MODEL_SERVICE_API_KEY:-}
       MODEL_PATH: /workspace/models/priorizacion
+      # Orden de las salidas del modelo (README, "Orden de las clases"). Sin
+      # pasarla aca, definirla en el .env no tenia ningun efecto.
+      MODEL_LABELS: ${MODEL_LABELS:-}
       NER_MODEL_PATH: /workspace/models/NER/modelo
+      # Reentrenamiento: versiones nuevas en el disco del servidor, y el
+      # modelo base de Hugging Face en cache para no bajarlo cada vez.
+      MODELOS_VERSIONES_DIR: /workspace/models/versiones
+      HF_HOME: /workspace/models/hf-cache
+      REENTRENAMIENTO_MINIMO: ${REENTRENAMIENTO_MINIMO:-100}
+      REENTRENAMIENTO_MODELO_BASE: ${REENTRENAMIENTO_MODELO_BASE:-PlanTL-GOB-ES/bsc-bio-ehr-es}
 
   frontend:
       build:

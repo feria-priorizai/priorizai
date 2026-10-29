@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+import threading
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any, cast
 
 from app.core.config import settings
@@ -98,6 +99,60 @@ def construir_texto(interconsulta: Interconsulta) -> str:
     return " ".join(" ".join(part.split()) for part in partes if part is not None)
 
 
+def resolver_labels(
+    num_labels: int,
+    id2label: dict[Any, str] | None,
+    configurados: tuple[str, ...] = (),
+) -> list[str]:
+    """Orden de las clases de un modelo, a partir de su config.
+
+    Funcion aparte de la clase para poder resolverlo leyendo solo config.json,
+    sin cargar los pesos: el reentrenamiento evalua el modelo en uso en otro
+    proceso y necesita saber que salida es cada prioridad.
+    """
+    if configurados:
+        return _labels_configurados(configurados, num_labels)
+    id2label = id2label or {}
+    raw = []
+    for i in range(num_labels):
+        raw.append(id2label.get(i, id2label.get(str(i))))
+
+    normalized = [
+        normalizar_clase(label) if label is not None else None for label in raw
+    ]
+    if all(label in PRIORITY_ORDER for label in normalized):
+        return [str(label) for label in normalized]
+
+    if num_labels != len(FALLBACK_ID2LABEL):
+        raise ValueError(
+            "El numero de clases del modelo no coincide con FALLBACK_ID2LABEL",
+        )
+
+    logger.warning(
+        "El modelo no declara sus clases (id2label=%s): se asume el orden de FALLBACK_ID2LABEL=%s. Si no coincide con el LabelEncoder del entrenamiento, TODAS las prioridades quedan mal asignadas. Fijar el orden real con la variable MODEL_LABELS.",
+        raw,
+        FALLBACK_ID2LABEL,
+    )
+    return [normalizar_clase(FALLBACK_ID2LABEL[i]) for i in range(num_labels)]
+
+
+def _labels_configurados(configurados: tuple[str, ...], num_labels: int) -> list[str]:
+    """Orden fijado a mano por configuracion (MODEL_LABELS)."""
+    labels = [normalizar_clase(label) for label in configurados]
+    if len(labels) != num_labels:
+        raise ValueError(
+            f"MODEL_LABELS define {len(labels)} clases y el modelo tiene "
+            f"{num_labels}",
+        )
+    desconocidas = [label for label in labels if label not in PRIORITY_ORDER]
+    if desconocidas:
+        raise ValueError(
+            f"MODEL_LABELS contiene clases desconocidas: {desconocidas}. "
+            f"Las validas son {PRIORITY_ORDER}",
+        )
+    return labels
+
+
 class PriorizadorRigoBerta:
     def __init__(self, config: ModeloConfiguracion) -> None:
         self.config = config
@@ -105,6 +160,17 @@ class PriorizadorRigoBerta:
         self._model: Any | None = None
         self._device: Any | None = None
         self._label_names: list[str] | None = None
+        # Las predicciones van de a una: un cambio de modelo no puede caer a
+        # mitad de un lote y mezclar el tokenizer de una version con los pesos
+        # de otra.
+        self._lock = threading.RLock()
+        self._siguiente: ModeloConfiguracion | None = None
+
+    def usar_modelo(self, path: str, labels: tuple[str, ...]) -> None:
+        """Cambia el modelo sin reiniciar el backend (activar o revertir una
+        version). No espera a que termine una prediccion en curso: el cambio
+        queda pendiente y se aplica al empezar la siguiente."""
+        self._siguiente = replace(self.config, path=path, labels=labels)
 
     def predecir(
         self,
@@ -113,27 +179,41 @@ class PriorizadorRigoBerta:
         if not interconsultas:
             return []
 
-        self._cargar_modelo()
-        textos = [construir_texto(interconsulta) for interconsulta in interconsultas]
-        probabilidades = self._predecir_textos(textos)
+        with self._lock:
+            self._cargar_modelo()
+            textos = [
+                construir_texto(interconsulta) for interconsulta in interconsultas
+            ]
+            probabilidades = self._predecir_textos(textos)
 
-        resultados = []
-        for interconsulta, probs in zip(interconsultas, probabilidades, strict=True):
-            resultados.append(self._crear_resultado(interconsulta.id, probs))
-        return resultados
+            resultados = []
+            for interconsulta, probs in zip(
+                interconsultas, probabilidades, strict=True
+            ):
+                resultados.append(self._crear_resultado(interconsulta.id, probs))
+            return resultados
 
     def recursos(self) -> RecursosModelo:
-        self._cargar_modelo()
-        assert self._label_names is not None
-        return RecursosModelo(
-            tokenizer=self._tokenizer,
-            model=self._model,
-            device=self._device,
-            labels=tuple(self._label_names),
-            max_length=self.config.max_length,
-        )
+        with self._lock:
+            self._cargar_modelo()
+            assert self._label_names is not None
+            return RecursosModelo(
+                tokenizer=self._tokenizer,
+                model=self._model,
+                device=self._device,
+                labels=tuple(self._label_names),
+                max_length=self.config.max_length,
+            )
+
+    def _aplicar_cambio_pendiente(self) -> None:
+        siguiente, self._siguiente = self._siguiente, None
+        if siguiente is None or siguiente == self.config:
+            return
+        self.config = siguiente
+        self._tokenizer = self._model = self._device = self._label_names = None
 
     def _cargar_modelo(self) -> None:
+        self._aplicar_cambio_pendiente()
         if self._model is not None and self._tokenizer is not None:
             return
 
@@ -149,51 +229,12 @@ class PriorizadorRigoBerta:
         self._label_names = self._resolver_labels()
 
     def _resolver_labels(self) -> list[str]:
-        model = cast(Any, self._model)
-        config = model.config
-
-        if self.config.labels:
-            return self._labels_configurados(config.num_labels)
-        id2label = getattr(config, "id2label", None) or {}
-        raw = []
-        for i in range(config.num_labels):
-            raw.append(id2label.get(i, id2label.get(str(i))))
-
-        normalized = [
-            normalizar_clase(label) if label is not None else None for label in raw
-        ]
-        if all(label in PRIORITY_ORDER for label in normalized):
-            return [str(label) for label in normalized]
-
-        if config.num_labels != len(FALLBACK_ID2LABEL):
-            raise ValueError(
-                "El numero de clases del modelo no coincide con FALLBACK_ID2LABEL",
-            )
-
-        logger.warning(
-            "El modelo no declara sus clases (id2label=%s): se asume el orden de FALLBACK_ID2LABEL=%s. Si no coincide con el LabelEncoder del entrenamiento, TODAS las prioridades quedan mal asignadas. Fijar el orden real con la variable MODEL_LABELS.",
-            raw,
-            FALLBACK_ID2LABEL,
+        config = cast(Any, self._model).config
+        return resolver_labels(
+            config.num_labels,
+            getattr(config, "id2label", None),
+            self.config.labels,
         )
-        return [
-            normalizar_clase(FALLBACK_ID2LABEL[i]) for i in range(config.num_labels)
-        ]
-
-    def _labels_configurados(self, num_labels: int) -> list[str]:
-        """Orden fijado a mano por configuracion (MODEL_LABELS)."""
-        labels = [normalizar_clase(label) for label in self.config.labels]
-        if len(labels) != num_labels:
-            raise ValueError(
-                f"MODEL_LABELS define {len(labels)} clases y el modelo tiene "
-                f"{num_labels}",
-            )
-        desconocidas = [label for label in labels if label not in PRIORITY_ORDER]
-        if desconocidas:
-            raise ValueError(
-                f"MODEL_LABELS contiene clases desconocidas: {desconocidas}. "
-                f"Las validas son {PRIORITY_ORDER}",
-            )
-        return labels
 
     def _predecir_textos(self, textos: list[str]) -> Any:
         import torch

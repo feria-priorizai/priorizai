@@ -22,6 +22,7 @@ from app.services.priorizador import (
     construir_texto,
     get_priorizador,
     normalizar_clase,
+    resolver_labels,
 )
 
 
@@ -454,3 +455,44 @@ def test_predecir_textos_devuelve_probabilidades_que_suman_uno() -> None:
     assert probs[0].sum().item() == pytest.approx(1.0)
     assert probs[0].argmax().item() == 0
     assert probs[1].argmax().item() == 2
+
+
+def test_usar_modelo_cambia_de_modelo_en_la_siguiente_carga() -> None:
+    """Activar una version no espera a que termine una prediccion en curso: el
+    cambio queda pendiente y suelta el modelo cargado recien al recargar."""
+    priorizador = _con_labels(["baja", "media", "alta"])
+    priorizador._tokenizer = TokenizadorFalso()
+    cargado = priorizador._model
+
+    priorizador.usar_modelo("/models/versiones/nueva", ("alta", "media", "baja"))
+
+    assert priorizador._model is cargado
+    priorizador._aplicar_cambio_pendiente()
+    assert priorizador.config.path == "/models/versiones/nueva"
+    assert priorizador.config.labels == ("alta", "media", "baja")
+    assert priorizador.config.max_length == 512
+    assert priorizador._model is None
+    assert priorizador._label_names is None
+
+
+def test_usar_el_mismo_modelo_no_lo_recarga() -> None:
+    priorizador = _con_labels(["baja", "media", "alta"])
+    cargado = priorizador._model
+
+    priorizador.usar_modelo(priorizador.config.path, priorizador.config.labels)
+    priorizador._aplicar_cambio_pendiente()
+
+    assert priorizador._model is cargado
+
+
+def test_resolver_labels_sin_cargar_el_modelo() -> None:
+    assert resolver_labels(3, {"0": "Alta", "1": "Baja", "2": "Media"}) == [
+        "alta",
+        "baja",
+        "media",
+    ]
+    assert resolver_labels(3, None, ("media", "alta", "baja")) == [
+        "media",
+        "alta",
+        "baja",
+    ]

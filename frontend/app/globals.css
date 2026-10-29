@@ -587,7 +587,8 @@ h1, h2, h3, h4, h5 {
   background: transparent;
 }
 .pz-table > thead th:first-child { white-space: nowrap; }
-.pz-table > tbody td {
+.pz-table > tbody td,
+.pz-table > tbody th[scope="row"] {
   border-bottom: 1px solid var(--pz-line);
   padding: .85rem 1rem;
   vertical-align: middle;

@@ -20,7 +20,7 @@ type RolUsuario = "medico" | "administrador";
 interface ItemNavegacion {
   nombre: string;
   ruta: string;
-  icono: "dashboard" | "interconsultas" | "configuracion" | "usuarios";
+  icono: "dashboard" | "interconsultas" | "configuracion" | "usuarios" | "reentrenamiento";
   roles: RolUsuario[]; // Roles que pueden ver este item
 }
 
@@ -39,6 +39,7 @@ const itemsNavegacion: ItemNavegacion[] = [
   { nombre: "Interconsultas", ruta: "/interconsultas", icono: "interconsultas", roles: ["medico", "administrador"] },
   { nombre: "Configuración", ruta: "/configuracion", icono: "configuracion", roles: ["administrador"] },
   { nombre: "Usuarios", ruta: "/usuarios", icono: "usuarios", roles: ["administrador"] },
+  { nombre: "Reentrenamiento", ruta: "/reentrenamiento", icono: "reentrenamiento", roles: ["administrador"] },
 ];
 
 function filtrarItemsPorRol(items: ItemNavegacion[], rol: RolUsuario): ItemNavegacion[] {
@@ -426,6 +427,16 @@ function IconoNavegacion({ tipo }: { tipo: ItemNavegacion["icono"] }) {
         <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
         <path d="M16 4.5a3.5 3.5 0 0 1 0 7" />
         <path d="M18 14.3c2.1.7 3.5 2.8 3.5 5.7" />
+      </IconoBase>
+    );
+  }
+
+  if (tipo === "reentrenamiento") {
+    return (
+      <IconoBase>
+        <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+        <path d="M20 4v4h-4" />
+        <path d="M8 15l2.5-3 2 2L16 10" />
       </IconoBase>
     );
   }

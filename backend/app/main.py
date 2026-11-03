@@ -21,6 +21,7 @@ from app.api.auth import UsuarioActual
 from app.api.auth import router as auth_router
 from app.api.interconsultas import encolar_explicaciones
 from app.api.interconsultas import router as interconsultas_router
+from app.api.plazos_revision import router as plazos_revision_router
 from app.api.usuarios import router as usuarios_router
 from app.core.config import settings
 from app.core.database import SessionLocal, engine
@@ -139,6 +140,7 @@ async def proteger_peticiones(
 
 app.include_router(auth_router)
 app.include_router(interconsultas_router)
+app.include_router(plazos_revision_router)
 app.include_router(usuarios_router)
 
 

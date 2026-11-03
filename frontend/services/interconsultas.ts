@@ -57,6 +57,8 @@ interface InterconsultaApi {
   terminos_bandera_roja: string | null;
   terminos_bandera_roja_nombres: string[];
   prioridad_forzada_por_regla: boolean;
+  atrasada: boolean;
+  dias_atraso: number | null;
   created_at: string;
   updated_at: string;
   entidades?: EntidadesPorCampo | null;
@@ -368,6 +370,8 @@ function mapearInterconsulta(api: InterconsultaApi): Interconsulta {
     banderaRoja: api.bandera_roja,
     terminosBanderaRoja,
     prioridadForzadaPorRegla: api.prioridad_forzada_por_regla,
+    atrasada: api.atrasada ?? false,
+    diasAtraso: api.dias_atraso ?? null,
     priorizacionIA: {
       nivelSugerido: prioridadSugerida ?? prioridadActual,
       confianza,

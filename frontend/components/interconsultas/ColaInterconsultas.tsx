@@ -11,6 +11,7 @@ import {
   type MouseEvent,
 } from "react";
 import type { Interconsulta } from "@/types";
+import BadgeAtrasada from "@/components/ui/BadgeAtrasada";
 import BadgeEstado from "@/components/ui/BadgeEstado";
 import BadgePrioridad from "@/components/ui/BadgePrioridad";
 import {
@@ -53,6 +54,16 @@ interface ColaInterconsultasProps {
   /** Tarjetas agrupadas o tabla (HDU-14). Sin `onCambiarVista` no hay selector. */
   vista?: VistaLista;
   onCambiarVista?: (vista: VistaLista) => void;
+  /** Filtro de atrasadas (HDU-22): la lista llega ordenada por días de atraso
+   *  y se muestra en un solo grupo, sin reagrupar por prioridad. */
+  ordenPorAtraso?: boolean;
+}
+
+interface GrupoCola {
+  clave: string;
+  titulo: string;
+  zona: string;
+  items: Interconsulta[];
 }
 
 /** Zona de color que corresponde a cada grupo: inválidas y sin priorizar comparten el neutro. */
@@ -95,13 +106,20 @@ export default function ColaInterconsultas({
   mensajeVacio,
   vista = "tarjetas",
   onCambiarVista,
+  ordenPorAtraso = false,
 }: ColaInterconsultasProps) {
   const router = useRouter();
   const idBase = useId();
 
   const [ordenTabla, setOrdenTabla] = useState<OrdenTabla | null>(null);
 
-  const porGrupo = agruparPorPrioridad(interconsultas);
+  // Agrupar por prioridad desharía el orden por atraso: con ese filtro va un
+  // solo grupo y cada ficha muestra su prioridad, que ya no la da la zona.
+  const porGrupo: GrupoCola[] = ordenPorAtraso
+    ? interconsultas.length > 0
+      ? [{ clave: "atrasada", titulo: "Atrasadas", zona: "atrasada", items: interconsultas }]
+      : []
+    : agruparPorPrioridad(interconsultas).map((g) => ({ ...g, zona: zonaDe(g.clave) }));
   const enOrdenDeLista = porGrupo.flatMap((g) => g.items);
   const filasTabla = ordenTabla
     ? ordenarPorColumna(enOrdenDeLista, ordenTabla)
@@ -192,7 +210,9 @@ export default function ColaInterconsultas({
           <p className="pz-panel__sub">
             {vista === "tabla"
               ? "Haz clic en un encabezado para ordenar; un tercer clic vuelve al orden de la lista"
-              : subtitulo}
+              : ordenPorAtraso
+                ? "Pendientes que superaron su plazo de revisión, de mayor a menor atraso"
+                : subtitulo}
           </p>
         </div>
 
@@ -281,7 +301,7 @@ export default function ColaInterconsultas({
               <section
                 key={grupo.clave}
                 aria-labelledby={`${idBase}-${grupo.clave}`}
-                className={`pz-zona pz-zona--${zonaDe(grupo.clave)}`}
+                className={`pz-zona pz-zona--${grupo.zona}`}
               >
                 <div className="pz-grupo">
                   <h3 id={`${idBase}-${grupo.clave}`} className="pz-grupo__t">
@@ -334,7 +354,11 @@ export default function ColaInterconsultas({
                     </div>
 
                     <div className="pz-fila-cola__lado">
+                      {ordenPorAtraso && !ic.sinPrioridad && (
+                        <BadgePrioridad prioridad={ic.prioridadActual} />
+                      )}
                       <BadgeEstado estado={ic.estado} />
+                      {ic.diasAtraso !== null && <BadgeAtrasada dias={ic.diasAtraso} />}
                       {ic.banderaRoja && (
                         <span
                           className="pz-chip pz-chip--flag"
@@ -413,6 +437,7 @@ const COLUMNAS: { clave: ColumnaOrden; titulo: string; derecha?: boolean }[] = [
   { clave: "emision", titulo: "Emisión" },
   { clave: "certeza", titulo: "Certeza", derecha: true },
   { clave: "estado", titulo: "Estado" },
+  { clave: "atraso", titulo: "Atraso", derecha: true },
 ];
 
 /**
@@ -545,6 +570,13 @@ function TablaCola({
                 </td>
                 <td>
                   <BadgeEstado estado={ic.estado} />
+                </td>
+                <td className="text-end">
+                  {ic.diasAtraso !== null ? (
+                    <BadgeAtrasada dias={ic.diasAtraso} compacta />
+                  ) : (
+                    <span className="pz-tabla-cola__dato">—</span>
+                  )}
                 </td>
                 <td>
                   {ic.banderaRoja && (

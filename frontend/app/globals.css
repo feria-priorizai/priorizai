@@ -202,6 +202,27 @@ h1, h2, h3, h4, h5 {
   border-radius: 4px;
 }
 
+/* Enlace para saltar el menú lateral con el teclado (HDU-20): fuera de la
+   vista hasta que recibe el foco. */
+.pz-saltar {
+  position: fixed;
+  top: .75rem;
+  left: .75rem;
+  z-index: 1100;
+  padding: .6rem 1rem;
+  background: var(--pz-blue-deep);
+  color: #fff;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-200%);
+}
+.pz-saltar:focus { transform: none; }
+.pz-saltar:focus-visible { outline-color: var(--pz-green); }
+/* El contenido recibe el foco desde el enlace, no con el tabulador: no
+   necesita el marco. */
+#contenido:focus { outline: none; }
+
 /* ============================================================
    Estructura
    ============================================================ */
@@ -679,14 +700,15 @@ h1, h2, h3, h4, h5 {
   box-shadow: none;
   padding: .72rem .85rem;
 }
-.pz-btn--nav:hover:not(:disabled) {
+.pz-btn--nav:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--pz-green);
   color: #05231B;
   border-color: var(--pz-green);
   transform: none;
   box-shadow: none;
 }
-.pz-btn--nav:disabled { background: rgba(255,255,255,.05); color: rgba(226,236,248,.45); border-color: rgba(126,168,224,.2); }
+.pz-btn--nav:disabled,
+.pz-btn--nav[aria-disabled="true"] { cursor: not-allowed; background: rgba(255,255,255,.05); color: rgba(226,236,248,.45); border-color: rgba(126,168,224,.2); }
 .pz-btn--nav.pz-btn--icono { padding: .72rem 0; }
 
 .pz-navlink {
@@ -868,9 +890,11 @@ h1, h2, h3, h4, h5 {
 }
 .pz-tabla-cola > tbody tr { cursor: pointer; }
 .pz-tabla-cola > tbody tr:nth-child(even) > td { background: #F6F9FE; }
-.pz-tabla-cola > tbody tr:hover > td { background: #E3EDFC; }
+.pz-tabla-cola > tbody tr:hover > td,
+.pz-tabla-cola > tbody tr:focus-within > td { background: #E3EDFC; }
 .pz-tabla-cola > tbody tr.is-sel > td { background: #DCE8FC; }
-.pz-tabla-cola > tbody tr:hover .pz-tabla-cola__dx { text-decoration: underline; }
+.pz-tabla-cola > tbody tr:hover .pz-tabla-cola__dx,
+.pz-tabla-cola > tbody tr:focus-within .pz-tabla-cola__dx { text-decoration: underline; }
 
 /* Columna de numero, como los encabezados de fila de una planilla. */
 .pz-tabla-cola__n {

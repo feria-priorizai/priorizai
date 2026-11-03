@@ -90,6 +90,7 @@ function version(parcial: Partial<VersionModelo> = {}): VersionModelo {
     creado_por: "Admin Test",
     created_at: "2026-10-21T04:00:00",
     disponible: true,
+    carpeta: "models/versiones/re-1/configuracion_1",
     ...parcial,
   };
 }
@@ -396,6 +397,17 @@ describe("PanelEjecucion", () => {
     expect(within(tabla).getByText("▼ 5.0 pts")).toBeInTheDocument();
     expect(screen.queryByTestId("cancelar-reentrenamiento")).not.toBeInTheDocument();
 
+    // Queda guardado en el computador aunque no se active, y se puede descargar.
+    const guardado = screen.getByTestId("guardado-resultado-1");
+    expect(guardado).toHaveTextContent("models/versiones/re-1/configuracion_1");
+    expect(within(guardado).getByRole("link", { name: `Descargar ${nueva.nombre}` })).toHaveAttribute(
+      "href",
+      "/api/reentrenamiento/versiones/v-1/descargar",
+    );
+    expect(screen.getByTestId("modelo-guardado")).toHaveTextContent(
+      "El modelo nuevo quedó guardado en este computador",
+    );
+
     await usuario.click(screen.getByTestId("activar-resultado-1"));
     expect(onActivar).toHaveBeenCalledWith(nueva);
   });
@@ -428,6 +440,9 @@ describe("PanelEjecucion", () => {
     expect(within(tabla).getByText("Entrenamiento 2")).toHaveTextContent("mejor F1");
     expect(within(tabla).getByText("En uso")).toBeInTheDocument();
     expect(screen.getByText(/no hay\s+contra qué comparar/)).toBeInTheDocument();
+    expect(screen.getByTestId("modelo-guardado")).toHaveTextContent(
+      "Los modelos nuevos quedaron guardados en este computador",
+    );
   });
 
   it("muestra el error de un reentrenamiento fallido", () => {

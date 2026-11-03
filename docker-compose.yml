@@ -37,6 +37,8 @@ services:
       # Reentrenamiento: versiones nuevas en el disco del servidor, y el
       # modelo base de Hugging Face en cache para no bajarlo cada vez.
       MODELOS_VERSIONES_DIR: /workspace/models/versiones
+      # Es ./models/versiones de este proyecto: asi se le muestra al usuario.
+      MODELOS_VERSIONES_DIR_VISIBLE: models/versiones
       HF_HOME: /workspace/models/hf-cache
       REENTRENAMIENTO_MINIMO: ${REENTRENAMIENTO_MINIMO:-100}
       REENTRENAMIENTO_MODELO_BASE: ${REENTRENAMIENTO_MODELO_BASE:-PlanTL-GOB-ES/bsc-bio-ehr-es}

@@ -46,6 +46,10 @@ class Settings:
     modelos_versiones_dir: str = os.getenv("MODELOS_VERSIONES_DIR", "") or str(
         Path(model_path).parent / "versiones"
     )
+    # La misma carpeta como la ve quien instalo la app. En Docker es una
+    # carpeta del proyecto montada en el contenedor, y la ruta de adentro no
+    # le dice nada al usuario. Vacia, se muestra la ruta tal cual.
+    modelos_versiones_dir_visible: str = os.getenv("MODELOS_VERSIONES_DIR_VISIBLE", "")
     # Punto de partida de cada reentrenamiento: un id de Hugging Face (se
     # descarga la primera vez) o una carpeta local, para servidores sin
     # internet.

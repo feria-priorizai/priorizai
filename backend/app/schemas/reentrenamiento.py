@@ -122,6 +122,8 @@ class VersionModeloResponse(BaseModel):
     creado_por: str | None
     created_at: datetime
     disponible: bool = True
+    # Carpeta donde quedo guardado, como la ve quien instalo la app.
+    carpeta: str = ""
 
 
 class CambioModeloResponse(BaseModel):

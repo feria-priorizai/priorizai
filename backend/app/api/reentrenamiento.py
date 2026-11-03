@@ -300,7 +300,10 @@ def listar_versiones(db: Session = DbSession) -> list[VersionModeloResponse]:
     ).all()
     return [
         VersionModeloResponse.model_validate(version).model_copy(
-            update={"disponible": servicio.modelo_presente(version)}
+            update={
+                "disponible": servicio.modelo_presente(version),
+                "carpeta": servicio.carpeta_visible(version),
+            }
         )
         for version in versiones
     ]

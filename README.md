@@ -289,7 +289,10 @@ responde 403.
 
 Los modelos se guardan en el disco del servidor que hostea la app
 (`models/versiones/`). Los datos del hospital y lo entrenado con ellos no salen
-de ahí. Para llevar un modelo a otro computador, se descarga como `.zip` desde
+de ahí. Al terminar un reentrenamiento, el resultado muestra la carpeta de cada
+modelo nuevo y un botón para descargarlo, aunque no se active. Con Docker la
+carpeta se muestra como `models/versiones/...` del proyecto
+(`MODELOS_VERSIONES_DIR_VISIBLE`), no con la ruta interna del contenedor. Para llevar un modelo a otro computador, se descarga como `.zip` desde
 la tabla de versiones y se sube en el otro con «Subir modelo». Solo se aceptan
 pesos `.safetensors`, porque un `.bin` de PyTorch puede ejecutar código al
 cargarse.

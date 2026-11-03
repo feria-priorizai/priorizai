@@ -327,6 +327,16 @@ def modelo_presente(version: VersionModelo) -> bool:
     return (Path(version.ruta) / "config.json").is_file()
 
 
+def carpeta_visible(version: VersionModelo) -> str:
+    """Donde quedo guardado el modelo, como lo ve quien instalo la app."""
+    ruta = PurePosixPath(Path(version.ruta).as_posix())
+    base = PurePosixPath(Path(settings.modelos_versiones_dir).as_posix())
+    visible = settings.modelos_versiones_dir_visible
+    if visible and ruta.is_relative_to(base):
+        return str(PurePosixPath(visible) / ruta.relative_to(base))
+    return version.ruta
+
+
 class PriorizadorIntercambiable(Protocol):
     def usar_modelo(self, path: str, labels: tuple[str, ...]) -> None: ...
 
@@ -691,6 +701,9 @@ class Reentrenador:
                 proceso=proceso,
                 carpeta=carpeta,
                 configuraciones=trabajo["configuraciones"],
+                # Hasta el primer evento del proceso, el avance guardado sigue
+                # siendo "Preparando" en vez de quedar vacio.
+                progreso=registro.progreso,
             )
             ejecucion.hilo = threading.Thread(
                 target=self._seguir,

@@ -98,7 +98,9 @@ export default function DatosEntrenamiento({
 
       {archivos.map((a) => (
         <div key={a.id} className="flex items-start gap-2" data-testid={`archivo-${a.id}`}>
-          <label className="form-check m-0 flex flex-1 items-start gap-2">
+          {/* min-w-0 y overflowWrap: un nombre de archivo largo y sin espacios
+              no empuja el botón fuera del panel. */}
+          <label className="form-check m-0 flex min-w-0 flex-1 items-start gap-2">
             <input
               type="checkbox"
               className="form-check-input mt-1"
@@ -107,7 +109,7 @@ export default function DatosEntrenamiento({
               disabled={deshabilitado}
               onChange={(e) => onSeleccionar(a.id, e.target.checked)}
             />
-            <span style={{ fontSize: "var(--fs-sm)", color: "var(--pz-ink)" }}>
+            <span style={{ fontSize: "var(--fs-sm)", color: "var(--pz-ink)", overflowWrap: "anywhere" }}>
               <strong>{a.nombre}</strong>: {a.n_registros} interconsultas
               <span className="d-block" style={textoAyuda}>
                 {NIVELES.map((nivel) => `${nivel} ${a.registros_por_clase[nivel] ?? 0}`).join(" · ")}
@@ -118,7 +120,7 @@ export default function DatosEntrenamiento({
           </label>
           <button
             type="button"
-            className="pz-btn pz-btn--claro pz-btn--mini"
+            className="pz-btn pz-btn--claro pz-btn--mini shrink-0"
             aria-label={`Borrar ${a.nombre}`}
             disabled={deshabilitado}
             onClick={() => onEliminar(a)}

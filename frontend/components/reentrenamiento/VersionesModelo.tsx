@@ -78,7 +78,7 @@ export default function VersionesModelo({
                     {v.activa ? (
                       <span className="pz-chip pz-chip--baja">En uso</span>
                     ) : !v.disponible ? (
-                      <span className="pz-chip pz-chip--alta" title={v.ruta}>
+                      <span className="pz-chip pz-chip--alta" title={v.carpeta || v.ruta}>
                         Sin archivos
                       </span>
                     ) : (

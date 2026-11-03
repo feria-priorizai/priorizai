@@ -99,6 +99,8 @@ export interface VersionModelo {
   creado_por: string | null;
   created_at: string;
   disponible: boolean;
+  /** Carpeta donde quedó guardado, como la ve quien instaló la app. */
+  carpeta: string;
 }
 
 export interface CambioModelo {

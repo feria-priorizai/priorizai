@@ -614,6 +614,29 @@ def test_el_avance_se_guarda_mientras_corre(
     _terminado(api, reentrenador, lanzador, respuesta)
 
 
+def test_antes_del_primer_evento_el_avance_sigue_en_preparando(
+    api: TestClient,
+    reentrenador: Reentrenador,
+    lanzador: Lanzador,
+    revisadas: Callable[..., None],
+    monkeypatch: pytest.MonkeyPatch,
+    db: Session,
+) -> None:
+    revisadas()
+    monkeypatch.setattr(servicio, "INTERVALO_GUARDADO_S", 0.0)
+    lanzador.proceso = ProcesoFalso(["Cargando el modelo base"], bloquear=True)
+    respuesta = _iniciar(api)
+    lanzador.proceso.arrancar.set()
+    assert lanzador.proceso.esperando.wait(10)
+
+    registro = db.get(Reentrenamiento, respuesta.json()["id"])
+
+    # La linea de log se guarda sin borrar el avance inicial.
+    assert registro is not None and "Cargando el modelo base" in (registro.log or "")
+    assert registro.progreso == {"etapa": "Preparando", "porcentaje": 0.0}
+    _terminado(api, reentrenador, lanzador, respuesta)
+
+
 def test_cancelar_uno_colgado_tras_un_reinicio(api: TestClient, db: Session) -> None:
     db.add(_registro_en_curso("re-colgado"))
     db.commit()
@@ -733,6 +756,31 @@ def test_activar_la_que_ya_esta_en_uso_es_un_conflicto(
     respuesta = api.post(f"/api/reentrenamiento/versiones/{activa.id}/activar")
 
     assert respuesta.status_code == 409
+
+
+def test_las_versiones_dicen_en_que_carpeta_quedaron(
+    api: TestClient, entorno: Path, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    nueva = _version(db, entorno / "versiones" / "re-1" / "configuracion_1")
+    monkeypatch.setattr(settings, "modelos_versiones_dir_visible", "models/versiones")
+
+    versiones = {v["id"]: v for v in api.get("/api/reentrenamiento/versiones").json()}
+
+    assert versiones[nueva.id]["carpeta"] == "models/versiones/re-1/configuracion_1"
+    # La inicial no esta dentro de la carpeta de versiones: va su ruta tal cual.
+    inicial = _activa(db)
+    assert versiones[inicial.id]["carpeta"] == inicial.ruta
+
+
+def test_sin_carpeta_visible_se_muestra_la_ruta_del_servidor(
+    api: TestClient, entorno: Path, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    nueva = _version(db, entorno / "versiones" / "re-1" / "configuracion_1")
+    monkeypatch.setattr(settings, "modelos_versiones_dir_visible", "")
+
+    versiones = {v["id"]: v for v in api.get("/api/reentrenamiento/versiones").json()}
+
+    assert versiones[nueva.id]["carpeta"] == nueva.ruta
 
 
 def test_activar_una_version_sin_archivos_es_un_conflicto(

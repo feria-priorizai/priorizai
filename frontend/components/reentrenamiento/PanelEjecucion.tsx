@@ -8,6 +8,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Metricas, Reentrenamiento, VersionModelo } from "@/types/reentrenamiento";
+import { urlDescargaVersion } from "@/services/reentrenamiento";
 import { formatearFechaHoraChile } from "@/utils/fechas";
 
 const ETIQUETAS_ESTADO: Record<Reentrenamiento["estado"], { texto: string; chip: string }> = {
@@ -256,6 +257,34 @@ function Comparacion({
               ))}
             </tr>
             <tr>
+              <th scope="row" style={{ fontWeight: 600, color: "var(--pz-ink)" }}>
+                Guardado en
+              </th>
+              <td style={{ fontSize: "var(--fs-sm)", color: "var(--pz-ink-3)" }}>—</td>
+              {columnas.map((c) => {
+                const version = versiones.find((v) => v.id === c.version_id);
+                return (
+                  <td key={c.indice} data-testid={`guardado-resultado-${c.indice + 1}`}>
+                    {version && (
+                      <>
+                        <code className="pz-mono d-block" style={{ fontSize: "var(--fs-micro)", overflowWrap: "anywhere" }}>
+                          {version.carpeta || version.ruta}
+                        </code>
+                        <a
+                          className="pz-btn pz-btn--claro pz-btn--mini mt-1"
+                          href={urlDescargaVersion(version.id)}
+                          download
+                          aria-label={`Descargar ${version.nombre}`}
+                        >
+                          Descargar .zip
+                        </a>
+                      </>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+            <tr>
               <th scope="row" />
               <td />
               {columnas.map((c) => {
@@ -282,6 +311,16 @@ function Comparacion({
           </tbody>
         </table>
       </div>
+      <p
+        className="mt-2 mb-0"
+        data-testid="modelo-guardado"
+        style={{ fontSize: "var(--fs-sm)", color: "var(--pz-ink-2)" }}
+      >
+        {columnas.length > 1
+          ? "Los modelos nuevos quedaron guardados en este computador, en las carpetas indicadas arriba, aunque no los actives."
+          : "El modelo nuevo quedó guardado en este computador, en la carpeta indicada arriba, aunque no lo actives."}{" "}
+        Con «Descargar .zip» guardas una copia donde quieras.
+      </p>
       {!actual && (
         <p className="mt-2 mb-0" style={{ fontSize: "var(--fs-sm)", color: "var(--pz-ink-3)" }}>
           No se pudo evaluar el modelo en uso (sus archivos no estaban disponibles), así que no hay

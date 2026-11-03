@@ -47,7 +47,7 @@ describe.each<VistaLista>(["tarjetas", "tabla"])("ColaInterconsultas con teclado
     const { usuario } = renderizar(vista);
     screen.getByRole("button", { name: "Antes de la lista" }).focus();
     // La tabla tiene antes los encabezados ordenables.
-    const saltos = vista === "tabla" ? 10 : 1;
+    const saltos = vista === "tabla" ? 11 : 1;
 
     for (let i = 0; i < saltos; i++) await usuario.tab();
     expect(folio("aaaaaaaa-1")).toHaveFocus();
@@ -102,5 +102,47 @@ describe("ColaInterconsultas en modo descarga con teclado (HDU-20)", () => {
     await usuario.keyboard("{ArrowDown}");
 
     expect(within(filas[1]).getByRole("checkbox")).toHaveFocus();
+  });
+});
+
+describe("ColaInterconsultas con el filtro de atrasadas (HDU-22)", () => {
+  const atrasadas = [
+    crearInterconsulta({ id: "dddddddd-4", prioridadActual: "baja", atrasada: true, diasAtraso: 12 }),
+    crearInterconsulta({ id: "eeeeeeee-5", prioridadActual: "alta", atrasada: true, diasAtraso: 3 }),
+  ];
+
+  it("muestra un solo grupo en el orden recibido, con la prioridad de cada ficha", () => {
+    render(<ColaInterconsultas interconsultas={atrasadas} ordenPorAtraso />);
+
+    expect(screen.getByRole("heading", { name: "Atrasadas" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Alta" })).not.toBeInTheDocument();
+    const filas = screen.getAllByTestId("fila-interconsulta");
+    expect(filas.map((f) => f.dataset.id)).toEqual(["dddddddd-4", "eeeeeeee-5"]);
+    expect(within(filas[0]).getByText("Baja")).toBeInTheDocument();
+    expect(within(filas[0]).getByTestId("atrasada")).toHaveTextContent("+12 d");
+    expect(screen.getByText(/de mayor a menor atraso/)).toBeInTheDocument();
+  });
+
+  it("sin el filtro agrupa por prioridad y marca igual las atrasadas", () => {
+    render(<ColaInterconsultas interconsultas={atrasadas} />);
+
+    const filas = screen.getAllByTestId("fila-interconsulta");
+    expect(filas.map((f) => f.dataset.id)).toEqual(["eeeeeeee-5", "dddddddd-4"]);
+    expect(screen.getAllByTestId("atrasada")).toHaveLength(2);
+  });
+
+  it("en la tabla muestra el atraso en su propia columna", () => {
+    render(<ColaInterconsultas interconsultas={[...atrasadas, interconsultas[0]]} vista="tabla" />);
+
+    expect(screen.getByRole("button", { name: /Atraso/ })).toBeInTheDocument();
+    expect(screen.getAllByTestId("atrasada")).toHaveLength(2);
+  });
+
+  it("sin atrasadas muestra el mensaje de lista vacía", () => {
+    render(
+      <ColaInterconsultas interconsultas={[]} ordenPorAtraso mensajeVacio="Nada atrasado" />,
+    );
+
+    expect(screen.getByText("Nada atrasado")).toBeInTheDocument();
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import type { FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
 import type { NivelPrioridad } from "@/types";
 
 interface FormularioModificarPrioridadProps {
@@ -12,6 +12,8 @@ interface FormularioModificarPrioridadProps {
 
 const NIVELES: NivelPrioridad[] = ["alta", "media", "baja"];
 const MOTIVO_MINIMO = 10;
+
+type DestinoFoco = "motivo" | "confirmar" | "solicitar" | "mensaje";
 
 /**
  * Cambio manual de prioridad (HdU02). Vive dentro de la columna de decisión,
@@ -40,6 +42,32 @@ export default function FormularioModificarPrioridad({
     setConfirmando(false);
   }
 
+  // HDU-20: el paso de confirmación reemplaza al botón que tenía el foco, y
+  // al resolverse se reemplaza a sí mismo. Si nadie mueve el foco, cae al
+  // inicio de la página y quien usa teclado o lector de pantalla pierde el
+  // lugar. Cada acción deja anotado a dónde va y el efecto lo aplica después
+  // del render, cuando el elemento ya existe.
+  const focoPendiente = useRef<DestinoFoco | null>(null);
+  const motivoRef = useRef<HTMLTextAreaElement | null>(null);
+  const confirmarRef = useRef<HTMLButtonElement | null>(null);
+  const solicitarRef = useRef<HTMLButtonElement | null>(null);
+  const mensajeRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const destino = focoPendiente.current;
+    if (!destino) return;
+    focoPendiente.current = null;
+    const elementos = {
+      motivo: motivoRef,
+      confirmar: confirmarRef,
+      solicitar: solicitarRef,
+      mensaje: mensajeRef,
+    };
+    elementos[destino].current?.focus();
+  });
+  const enfocar = (destino: DestinoFoco) => {
+    focoPendiente.current = destino;
+  };
+
   const motivoLimpio = motivo.trim();
   const hayCambio = nuevaPrioridad !== prioridadActual;
   const motivoInvalido =
@@ -58,6 +86,7 @@ export default function FormularioModificarPrioridad({
     }
 
     if (!motivoLimpio) {
+      enfocar("motivo");
       setMensaje({
         tipo: "error",
         texto:
@@ -67,6 +96,7 @@ export default function FormularioModificarPrioridad({
     }
 
     if (motivoLimpio.length < MOTIVO_MINIMO) {
+      enfocar("motivo");
       setMensaje({
         tipo: "error",
         texto: `El motivo debe tener al menos ${MOTIVO_MINIMO} caracteres. El cambio no fue guardado.`,
@@ -74,7 +104,22 @@ export default function FormularioModificarPrioridad({
       return;
     }
 
+    enfocar("confirmar");
     setConfirmando(true);
+  };
+
+  // Ctrl+Enter (Cmd+Enter en Mac) envía desde el motivo; Enter solo sigue
+  // siendo un salto de línea.
+  const enviarConAtajo = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      e.currentTarget.form?.requestSubmit();
+    }
+  };
+
+  const cancelarConfirmacion = () => {
+    enfocar("solicitar");
+    setConfirmando(false);
   };
 
   const confirmarModificacion = async () => {
@@ -82,6 +127,7 @@ export default function FormularioModificarPrioridad({
     const exito = await onModificar(nuevaPrioridad, motivoLimpio);
     setEnviando(false);
     setConfirmando(false);
+    enfocar("mensaje");
 
     if (exito) {
       setMensaje({
@@ -125,6 +171,7 @@ export default function FormularioModificarPrioridad({
           Motivo *
         </label>
         <textarea
+          ref={motivoRef}
           id="motivo-modificacion"
           data-testid="motivo-modificacion"
           className="form-control"
@@ -133,18 +180,21 @@ export default function FormularioModificarPrioridad({
           aria-invalid={motivoInvalido}
           aria-describedby="motivo-ayuda"
           onChange={(e) => setMotivo(e.target.value)}
+          onKeyDown={enviarConAtajo}
           placeholder="Criterio clínico que justifica el cambio…"
           rows={3}
           style={{ resize: "none" }}
         />
         <p id="motivo-ayuda" className="pz-label mt-1.5">
           Obligatorio · mínimo {MOTIVO_MINIMO} ({motivoLimpio.length}/
-          {MOTIVO_MINIMO})
+          {MOTIVO_MINIMO}) · Ctrl+Enter para enviar
         </p>
       </div>
 
       {mensaje && (
         <div
+          ref={mensajeRef}
+          tabIndex={-1}
           role={mensaje.tipo === "error" ? "alert" : "status"}
           data-testid="mensaje-modificacion"
           aria-live="polite"
@@ -184,6 +234,7 @@ export default function FormularioModificarPrioridad({
           </p>
           <div className="flex gap-2">
             <button
+              ref={confirmarRef}
               type="button"
               data-testid="confirmar-modificacion"
               onClick={confirmarModificacion}
@@ -194,7 +245,7 @@ export default function FormularioModificarPrioridad({
             </button>
             <button
               type="button"
-              onClick={() => setConfirmando(false)}
+              onClick={cancelarConfirmacion}
               disabled={enviando}
               className="pz-btn pz-btn--claro"
             >
@@ -204,6 +255,7 @@ export default function FormularioModificarPrioridad({
         </div>
       ) : (
         <button
+          ref={solicitarRef}
           type="submit"
           data-testid="solicitar-cambio-prioridad"
           disabled={!hayCambio}

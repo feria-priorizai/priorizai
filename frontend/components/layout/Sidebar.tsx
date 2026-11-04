@@ -251,12 +251,17 @@ export default function Sidebar() {
           onChange={manejarSeleccionArchivo}
         />
         <div className="flex flex-col gap-1.5">
+          {/* aria-disabled y no disabled: un botón deshabilitado pierde el foco,
+              y el resumen de la carga lo tiene que devolver aquí al cerrarse. */}
           <button
             type="button"
             data-testid="cargar-archivo"
-            onClick={() => inputArchivoRef.current?.click()}
-            disabled={subiendoArchivo}
+            onClick={() => {
+              if (!subiendoArchivo) inputArchivoRef.current?.click();
+            }}
+            aria-disabled={subiendoArchivo}
             title={colapsado ? "Cargar archivo" : undefined}
+            aria-label={colapsado ? "Cargar archivo" : undefined}
             className={`pz-btn pz-btn--nav pz-btn--block ${
               colapsado ? "pz-btn--icono" : ""
             }`}
@@ -270,6 +275,7 @@ export default function Sidebar() {
             onClick={manejarReevaluarBanderas}
             disabled={reevaluando}
             title={colapsado ? "Reevaluar banderas" : undefined}
+            aria-label={colapsado ? "Reevaluar banderas" : undefined}
             className={`pz-btn pz-btn--nav pz-btn--block ${
               colapsado ? "pz-btn--icono" : ""
             }`}

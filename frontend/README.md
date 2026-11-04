@@ -56,12 +56,12 @@ npm run test:coverage  # pruebas con reporte de cobertura
 | `components/auth/` | Cambio de contraseña, incluida la pantalla obligatoria del primer ingreso |
 | `components/layout/` | Contenedor de la aplicación, barra lateral y encabezado |
 | `components/interconsultas/` | Lista de espera en tarjetas o tabla, detalle, panel de decisión, navegación entre interconsultas, resumen clínico, entidades, explicación de la sugerencia y resumen de cada carga de archivo |
-| `components/configuracion/` | Matriz de campos de importación y exportación |
+| `components/configuracion/` | Plazos de revisión por prioridad y matriz de campos de importación y exportación |
 | `components/dashboard/`, `components/ui/` | Indicadores del resumen y piezas compartidas |
 | `services/` | Llamadas a la API (`api.ts` centraliza el fetch y el manejo del 401), sesión y mapeo de las respuestas al modelo del front |
 | `hooks/`, `context/` | Estado del listado y de la vista preferida, de la sesión (`SesionContext`) y de la configuración de campos |
 | `types/` | Tipos compartidos del dominio |
-| `utils/` | Formato de fechas, orden de la lista de espera y exportación a los distintos formatos |
+| `utils/` | Formato de fechas, orden de la lista de espera, validación de plazos y orden por atraso, y exportación a los distintos formatos |
 | `data/` | Datos fijos de la instalación, como el nombre del establecimiento |
 | `tests/` | Pruebas unitarias y de componentes (`tests/unit`) y su configuración |
 
@@ -102,19 +102,22 @@ muestra un emblema junto al nombre del centro en lugar de una imagen rota.
 
 Las pruebas usan Vitest con jsdom y React Testing Library, y viven en
 `tests/unit`. Cubren las utilidades (exportación a CSV, JSON y XLSX, incluida la
-neutralización de fórmulas; orden de la lista; fechas), los servicios de la API
-(con `fetch` simulado) y los formularios de cambio de prioridad y de contraseña.
+neutralización de fórmulas; orden de la lista; fechas; navegación por teclado;
+validación de plazos y orden por atraso), los servicios de la API (con `fetch`
+simulado), los formularios de cambio de prioridad y de contraseña, el
+comportamiento de teclado de la lista de espera y del resumen de carga (HDU-20) y
+la marca de atrasada en la lista (HDU-22), con el router de Next simulado.
 
 ```bash
 npm test
 npm run test:coverage
 ```
 
-La cobertura se mide sobre `utils/`, `services/`, `components/ui/` y esos dos
-formularios, y la corrida falla si cualquiera de sus medidas (líneas, ramas,
+La cobertura se mide sobre `utils/`, `services/`, `components/ui/`, esos dos
+formularios y el hook `useTrampaFoco`, y la corrida falla si cualquiera de sus medidas (líneas, ramas,
 funciones o sentencias) baja del 90 %. El reporte HTML queda en `coverage/`.
-Las páginas y los componentes que dependen del router de Next no se prueban
-aquí: los recorren las pruebas E2E del ambiente QA (`../qa/e2e`), que los
+Las páginas y el resto de los componentes que dependen del router de Next no
+se prueban aquí: los recorren las pruebas E2E del ambiente QA (`../qa/e2e`), que los
 encuentran por sus atributos `data-testid`. Al cambiar uno de esos atributos hay
 que actualizar también las pruebas E2E.
 

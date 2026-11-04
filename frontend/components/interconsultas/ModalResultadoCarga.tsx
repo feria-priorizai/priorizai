@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTrampaFoco } from "@/hooks/useTrampaFoco";
 import {
   EVENTO_RESULTADO_CARGA,
   type FilaRechazada,
@@ -32,54 +33,11 @@ export function ModalResultadoCarga() {
     return () => window.removeEventListener(EVENTO_RESULTADO_CARGA, manejar);
   }, []);
 
-  const abierto = resultado !== null;
-
-  useEffect(() => {
-    if (!abierto) {
-      return;
-    }
-
-    const focoPrevio = document.activeElement as HTMLElement | null;
-    cerrarRef.current?.focus();
-
-    // Un diálogo modal tiene que atrapar el foco: sin esto el tabulador se va a
-    // la página de atrás, que el lector de pantalla no debería poder alcanzar.
-    const manejarTeclado = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setResultado(null);
-        return;
-      }
-      if (e.key !== "Tab" || !dialogoRef.current) {
-        return;
-      }
-      const focusables = dialogoRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      if (focusables.length === 0) {
-        return;
-      }
-      const primero = focusables[0];
-      const ultimo = focusables[focusables.length - 1];
-      if (e.shiftKey && document.activeElement === primero) {
-        e.preventDefault();
-        ultimo.focus();
-      } else if (!e.shiftKey && document.activeElement === ultimo) {
-        e.preventDefault();
-        primero.focus();
-      }
-    };
-
-    document.addEventListener("keydown", manejarTeclado);
-    return () => {
-      document.removeEventListener("keydown", manejarTeclado);
-      focoPrevio?.focus();
-    };
-  }, [abierto]);
+  const cerrar = () => setResultado(null);
+  useTrampaFoco(resultado !== null, dialogoRef, cerrar, cerrarRef);
 
   if (!resultado) return null;
 
-  const cerrar = () => setResultado(null);
   const irALista = () => {
     setResultado(null);
     router.push("/interconsultas");

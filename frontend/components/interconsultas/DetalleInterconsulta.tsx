@@ -6,6 +6,7 @@ import {
   formatearFechaCalendarioLarga,
   formatearFechaHoraChileLarga,
 } from "@/utils/fechas";
+import { textoDias } from "@/utils/plazos";
 
 interface DetalleInterconsultaProps {
   interconsulta: Interconsulta;
@@ -53,6 +54,8 @@ export default function DetalleInterconsulta({
             <Dato etiqueta="Especialidad de origen">{ic.centroOrigen}</Dato>
             <Dato etiqueta="Estado de revisión">
               {ic.estado === "revisada" ? "Revisada" : "Pendiente de revisión"}
+              {ic.diasAtraso !== null &&
+                ` · atrasada ${textoDias(ic.diasAtraso)}`}
             </Dato>
           </div>
 

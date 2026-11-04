@@ -306,7 +306,14 @@ docker compose down -v
    corrección exige un motivo y queda en el historial de la interconsulta. Desde
    el detalle se pasa a la anterior o la siguiente en el mismo orden y con los
    mismos filtros de la lista.
-7. **Exportación.** Las interconsultas revisadas se descargan en JSON, CSV o
+7. **Plazos de revisión.** El administrador define en la configuración cuántos
+   días puede esperar como máximo una interconsulta de cada prioridad (de
+   fábrica: alta 5, media 15, baja 30). Las pendientes que llevan más días desde
+   su emisión que el plazo de su prioridad quedan marcadas como atrasadas en la
+   lista y en el detalle, y el filtro "Atrasadas" las muestra de mayor a menor
+   atraso. La marca desaparece al revisarlas. El atraso se calcula en cada
+   lectura, así que un plazo nuevo rige de inmediato para todas las pendientes.
+8. **Exportación.** Las interconsultas revisadas se descargan en JSON, CSV o
    XLSX, con los campos que defina la configuración.
 
 ## API
@@ -325,7 +332,7 @@ docker compose down -v
 | `PATCH` | `/api/usuarios/{id}/estado` | Bloquea o desbloquea una cuenta (solo administrador) |
 | `DELETE` | `/api/usuarios/{id}` | Elimina una cuenta (solo administrador) |
 | `POST` | `/upload-csv` | Ingesta de un archivo CSV o XLSX |
-| `GET` | `/api/interconsultas` | Listado paginado (`limit` de 1 a 500, `offset`); el total va en la cabecera `X-Total-Count`. Un médico solo recibe las de su especialidad |
+| `GET` | `/api/interconsultas` | Listado paginado (`limit` de 1 a 500, `offset`); el total va en la cabecera `X-Total-Count`. Un médico solo recibe las de su especialidad. Cada interconsulta trae `atrasada` y `dias_atraso` |
 | `GET` | `/api/interconsultas/{id}` | Detalle de una interconsulta |
 | `PATCH` | `/api/interconsultas/{id}/prioridad` | Cambio manual de prioridad con motivo; el responsable sale de la sesión |
 | `PATCH` | `/api/interconsultas/{id}/estado` | Marca la interconsulta como revisada o pendiente |
@@ -334,6 +341,8 @@ docker compose down -v
 | `POST` | `/api/interconsultas/priorizar` | Ejecuta el modelo sobre los identificadores indicados |
 | `POST` | `/api/interconsultas/priorizar-pendientes` | Ejecuta el modelo sobre las que aún no tienen prioridad |
 | `POST` | `/api/interconsultas/reevaluar-banderas` | Vuelve a aplicar el catálogo de términos de alarma |
+| `GET` | `/api/plazos-revision` | Plazos máximos de revisión, en días, de cada prioridad |
+| `PUT` | `/api/plazos-revision` | Define los tres plazos: enteros positivos, sin que una prioridad más alta tenga más días que una más baja (solo administrador) |
 
 Salvo `/health` y `/api/auth/login`, todo responde 401 sin sesión. La
 documentación interactiva completa está en http://localhost:8000/docs.
@@ -347,7 +356,7 @@ Next.js 16 con App Router, React 19, Bootstrap 5 y Tailwind CSS 4.
 | `/dashboard` | Resumen de la lista de espera y cola agrupada por prioridad |
 | `/interconsultas` | Lista de espera completa, en tarjetas agrupadas por prioridad o en tabla ordenable por columna, con filtros y descarga múltiple |
 | `/interconsultas/[id]` | Detalle: columna de decisión fija, sustento clínico y explicación de la sugerencia al lado, y navegación a la anterior y la siguiente |
-| `/configuracion` | Campos exigidos al importar y campos incluidos al exportar (solo administrador) |
+| `/configuracion` | Plazos de revisión por prioridad, campos exigidos al importar y campos incluidos al exportar (solo administrador) |
 | `/login` | Inicio de sesión |
 | `/cuenta` | Datos de la sesión y cambio de contraseña |
 | `/usuarios` | Gestión de cuentas: alta, edición, bloqueo y eliminación (solo administrador) |
@@ -431,7 +440,8 @@ docker compose -f docker-compose.qa.yml --profile pruebas down -v
 
 - **E2E** (`qa/e2e`): Playwright en Chromium headless sobre los flujos críticos:
   login y bloqueo, primer ingreso, carga de archivos, alertas clínicas, revisión
-  de prioridad con motivo, exportación y perfiles. Los selectores usan
+  de prioridad con motivo, exportación, perfiles, navegación por teclado y plazos
+  de revisión. Los selectores usan
   `data-testid`. El reporte HTML queda en `qa/e2e/reportes/html` y, si una prueba
   falla, también la captura, el video y la traza.
 - **Carga** (`qa/carga`): k6 con usuarios concurrentes sobre el listado y el

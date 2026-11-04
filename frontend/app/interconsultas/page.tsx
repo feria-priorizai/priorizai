@@ -114,6 +114,7 @@ export default function InterconsultasPage() {
         mensajeVacio={mensajeVacio}
         vista={vista}
         onCambiarVista={setVista}
+        ordenPorAtraso={filtros.estado === "atrasada"}
       />
 
       <p className="pz-label">

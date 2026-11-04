@@ -304,6 +304,27 @@ h1, h2, h3, h4, h5 {
   border-radius: 4px;
 }
 
+/* Enlace para saltar el menú lateral con el teclado (HDU-20): fuera de la
+   vista hasta que recibe el foco. */
+.pz-saltar {
+  position: fixed;
+  top: .75rem;
+  left: .75rem;
+  z-index: 1100;
+  padding: .6rem 1rem;
+  background: var(--pz-blue-deep);
+  color: #fff;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-200%);
+}
+.pz-saltar:focus { transform: none; }
+.pz-saltar:focus-visible { outline-color: var(--pz-green); }
+/* El contenido recibe el foco desde el enlace, no con el tabulador: no
+   necesita el marco. */
+#contenido:focus { outline: none; }
+
 /* ============================================================
    Estructura
    ============================================================ */
@@ -473,6 +494,9 @@ h1, h2, h3, h4, h5 {
 .pz-chip--neutral { background: var(--pz-paper-3);  color: var(--pz-ink-2);        border-color: var(--pz-line-2); }
 .pz-chip--ink     { background: var(--pz-relleno-tinta); color: #fff; }
 .pz-chip--flag    { background: var(--pz-relleno-alta);  color: #fff; }
+/* Atrasada (HDU-22): contorno punteado en tinta. Tiene que distinguirse de la
+   bandera roja de un vistazo y sin depender del color. */
+.pz-chip--atrasada { background: var(--pz-paper); color: var(--pz-ink); border: 1px dashed var(--pz-ink); }
 
 /* ============================================================
    Botones — el color dice que clase de accion es
@@ -551,6 +575,80 @@ h1, h2, h3, h4, h5 {
 }
 .pz-form .form-control[aria-invalid="true"] { border-color: var(--pz-alta); }
 .pz-form .form-control::placeholder { color: var(--pz-ink-3); }
+/* Plazos de revision (HDU-22). Sin el .input-group de Bootstrap: el preflight
+   de Tailwind le quita el padding y el borde al sufijo y "dias" quedaba pegado
+   al numero. */
+.pz-plazos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1rem;
+}
+.pz-plazo {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  padding: 1rem 1.15rem;
+  background: var(--pz-paper-2);
+  border-left: 3px solid var(--pz-plazo-acento);
+  border-radius: var(--radius-sm);
+}
+.pz-plazo--alta  { --pz-plazo-acento: var(--pz-alta); }
+.pz-plazo--media { --pz-plazo-acento: var(--pz-media); }
+.pz-plazo--baja  { --pz-plazo-acento: var(--pz-green-ink); }
+.pz-plazo__nombre { align-self: flex-start; }
+/* El numero y la unidad van en un mismo recuadro, que es el que se enmarca y
+   se resalta con el foco; el input queda sin borde propio adentro. */
+.pz-plazo__campo {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 13rem;
+  background: var(--pz-paper);
+  border: 2px solid var(--pz-line-2);
+  border-radius: var(--radius-sm);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.pz-plazo__campo:focus-within {
+  border-color: var(--pz-blue-deep);
+  box-shadow: 0 0 0 4px rgba(0,61,150,.16);
+}
+.pz-plazo__campo:has([aria-invalid="true"]) { border-color: var(--pz-alta); }
+.pz-form .pz-plazo__campo .form-control {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: .6rem .2rem .6rem .9rem;
+  font-family: var(--pz-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.pz-form .pz-plazo__campo .form-control:focus,
+.pz-form .pz-plazo__campo .form-control:focus-visible { box-shadow: none; outline: none; }
+.pz-plazo__campo .form-control::-webkit-outer-spin-button,
+.pz-plazo__campo .form-control::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.pz-plazo__unidad {
+  flex: none;
+  padding: 0 .9rem 0 .4rem;
+  font-family: var(--pz-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--pz-ink-2);
+}
+.pz-plazo__error {
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--pz-alta);
+}
+
 .pz-form .form-label {
   font-family: var(--pz-mono);
   font-size: var(--fs-micro);
@@ -790,14 +888,15 @@ h1, h2, h3, h4, h5 {
   box-shadow: none;
   padding: .72rem .85rem;
 }
-.pz-btn--nav:hover:not(:disabled) {
+.pz-btn--nav:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--pz-green);
   color: #05231B;
   border-color: var(--pz-green);
   transform: none;
   box-shadow: none;
 }
-.pz-btn--nav:disabled { background: rgba(255,255,255,.05); color: rgba(226,236,248,.45); border-color: rgba(126,168,224,.2); }
+.pz-btn--nav:disabled,
+.pz-btn--nav[aria-disabled="true"] { cursor: not-allowed; background: rgba(255,255,255,.05); color: rgba(226,236,248,.45); border-color: rgba(126,168,224,.2); }
 .pz-btn--nav.pz-btn--icono { padding: .72rem 0; }
 
 .pz-navlink {
@@ -848,6 +947,7 @@ h1, h2, h3, h4, h5 {
 .pz-zona--media { --pz-zona: var(--pz-zona-media); --pz-zona-tinta: var(--pz-media-fuerte); }
 .pz-zona--baja  { --pz-zona: var(--pz-zona-baja);  --pz-zona-tinta: var(--pz-green-ink); }
 .pz-zona--sin   { --pz-zona: var(--pz-zona-sin);   --pz-zona-tinta: var(--pz-ink-2); }
+.pz-zona--atrasada { --pz-zona: var(--pz-paper-3); --pz-zona-tinta: var(--pz-ink); }
 
 .pz-grupo {
   display: flex;
@@ -980,11 +1080,13 @@ h1, h2, h3, h4, h5 {
 }
 .pz-tabla-cola > tbody tr { cursor: pointer; }
 .pz-tabla-cola > tbody tr:nth-child(even) > td { background: var(--pz-fila-par); }
-.pz-tabla-cola > tbody tr:hover > td { background: var(--pz-fila-hover); }
+.pz-tabla-cola > tbody tr:hover > td,
+.pz-tabla-cola > tbody tr:focus-within > td { background: var(--pz-fila-hover); }
 .pz-tabla-cola > tbody tr.is-sel > td { background: var(--pz-fila-sel); }
 /* Ultima interconsulta abierta: el punto donde se retoma la lista (HDU-17). */
 .pz-tabla-cola > tbody tr.is-ultima > td { box-shadow: inset 0 2px 0 var(--pz-blue-deep), inset 0 -2px 0 var(--pz-blue-deep); }
-.pz-tabla-cola > tbody tr:hover .pz-tabla-cola__dx { text-decoration: underline; }
+.pz-tabla-cola > tbody tr:hover .pz-tabla-cola__dx,
+.pz-tabla-cola > tbody tr:focus-within .pz-tabla-cola__dx { text-decoration: underline; }
 
 /* Columna de numero, como los encabezados de fila de una planilla. */
 .pz-tabla-cola__n {

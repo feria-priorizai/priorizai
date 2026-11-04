@@ -113,6 +113,15 @@ describe("ordenarPorColumna", () => {
     expect(orden[0].id).toBe("x");
   });
 
+  it("ordena por días de atraso y deja al final las que están a tiempo (HDU-22)", () => {
+    const aTiempo = crearInterconsulta({ id: "t", diasAtraso: null });
+    const poco = crearInterconsulta({ id: "p", diasAtraso: 2 });
+    const mucho = crearInterconsulta({ id: "m", diasAtraso: 20 });
+    expect(
+      ids(ordenarPorColumna([aTiempo, poco, mucho], { columna: "atraso", descendente: true })),
+    ).toEqual(["m", "p", "t"]);
+  });
+
   it("mantiene el orden original ante empates", () => {
     const uno = crearInterconsulta({ id: "1", pacienteEdad: 40 });
     const dos = crearInterconsulta({ id: "2", pacienteEdad: 40 });

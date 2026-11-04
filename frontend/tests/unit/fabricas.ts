@@ -42,6 +42,8 @@ export function crearInterconsulta(parcial: Partial<Interconsulta> = {}): Interc
     banderaRoja: false,
     terminosBanderaRoja: [],
     prioridadForzadaPorRegla: false,
+    atrasada: false,
+    diasAtraso: null,
     historialModificaciones: [],
     fechaIngreso: "2026-10-01T12:00:00",
     fechaEmision: "2026-09-30",

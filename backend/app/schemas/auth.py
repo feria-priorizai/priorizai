@@ -1,6 +1,12 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 _LARGO_MAXIMO_ENTRADA = 256
+
+Tema = Literal["claro", "oscuro"]
+TamanoLetra = Literal["normal", "grande", "muy_grande"]
+ModoInterfaz = Literal["estandar", "legacy"]
 
 
 class LoginRequest(BaseModel):
@@ -16,6 +22,16 @@ class CambiarPasswordRequest(BaseModel):
     password_nueva: str = Field(max_length=_LARGO_MAXIMO_ENTRADA)
 
 
+class PreferenciasRequest(BaseModel):
+    """Actualizacion parcial: solo cambia lo que viene en el cuerpo, los valores
+    por defecto nunca se aplican. `tema: null` es una eleccion valida, la de
+    volver a seguir al sistema operativo."""
+
+    tema: Tema | None = None
+    tamano_letra: TamanoLetra = "normal"
+    modo_interfaz: ModoInterfaz = "estandar"
+
+
 class UsuarioResponse(BaseModel):
     id: str
     alias: str
@@ -25,6 +41,9 @@ class UsuarioResponse(BaseModel):
     especialidad: str | None
     activo: bool
     debe_cambiar_password: bool
+    tema: Tema | None
+    tamano_letra: TamanoLetra
+    modo_interfaz: ModoInterfaz
     bloqueado_por_intentos: bool = False
 
     model_config = {"from_attributes": True}

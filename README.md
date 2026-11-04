@@ -318,6 +318,7 @@ docker compose down -v
 | `POST` | `/api/auth/logout` | Cierra la sesión en el servidor |
 | `GET` | `/api/auth/me` | Usuario de la sesión actual |
 | `POST` | `/api/auth/cambiar-password` | Cambia la contraseña propia; exige la actual |
+| `PATCH` | `/api/auth/preferencias` | Guarda tema, tamaño de letra y modo de interfaz de la cuenta |
 | `GET` | `/api/usuarios` | Lista las cuentas (solo administrador) |
 | `POST` | `/api/usuarios` | Crea una cuenta (solo administrador) |
 | `PATCH` | `/api/usuarios/{id}` | Edita una cuenta y opcionalmente restablece su contraseña (solo administrador) |

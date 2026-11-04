@@ -11,7 +11,12 @@ from sqlalchemy.pool import StaticPool
 import app.core.database as database_module
 import app.main as main_module
 from app.core.database import get_db
-from app.main import COLUMNAS_NUEVAS, _asegurar_columnas_interconsultas
+from app.main import (
+    COLUMNAS_NUEVAS,
+    COLUMNAS_NUEVAS_USUARIOS,
+    _asegurar_columnas_interconsultas,
+    _asegurar_columnas_usuarios,
+)
 
 
 class SesionEspia:
@@ -98,3 +103,24 @@ def test_asegurar_columnas_es_idempotente(engine_con_tabla_vieja) -> None:
     _asegurar_columnas_interconsultas()
 
     assert _columnas(engine_con_tabla_vieja) == columnas_tras_la_primera
+
+
+def test_las_cuentas_existentes_quedan_con_las_preferencias_por_defecto(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    motor = create_engine("sqlite://", poolclass=StaticPool)
+    with motor.begin() as conexion:
+        conexion.execute(text("CREATE TABLE usuarios (id VARCHAR(36) PRIMARY KEY)"))
+        conexion.execute(text("INSERT INTO usuarios (id) VALUES ('u-1')"))
+    monkeypatch.setattr(main_module, "engine", motor)
+
+    _asegurar_columnas_usuarios()
+    _asegurar_columnas_usuarios()
+
+    with motor.connect() as conexion:
+        fila = conexion.execute(text("SELECT * FROM usuarios")).mappings().one()
+    assert set(COLUMNAS_NUEVAS_USUARIOS) <= set(fila.keys())
+    assert fila["tema"] is None
+    assert fila["tamano_letra"] == "normal"
+    assert fila["modo_interfaz"] == "estandar"
+    motor.dispose()

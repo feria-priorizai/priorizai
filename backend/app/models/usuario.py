@@ -26,6 +26,14 @@ class Usuario(Base):
     debe_cambiar_password: Mapped[bool] = mapped_column(
         Boolean, default=True, nullable=False
     )
+    # Sin elegir (None), la interfaz sigue el tema del sistema operativo.
+    tema: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    tamano_letra: Mapped[str] = mapped_column(
+        String(10), default="normal", nullable=False
+    )
+    modo_interfaz: Mapped[str] = mapped_column(
+        String(10), default="estandar", nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=utc_now,

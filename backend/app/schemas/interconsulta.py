@@ -71,6 +71,14 @@ class InterconsultaResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     modificaciones: list[ModificacionPrioridadResponse] = []
+    # Dias por sobre el plazo de revision de su prioridad (HDU-22). No es una
+    # columna: lo calcula el endpoint con los plazos vigentes y la fecha de hoy.
+    dias_atraso: int | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def atrasada(self) -> bool:
+        return self.dias_atraso is not None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

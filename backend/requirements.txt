@@ -5,6 +5,7 @@ python-multipart==0.0.6
 SQLAlchemy==2.0.50
 psycopg2-binary==2.9.12
 pydantic==2.13.4
+tzdata==2026.6
 
 pwdlib[argon2]==0.3.1
 

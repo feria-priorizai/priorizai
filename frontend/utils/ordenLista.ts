@@ -44,7 +44,8 @@ export type ColumnaOrden =
   | "destino"
   | "emision"
   | "certeza"
-  | "estado";
+  | "estado"
+  | "atraso";
 
 export interface OrdenTabla {
   columna: ColumnaOrden;
@@ -81,6 +82,8 @@ function valorOrden(ic: Interconsulta, columna: ColumnaOrden): string | number {
       return (ic.priorizacionIA.priorizada ?? true) ? ic.priorizacionIA.confianza : -1;
     case "estado":
       return ic.estado;
+    case "atraso":
+      return ic.diasAtraso ?? 0;
   }
 }
 

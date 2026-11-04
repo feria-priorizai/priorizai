@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation";
 import type { Usuario } from "@/types/usuario";
 import { cerrarSesion, obtenerSesion } from "@/services/auth";
 import { irAlLogin } from "@/services/api";
+import { olvidarEstadoDeLaPestana } from "@/utils/ordenLista";
 import EstadoVista from "@/components/ui/EstadoVista";
 import CambioPasswordObligatorio from "@/components/auth/CambioPasswordObligatorio";
 
@@ -51,6 +52,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
 
   const salir = useCallback(async () => {
     await cerrarSesion().catch(() => undefined);
+    olvidarEstadoDeLaPestana();
     window.location.assign("/login");
   }, []);
 

@@ -2,10 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 import {
   agruparPorPrioridad,
   grupoDe,
+  guardarFiltrosLista,
+  guardarInterconsultaAbierta,
   guardarOrdenLista,
   guardarVistaPreferida,
+  leerFiltrosLista,
+  leerInterconsultaAbierta,
   leerOrdenLista,
   leerVistaPreferida,
+  olvidarEstadoDeLaPestana,
   ordenarPorColumna,
 } from "@/utils/ordenLista";
 import { crearInterconsulta } from "./fabricas";
@@ -144,6 +149,36 @@ describe("almacenamiento de la lista", () => {
     expect(leerVistaPreferida("u2")).toBe("tarjetas");
   });
 
+  it("recuerda los filtros por usuario", () => {
+    expect(leerFiltrosLista("u1")).toEqual({});
+    guardarFiltrosLista("u1", { prioridad: "alta", busqueda: "tórax" });
+    expect(leerFiltrosLista("u1")).toEqual({ prioridad: "alta", busqueda: "tórax" });
+    expect(leerFiltrosLista("u2")).toEqual({});
+  });
+
+  it("ignora filtros guardados que no son un objeto", () => {
+    sessionStorage.setItem("pz:filtros-lista:u1", '"alta"');
+    expect(leerFiltrosLista("u1")).toEqual({});
+  });
+
+  it("recuerda la última interconsulta abierta", () => {
+    expect(leerInterconsultaAbierta()).toBeNull();
+    guardarInterconsultaAbierta("a");
+    expect(leerInterconsultaAbierta()).toBe("a");
+  });
+
+  it("olvida lo de la pestaña sin tocar la vista preferida", () => {
+    guardarFiltrosLista("u1", { busqueda: "tórax" });
+    guardarInterconsultaAbierta("a");
+    guardarVistaPreferida("u1", "tabla");
+
+    olvidarEstadoDeLaPestana();
+
+    expect(leerFiltrosLista("u1")).toEqual({});
+    expect(leerInterconsultaAbierta()).toBeNull();
+    expect(leerVistaPreferida("u1")).toBe("tabla");
+  });
+
   it("no rompe la vista si el almacenamiento no está disponible", () => {
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("cuota llena");
@@ -153,7 +188,21 @@ describe("almacenamiento de la lista", () => {
     });
     expect(() => guardarOrdenLista(["a"])).not.toThrow();
     expect(() => guardarVistaPreferida("u1", "tabla")).not.toThrow();
+    expect(() => guardarFiltrosLista("u1", {})).not.toThrow();
+    expect(() => guardarInterconsultaAbierta("a")).not.toThrow();
     expect(leerOrdenLista()).toEqual([]);
     expect(leerVistaPreferida("u1")).toBe("tarjetas");
+    expect(leerFiltrosLista("u1")).toEqual({});
+    expect(leerInterconsultaAbierta()).toBeNull();
+  });
+});
+
+describe("olvidarEstadoDeLaPestana", () => {
+  it("no falla si el almacenamiento no está disponible", () => {
+    const clear = vi.spyOn(Storage.prototype, "clear").mockImplementation(() => {
+      throw new Error("modo privado");
+    });
+    expect(() => olvidarEstadoDeLaPestana()).not.toThrow();
+    clear.mockRestore();
   });
 });

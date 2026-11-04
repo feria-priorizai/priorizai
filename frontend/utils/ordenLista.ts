@@ -125,6 +125,55 @@ export function leerOrdenLista(): string[] {
   }
 }
 
+/** Filtros de la lista: sobreviven a salir de la vista, no a la pestaña. */
+const claveFiltros = (usuarioId: string) => `pz:filtros-lista:${usuarioId}`;
+
+export function guardarFiltrosLista(usuarioId: string, filtros: object): void {
+  try {
+    sessionStorage.setItem(claveFiltros(usuarioId), JSON.stringify(filtros));
+  } catch {
+    /* sin almacenamiento, los filtros duran lo que dure la vista */
+  }
+}
+
+export function leerFiltrosLista<T extends object>(usuarioId: string): Partial<T> {
+  try {
+    const crudo = sessionStorage.getItem(claveFiltros(usuarioId));
+    const filtros: unknown = crudo ? JSON.parse(crudo) : null;
+    return filtros && typeof filtros === "object" ? (filtros as Partial<T>) : {};
+  } catch {
+    return {};
+  }
+}
+
+const CLAVE_ABIERTA = "pz:interconsulta-abierta";
+
+/** Última interconsulta abierta: la lista la marca para retomar desde ahí. */
+export function guardarInterconsultaAbierta(id: string): void {
+  try {
+    sessionStorage.setItem(CLAVE_ABIERTA, id);
+  } catch {
+    /* sin almacenamiento, sin marca */
+  }
+}
+
+export function leerInterconsultaAbierta(): string | null {
+  try {
+    return sessionStorage.getItem(CLAVE_ABIERTA);
+  } catch {
+    return null;
+  }
+}
+
+/** En un equipo compartido, lo que quedó en la pestaña no pasa a la siguiente cuenta. */
+export function olvidarEstadoDeLaPestana(): void {
+  try {
+    sessionStorage.clear();
+  } catch {
+    /* no había nada que olvidar */
+  }
+}
+
 /** La vista preferida es por usuario y persiste al cerrar sesión. */
 const claveVista = (usuarioId: string) => `pz:vista-lista:${usuarioId}`;
 

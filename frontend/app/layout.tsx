@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Archivo, IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
+import { SCRIPT_PREFERENCIAS } from "@/utils/preferencias";
 
 const archivo = Archivo({
   variable: "--font-display",
@@ -33,10 +34,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // SCRIPT_PREFERENCIAS escribe atributos en <html> antes de hidratar.
     <html
       lang="es"
       className={`${archivo.variable} ${instrumentSans.variable} ${ibmPlexMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_PREFERENCIAS }} />
+      </head>
       <body className="min-h-full">
         <AppShell>{children}</AppShell>
       </body>

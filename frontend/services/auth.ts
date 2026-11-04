@@ -1,4 +1,4 @@
-import type { RolUsuario, Usuario } from "@/types/usuario";
+import type { Preferencias, RolUsuario, Usuario } from "@/types/usuario";
 import { apiFetch, obtenerMensajeError } from "@/services/api";
 
 async function lanzarError(respuesta: Response, fallback: string): Promise<never> {
@@ -46,6 +46,20 @@ export async function cambiarPassword(
   });
   if (!respuesta.ok) {
     return lanzarError(respuesta, "No se pudo cambiar la contraseña");
+  }
+  return respuesta.json();
+}
+
+export async function guardarPreferencias(
+  cambios: Partial<Preferencias>,
+): Promise<Usuario> {
+  const respuesta = await apiFetch("/api/auth/preferencias", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cambios),
+  });
+  if (!respuesta.ok) {
+    return lanzarError(respuesta, "No se pudieron guardar las preferencias");
   }
   return respuesta.json();
 }

@@ -44,7 +44,7 @@ const GRUPOS: Grupo[] = [
     titulo: "Metadatos",
     descripcion: "Trazabilidad: folio, estado y fechas.",
     acento: "var(--pz-purple-ink)",
-    acentoFondo: "#EAE2FB",
+    acentoFondo: "var(--pz-purple-bg)",
   },
 ];
 

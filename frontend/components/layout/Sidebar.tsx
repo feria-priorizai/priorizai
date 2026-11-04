@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { usePreferencias } from "@/context/PreferenciasContext";
 import { useSesion } from "@/context/SesionContext";
 import { ETIQUETAS_ROL } from "@/types/usuario";
 import {
@@ -14,6 +15,7 @@ import {
   type ResultadoCarga,
 } from "@/services/interconsultas";
 import { useConfiguracionImport } from "@/hooks/useConfiguracionCampos";
+import { menuNoCabe } from "@/utils/preferencias";
 
 type RolUsuario = "medico" | "administrador";
 
@@ -52,9 +54,14 @@ export default function Sidebar() {
   const { camposObligatorios } = useConfiguracionImport();
   // En pantallas angostas el menú abierto se comía casi todo el ancho: parte
   // contraído. Se monta solo con sesión confirmada, así que window existe.
-  const [colapsado, setColapsado] = useState(
-    () => window.matchMedia("(max-width: 991.98px)").matches,
-  );
+  const { tamano_letra: letra } = usePreferencias().preferencias;
+  const [letraMedida, setLetraMedida] = useState(letra);
+  const [colapsado, setColapsado] = useState(() => menuNoCabe(letra));
+
+  if (letra !== letraMedida) {
+    setLetraMedida(letra);
+    setColapsado(menuNoCabe(letra));
+  }
   const [notificacion, setNotificacion] = useState<Notificacion | null>(null);
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
   const [reevaluando, setReevaluando] = useState(false);

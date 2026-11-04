@@ -10,6 +10,7 @@ import {
   obtenerInterconsultas,
   priorizarInterconsulta,
 } from "@/services/interconsultas";
+import { guardarFiltrosLista, leerFiltrosLista } from "@/utils/ordenLista";
 
 export interface FiltrosInterconsulta {
   prioridad: NivelPrioridad | "sin" | "todas";
@@ -74,7 +75,13 @@ function notificarActualizacion(actualizada?: Interconsulta): void {
   }
 }
 
-export function useInterconsultas(): UseInterconsultasReturn {
+/**
+ * Con `usuarioFiltros` los filtros se recuerdan entre vistas (HDU-17); solo la
+ * lista lo pide: el dashboard cuenta sobre el total, sin filtrar. Quien lo pasa
+ * se monta con sesión confirmada, así que leer al iniciar no produce diferencias
+ * de hidratación.
+ */
+export function useInterconsultas(usuarioFiltros?: string): UseInterconsultasReturn {
   const [estado, setEstado] = useState<EstadoListado>({
     interconsultas: [],
     cargando: true,
@@ -82,7 +89,14 @@ export function useInterconsultas(): UseInterconsultasReturn {
     total: 0,
     truncado: false,
   });
-  const [filtros, setFiltros] = useState<FiltrosInterconsulta>(filtrosIniciales);
+  const [filtros, setFiltros] = useState<FiltrosInterconsulta>(() => ({
+    ...filtrosIniciales,
+    ...(usuarioFiltros && leerFiltrosLista<FiltrosInterconsulta>(usuarioFiltros)),
+  }));
+
+  useEffect(() => {
+    if (usuarioFiltros) guardarFiltrosLista(usuarioFiltros, filtros);
+  }, [usuarioFiltros, filtros]);
 
   const recargar = useCallback(async () => {
     setEstado((prev) => ({ ...prev, cargando: true, error: null }));

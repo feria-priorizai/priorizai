@@ -14,6 +14,7 @@ import {
   agruparPorPrioridad,
   grupoDe,
   guardarOrdenLista,
+  leerInterconsultaAbierta,
   ordenarPorColumna,
   type ClaveGrupo,
   type ColumnaOrden,
@@ -90,6 +91,7 @@ export default function ColaInterconsultas({
   const idBase = useId();
 
   const [ordenTabla, setOrdenTabla] = useState<OrdenTabla | null>(null);
+  const [ultimaAbierta] = useState(leerInterconsultaAbierta);
 
   const porGrupo = agruparPorPrioridad(interconsultas);
   const enOrdenDeLista = porGrupo.flatMap((g) => g.items);
@@ -232,6 +234,7 @@ export default function ColaInterconsultas({
           seleccionadas={seleccionadas}
           onAlternar={alternarSeleccion}
           onClickFila={alClickearFila}
+          ultimaAbierta={ultimaAbierta}
         />
       ) : (
         porGrupo.map((grupo) => (
@@ -251,7 +254,9 @@ export default function ColaInterconsultas({
             {grupo.items.map((ic) => (
               <div
                 key={ic.id}
-                className="pz-fila-cola"
+                className={`pz-fila-cola${
+                  ic.id === ultimaAbierta ? " is-ultima" : ""
+                }`}
                 data-testid="fila-interconsulta"
                 data-id={ic.id}
                 onClick={(e) => alClickearFila(e, ic.id)}
@@ -379,6 +384,7 @@ function TablaCola({
   seleccionadas,
   onAlternar,
   onClickFila,
+  ultimaAbierta,
 }: {
   filas: Interconsulta[];
   orden: OrdenTabla | null;
@@ -387,6 +393,7 @@ function TablaCola({
   seleccionadas: Set<string>;
   onAlternar: (id: string) => void;
   onClickFila: (e: MouseEvent<HTMLElement>, id: string) => void;
+  ultimaAbierta: string | null;
 }) {
   return (
     <div className="pz-planilla custom-scrollbar">
@@ -440,7 +447,7 @@ function TablaCola({
                 key={ic.id}
                 className={`pz-tabla-cola__fila--${zonaDe(clave)}${
                   seleccionadas.has(ic.id) ? " is-sel" : ""
-                }`}
+                }${ic.id === ultimaAbierta ? " is-ultima" : ""}`}
                 data-testid="fila-interconsulta"
                 data-id={ic.id}
                 onClick={(e) => onClickFila(e, ic.id)}

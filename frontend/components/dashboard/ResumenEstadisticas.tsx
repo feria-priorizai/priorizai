@@ -57,7 +57,7 @@ export default function ResumenEstadisticas({
         valor={banderasRojas}
         icono={<IconoBandera />}
         acento="var(--pz-purple-ink)"
-        acentoFondo="#EAE2FB"
+        acentoFondo="var(--pz-purple-bg)"
       />
     </section>
   );

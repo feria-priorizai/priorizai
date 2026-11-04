@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * Mi cuenta: datos de la sesión y cambio de la contraseña propia.
+ * Mi cuenta: datos de la sesión, apariencia y cambio de la contraseña propia.
  */
 
 import { useState } from "react";
 import { useSesion } from "@/context/SesionContext";
 import FormularioCambioPassword from "@/components/auth/FormularioCambioPassword";
+import PreferenciasInterfaz from "@/components/cuenta/PreferenciasInterfaz";
 import { ETIQUETAS_ROL } from "@/types/usuario";
 
 export default function CuentaPage() {
@@ -52,7 +53,22 @@ export default function CuentaPage() {
         </section>
       </div>
 
-      <div className="col-12 col-lg-7">
+      <div className="col-12 col-lg-7 flex flex-col gap-[1.5rem]">
+        <section className="pz-panel" aria-labelledby="titulo-apariencia">
+          <div className="pz-panel__head">
+            <span className="pz-eyebrow pz-eyebrow--purple">Preferencias</span>
+            <h2 id="titulo-apariencia" className="pz-panel__title">
+              Apariencia
+            </h2>
+            <p className="pz-panel__sub">
+              Se aplica al instante y se mantiene en tus próximos ingresos.
+            </p>
+          </div>
+          <div className="pz-panel__body">
+            <PreferenciasInterfaz />
+          </div>
+        </section>
+
         <section className="pz-panel" aria-labelledby="titulo-password">
           <div className="pz-panel__head">
             <span className="pz-eyebrow pz-eyebrow--green">Seguridad</span>

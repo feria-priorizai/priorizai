@@ -7,6 +7,7 @@ from app.models.reentrenamiento import (
     Reentrenamiento,
     VersionModelo,
 )
+from app.models.plazo_revision import PlazoRevision
 from app.models.usuario import IntentoLogin, Sesion, Usuario
 
 __all__ = [
@@ -17,6 +18,7 @@ __all__ = [
     "Interconsulta",
     "ModificacionPrioridad",
     "Reentrenamiento",
+    "PlazoRevision",
     "Sesion",
     "Usuario",
     "VersionModelo",

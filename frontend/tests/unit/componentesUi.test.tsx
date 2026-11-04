@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import BadgeAtrasada from "@/components/ui/BadgeAtrasada";
 import BadgeBanderaRoja from "@/components/ui/BadgeBanderaRoja";
 import BadgeEstado from "@/components/ui/BadgeEstado";
 import BadgePrioridad from "@/components/ui/BadgePrioridad";
@@ -36,6 +37,23 @@ describe("insignias", () => {
   it("muestra una bandera roja genérica sin términos", () => {
     render(<BadgeBanderaRoja terminos={[]} />);
     expect(screen.getByTitle("Bandera roja detectada")).toBeInTheDocument();
+  });
+
+  it("marca la atrasada con un estilo distinto al de la bandera roja (HDU-22)", () => {
+    render(<BadgeAtrasada dias={3} />);
+    const marca = screen.getByTestId("atrasada");
+    expect(marca).toHaveTextContent("Atrasada · +3 d");
+    expect(marca).toHaveClass("pz-chip--atrasada");
+    expect(marca).not.toHaveClass("pz-chip--flag");
+    expect(marca).toHaveAttribute("title", "Atrasada: 3 días sobre el plazo de revisión");
+  });
+
+  it("en su versión compacta deja la descripción completa para el lector de pantalla", () => {
+    render(<BadgeAtrasada dias={1} compacta />);
+    expect(screen.getByTestId("atrasada")).toHaveTextContent("+1 d");
+    expect(screen.getByText("Atrasada: 1 día sobre el plazo de revisión")).toHaveClass(
+      "visually-hidden",
+    );
   });
 });
 

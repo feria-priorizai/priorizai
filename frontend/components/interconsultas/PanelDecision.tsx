@@ -4,8 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Interconsulta, NivelPrioridad } from "@/types";
 import FormularioModificarPrioridad from "./FormularioModificarPrioridad";
+import BadgeAtrasada from "@/components/ui/BadgeAtrasada";
 import BadgeBanderaRoja from "@/components/ui/BadgeBanderaRoja";
 import BadgeEstado from "@/components/ui/BadgeEstado";
+import { textoDias } from "@/utils/plazos";
 
 type FormatoExportacion = "json" | "csv" | "xlsx";
 
@@ -71,6 +73,22 @@ export default function PanelDecision({
           <span className="pz-vigente pz-vigente--ninguna mt-3">
             {esValida ? "Sin prioridad" : "No priorizable"}
           </span>
+        )}
+
+        {ic.diasAtraso !== null && (
+          <div
+            className="mt-3 flex flex-col gap-1.5 p-3"
+            style={{
+              background: "var(--pz-paper-2)",
+              borderLeft: "2px dashed var(--pz-ink)",
+            }}
+          >
+            <BadgeAtrasada dias={ic.diasAtraso} />
+            <p className="text-[.82rem] leading-relaxed text-[var(--pz-ink-2)]">
+              Lleva {textoDias(ic.diasAtraso)} sobre el plazo de revisión de la
+              prioridad {ic.prioridadActual}. Al revisarla, la marca desaparece.
+            </p>
+          </div>
         )}
 
         <div className="mt-3">

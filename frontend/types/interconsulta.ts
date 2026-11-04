@@ -9,6 +9,9 @@ export type NivelPrioridad = "alta" | "media" | "baja";
 
 export type EstadoInterconsulta = "pendiente" | "revisada";
 
+/** Días máximos de revisión de cada prioridad (HDU-22). */
+export type PlazosRevision = Record<NivelPrioridad, number>;
+
 export interface ResultadoPriorizacion {
   nivelSugerido: NivelPrioridad;
   confianza: number;
@@ -68,6 +71,10 @@ export interface Interconsulta {
   banderaRoja: boolean;
   terminosBanderaRoja: string[];
   prioridadForzadaPorRegla: boolean;
+  /** Pendiente que superó el plazo de revisión de su prioridad (HDU-22). */
+  atrasada: boolean;
+  /** Días por sobre ese plazo; null si no está atrasada. */
+  diasAtraso: number | null;
   historialModificaciones: ModificacionPrioridad[];
   fechaIngreso: string;
   fechaEmision: string | null;

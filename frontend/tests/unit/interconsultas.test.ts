@@ -38,6 +38,8 @@ function crearApi(parcial: Record<string, unknown> = {}) {
     terminos_bandera_roja: "dolor_toracico",
     terminos_bandera_roja_nombres: ["Dolor torácico"],
     prioridad_forzada_por_regla: true,
+    atrasada: false,
+    dias_atraso: null,
     created_at: "2026-10-01T12:00:00",
     updated_at: "2026-10-02T12:00:00",
     ...parcial,
@@ -113,6 +115,26 @@ describe("mapeo de la API", () => {
     });
     expect(ic?.priorizacionIA.priorizada).toBe(false);
     expect(ic?.priorizacionIA.confianza).toBe(0);
+  });
+
+  it("trae el atraso de las pendientes que superaron su plazo (HDU-22)", async () => {
+    fetchMock.mockResolvedValue(
+      respuestaJson(crearApi({ estado: "pendiente", atrasada: true, dias_atraso: 4 })),
+    );
+
+    const ic = await obtenerInterconsultaPorId("ic-1");
+
+    expect(ic).toMatchObject({ atrasada: true, diasAtraso: 4 });
+  });
+
+  it("sin datos de atraso la trata como a tiempo", async () => {
+    fetchMock.mockResolvedValue(
+      respuestaJson(crearApi({ atrasada: undefined, dias_atraso: undefined })),
+    );
+
+    const ic = await obtenerInterconsultaPorId("ic-1");
+
+    expect(ic).toMatchObject({ atrasada: false, diasAtraso: null });
   });
 
   it("traduce el historial de modificaciones", async () => {

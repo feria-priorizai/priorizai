@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, selectinload, sessionmaker
 
 from app.api.auth import ClinicoActual, UsuarioActual
 from app.core.database import get_db
+from app.core.tiempo import hoy_chile
 from app.models.interconsulta import Interconsulta
 from app.models.modificacion_prioridad import ModificacionPrioridad
 from app.models.usuario import Usuario
@@ -31,6 +32,7 @@ from app.services.cola_explicaciones import ColaExplicaciones, get_cola
 from app.services.especialidades import (
     filtrar_por_especialidad_si_medico as _filtrar_por_especialidad_si_medico,
 )
+from app.services.plazos_revision import dias_de_atraso, obtener_plazos
 from app.services.priorizador import (
     PriorizadorRigoBerta,
     aplicar_resultado,
@@ -67,6 +69,21 @@ _ORDEN_PRIORIDAD = case(
 )
 
 
+def _con_atraso[R: InterconsultaResponse](
+    interconsultas: list[Interconsulta], db: Session, esquema: type[R]
+) -> list[R]:
+    """Respuestas con los dias de atraso (HDU-22) ya calculados. Los plazos se
+    leen una vez por peticion, no una vez por interconsulta."""
+    plazos = obtener_plazos(db)
+    hoy = hoy_chile()
+    return [
+        esquema.model_validate(interconsulta).model_copy(
+            update={"dias_atraso": dias_de_atraso(interconsulta, plazos, hoy)}
+        )
+        for interconsulta in interconsultas
+    ]
+
+
 @router.get("", response_model=list[InterconsultaResponse])
 def listar_interconsultas(
     response: Response,
@@ -74,7 +91,7 @@ def listar_interconsultas(
     offset: int = 0,
     db: Session = DbSession,
     usuario: Usuario = UsuarioActual,
-) -> list[Interconsulta]:
+) -> list[InterconsultaResponse]:
     """El total va en la cabecera `X-Total-Count`: sin el, el cliente no puede
     distinguir 'no hay mas' de 'la pagina se lleno' y termina mostrando como total
     lo que entro en la primera pagina.
@@ -99,7 +116,7 @@ def listar_interconsultas(
         .limit(limit)
     )
     stmt = _filtrar_por_especialidad_si_medico(stmt, usuario)
-    return list(db.scalars(stmt).all())
+    return _con_atraso(list(db.scalars(stmt).all()), db, InterconsultaResponse)
 
 
 @router.get("/{interconsulta_id}", response_model=InterconsultaDetalleResponse)
@@ -107,7 +124,7 @@ def obtener_interconsulta(
     interconsulta_id: str,
     db: Session = DbSession,
     usuario: Usuario = UsuarioActual,
-) -> Interconsulta:
+) -> InterconsultaDetalleResponse:
     stmt = (
         select(Interconsulta)
         .options(selectinload(Interconsulta.modificaciones))
@@ -120,7 +137,7 @@ def obtener_interconsulta(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Interconsulta no encontrada",
         )
-    return interconsulta
+    return _con_atraso([interconsulta], db, InterconsultaDetalleResponse)[0]
 
 
 def _explicacion_vigente(interconsulta: Interconsulta) -> dict[str, Any] | None:
@@ -306,7 +323,7 @@ def modificar_prioridad_interconsulta(
     payload: ModificarPrioridadRequest,
     db: Session = DbSession,
     usuario: Usuario = ClinicoActual,
-) -> Interconsulta:
+) -> InterconsultaResponse:
     nueva_prioridad = _normalizar_prioridad(payload.prioridad)
     motivo = payload.motivo.strip()
     if not motivo:
@@ -354,7 +371,7 @@ def modificar_prioridad_interconsulta(
         .where(Interconsulta.id == interconsulta_id)
     )
     assert actualizada is not None
-    return actualizada
+    return _con_atraso([actualizada], db, InterconsultaResponse)[0]
 
 
 @router.patch("/{interconsulta_id}/estado", response_model=InterconsultaResponse)
@@ -363,7 +380,7 @@ def modificar_estado_interconsulta(
     payload: ModificarEstadoRequest,
     db: Session = DbSession,
     usuario: Usuario = ClinicoActual,
-) -> Interconsulta:
+) -> InterconsultaResponse:
     nuevo_estado = _normalizar_estado(payload.estado)
     stmt = (
         select(Interconsulta)
@@ -386,7 +403,7 @@ def modificar_estado_interconsulta(
         .where(Interconsulta.id == interconsulta_id)
     )
     assert actualizada is not None
-    return actualizada
+    return _con_atraso([actualizada], db, InterconsultaResponse)[0]
 
 
 @router.post("/reevaluar-banderas", response_model=ReevaluarBanderasResponse)

@@ -81,6 +81,7 @@ export default function FiltrosInterconsultas({
               <option value="todos">Todos</option>
               <option value="pendiente">Pendiente</option>
               <option value="revisada">Revisada</option>
+              <option value="atrasada">Atrasadas</option>
             </select>
           </div>
         </div>

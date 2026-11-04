@@ -10,10 +10,12 @@ import {
   obtenerInterconsultas,
   priorizarInterconsulta,
 } from "@/services/interconsultas";
+import { ordenarPorAtraso } from "@/utils/plazos";
 
 export interface FiltrosInterconsulta {
   prioridad: NivelPrioridad | "sin" | "todas";
-  estado: EstadoInterconsulta | "todos";
+  /** "atrasada" deja solo las pendientes que superaron su plazo (HDU-22). */
+  estado: EstadoInterconsulta | "todos" | "atrasada";
   busqueda: string;
 }
 
@@ -169,6 +171,7 @@ export function useInterconsultas(): UseInterconsultasReturn {
     };
   }, [recargar]);
 
+  const soloAtrasadas = filtros.estado === "atrasada";
   const interconsultasFiltradas = estado.interconsultas.filter((ic) => {
     if (filtros.prioridad === "sin") {
       if (!ic.sinPrioridad) {
@@ -179,7 +182,11 @@ export function useInterconsultas(): UseInterconsultasReturn {
         return false;
       }
     }
-    if (filtros.estado !== "todos" && ic.estado !== filtros.estado) {
+    if (soloAtrasadas) {
+      if (!ic.atrasada) {
+        return false;
+      }
+    } else if (filtros.estado !== "todos" && ic.estado !== filtros.estado) {
       return false;
     }
     if (!filtros.busqueda) {
@@ -249,7 +256,10 @@ export function useInterconsultas(): UseInterconsultasReturn {
   };
 
   return {
-    interconsultas: interconsultasFiltradas,
+    // Las atrasadas se revisan de la que más espera a la que menos.
+    interconsultas: soloAtrasadas
+      ? ordenarPorAtraso(interconsultasFiltradas)
+      : interconsultasFiltradas,
     cargando: estado.cargando,
     error: estado.error,
     totalInterconsultas: estado.total,

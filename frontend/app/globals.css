@@ -312,7 +312,7 @@ h1, h2, h3, h4, h5 {
   left: .75rem;
   z-index: 1100;
   padding: .6rem 1rem;
-  background: var(--pz-blue-deep);
+  background: var(--pz-relleno-azul);
   color: #fff;
   font-weight: 600;
   border-radius: var(--radius-sm);
@@ -1204,7 +1204,7 @@ h1, h2, h3, h4, h5 {
 .pz-navegador .pz-btn,
 .pz-navegador__pos { white-space: nowrap; }
 @media (max-width: 575.98px) {
-  .pz-navegador__pasos { width: 100%; justify-content: space-between; }
+  .pz-navegador__pasos { width: 100%; flex-wrap: wrap; justify-content: space-between; }
 }
 
 /* ---------- Columna de decision ---------- */
@@ -1425,6 +1425,25 @@ h1, h2, h3, h4, h5 {
   html[data-letra="muy_grande"] .row > [class*="col-lg-"] { flex: 0 0 100%; width: 100%; max-width: 100%; }
   html[data-letra="muy_grande"] .pz-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+/* En telefono el menu contraido y los margenes le quitaban a la vista el ancho
+   que la letra ya gasta, y lo que no parte linea se salia del panel. */
+html:is([data-letra="grande"], [data-letra="muy_grande"]) .pz-chip { white-space: normal; }
+@media (max-width: 767.98px) {
+  html:is([data-letra="grande"], [data-letra="muy_grande"]) {
+    & .pz-sidebar--colapsado { width: 3.25rem; }
+    & .pz-sidebar--colapsado > div { padding-inline: .3rem !important; }
+    & .pz-sidebar--colapsado nav { padding-inline: .3rem !important; }
+    & .pz-sidebar--colapsado .pz-btn--nav { padding-inline: 0; }
+    & .pz-blueprint { padding: .5rem !important; }
+    & .pz-panel__head, & .pz-panel__body, & .pz-decision__seccion { padding-inline: .7rem; }
+    & .pz-fila-cola { margin-inline: .3rem; padding-inline: .6rem; }
+    & .pz-vista, & .pz-campo, & .pz-decision__seccion .flex, & .pz-decision .flex { flex-wrap: wrap; }
+    & .pz-fila-cola__lado { flex: 1 1 100%; flex-wrap: wrap; margin-left: 0; }
+    & .pz-navegador .pz-btn, & .pz-navegador__pos { white-space: normal; }
+    & .pz-eyebrow { letter-spacing: .04em; }
+    & .pz-campo__sw { width: auto; }
+  }
+}
 /* En la planilla el diagnostico se corta por diseno; a esta escala es justo
    lo que se pidio leer entero. La tabla ya tiene scroll propio. */
 html[data-letra="grande"] .pz-tabla-cola__dx,
@@ -1437,25 +1456,37 @@ html[data-letra="muy_grande"] .pz-tabla-cola__dx {
 /* ============================================================
    Modo legacy (HDU-17)
    ============================================================
-   Las mismas vistas y los mismos componentes, con el aspecto de los
-   sistemas clinicos: denso, plano, sin animaciones ni tarjetas. Por eso
-   todas las acciones siguen disponibles y alternar no pierde estado.
-   La escala tipografica baja un escalon y sigue en rem, asi que el
-   tamano de letra (HDU-19) se aplica igual. */
+   Las mismas vistas y los mismos componentes con la estructura de un
+   sitio institucional de salud: pagina blanca, banda azul con el menu
+   horizontal, secciones sin tarjeta separadas por una regla y tablas
+   de encabezado azul. Colores y estructura de referencia, sin logos
+   ni emblemas de ninguna institucion.
+   Todo vive aqui porque es CSS: las acciones no cambian y alternar no
+   vuelve a montar nada. Tipografia en rem, asi que el tamano de letra
+   (HDU-19) se aplica igual, y superficies en tokens, asi que el tema
+   oscuro (HDU-18) tambien. */
 :root[data-modo="legacy"] {
-  --pz-display: Arial, "Helvetica Neue", Helvetica, sans-serif;
-  --pz-body:    Arial, "Helvetica Neue", Helvetica, sans-serif;
-  --pz-mono:    Arial, "Helvetica Neue", Helvetica, sans-serif;
+  --pz-display: var(--font-legacy), Arial, sans-serif;
+  --pz-body:    var(--font-legacy), Arial, sans-serif;
+  --pz-mono:    var(--font-legacy), Arial, sans-serif;
 
-  --fs-micro: .75rem;
-  --fs-chip:  .72rem;
-  --fs-sm:    .8125rem;
-  --fs-base:  .875rem;
-  --fs-md:    .9375rem;
-  --fs-lg:    1rem;
-  --fs-xl:    1.2rem;
+  --pz-legacy-banda:  #2B388F;
+  --pz-legacy-nav:    #0F69B4;
+  --pz-legacy-activo: #0A4F8A;
 
-  --radius-sm: 0;
+  --pz-night:      #2B388F;
+  --pz-night-2:    #2B388F;
+  --pz-night-line: rgba(255,255,255,.18);
+
+  --fs-micro: .8rem;
+  --fs-chip:  .75rem;
+  --fs-sm:    .875rem;
+  --fs-base:  .9375rem;
+  --fs-md:    1rem;
+  --fs-lg:    1.2rem;
+  --fs-xl:    1.5rem;
+
+  --radius-sm: 2px;
   --radius-md: 0;
   --radius-lg: 0;
   --shadow-sm: none;
@@ -1463,20 +1494,35 @@ html[data-letra="muy_grande"] .pz-tabla-cola__dx {
   --shadow-lg: none;
 }
 :root[data-modo="legacy"]:not([data-tema="oscuro"]) {
-  --pz-canvas:  #E4E7EB;
-  --pz-paper-2: #F1F3F5;
-  --pz-paper-3: #E1E5EA;
-  --pz-ink:     #111111;
-  --pz-ink-2:   #2B2B2B;
-  --pz-ink-3:   #555555;
-  --pz-line:    #C6CCD3;
-  --pz-line-2:  #98A1AC;
-  --pz-header-bg: #F1F3F5;
-  --pz-night:   #2F3B4A;
-  --pz-night-2: #2F3B4A;
+  --pz-canvas:   #FFFFFF;
+  --pz-paper:    #FFFFFF;
+  --pz-paper-2:  #F7F7F7;
+  --pz-paper-3:  #EDEDED;
+  --pz-ink:      #333333;
+  --pz-ink-2:    #4A4A4A;
+  --pz-ink-3:    #666666;
+  --pz-line:     #DDDDDD;
+  --pz-line-2:   #BBBBBB;
+  --pz-blue-deep: #0F69B4;
+  --pz-header-bg: #FFFFFF;
+  --pz-fila-par:   #F5F8FB;
+  --pz-fila-hover: #E4EFF9;
+  --pz-fila-sel:   #D5E6F5;
+  --pz-relleno-azul:   #0F69B4;
+  --pz-relleno-morado: #0F69B4;
+  --pz-relleno-tinta:  #0F69B4;
+  --pz-relleno-alta:   #C8283B;
+  --pz-relleno-alta-2: #A81F30;
+}
+:root[data-modo="legacy"][data-tema="oscuro"] {
+  --pz-legacy-banda:  #1B2460;
+  --pz-legacy-nav:    #0C5592;
+  --pz-legacy-activo: #083C69;
+  --pz-night:      #1B2460;
+  --pz-night-2:    #1B2460;
 }
 
-/* Sin animaciones: ni transiciones ni desplazamientos al pasar el cursor. */
+/* Sin animaciones. */
 [data-modo="legacy"] *,
 [data-modo="legacy"] *::before,
 [data-modo="legacy"] *::after {
@@ -1488,93 +1534,235 @@ html[data-letra="muy_grande"] .pz-tabla-cola__dx {
 [data-modo="legacy"] .pz-fila-cola:hover,
 [data-modo="legacy"] .pz-fila-cola:focus-within { transform: none; }
 
-/* Sin efectos de superficie. */
-[data-modo="legacy"] .pz-blueprint { background-image: none; padding: .5rem !important; }
+/* ---------- El menu lateral pasa a dos bandas superiores ----------
+   Arriba marca, usuario y accesos; debajo la navegacion azul. */
+[data-modo="legacy"] .pz-shell { flex-direction: column; }
+[data-modo="legacy"] .pz-sidebar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "marca usuario cuenta"
+    "nav   nav     acciones";
+  flex: none;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  background: var(--pz-legacy-nav);
+  box-shadow: none;
+}
 [data-modo="legacy"] .pz-sidebar::before,
-[data-modo="legacy"] .pz-login::before,
-[data-modo="legacy"] .pz-eyebrow::before { display: none; }
-[data-modo="legacy"] .pz-sidebar { box-shadow: none; width: 15.5rem; }
-[data-modo="legacy"] .pz-sidebar--colapsado { width: 3.5rem; }
+[data-modo="legacy"] .pz-sidebar__hueco,
+[data-modo="legacy"] .pz-toggle,
+[data-modo="legacy"] .pz-nav-group,
+[data-modo="legacy"] .pz-navlink svg,
+[data-modo="legacy"] .pz-sidebar__usuario > div:first-child,
+[data-modo="legacy"] .pz-login::before { display: none; }
+[data-modo="legacy"] .pz-sidebar__marca,
+[data-modo="legacy"] .pz-sidebar__usuario,
+[data-modo="legacy"] .pz-sidebar__cuenta {
+  background: var(--pz-legacy-banda);
+  border: 0 !important;
+  /* !important: los .px-3 y .py-4 de Bootstrap lo traen y, por estar en una capa
+     inferior, ganan a cualquier regla sin capa que no lo declare. */
+  padding: .5rem 1.25rem !important;
+}
+[data-modo="legacy"] .pz-sidebar__marca   { grid-area: marca; }
+[data-modo="legacy"] .pz-sidebar__usuario { grid-area: usuario; justify-content: flex-end; text-align: right; padding-inline: .5rem !important; }
+[data-modo="legacy"] .pz-sidebar__cuenta  { grid-area: cuenta; flex-direction: row; align-items: center; padding-left: .5rem !important; }
+[data-modo="legacy"] .pz-sidebar__nav     { grid-area: nav; padding: 0 .5rem !important; align-self: stretch; }
+[data-modo="legacy"] .pz-sidebar__acciones { grid-area: acciones; display: flex; align-items: center; padding: .2rem 1.25rem .2rem .5rem !important; }
+[data-modo="legacy"] .pz-sidebar__acciones > div { display: flex; flex-direction: row; gap: .4rem; }
+[data-modo="legacy"] .pz-sidebar__nav ul { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0; }
+[data-modo="legacy"] .pz-sidebar__nav li + li { border-left: 1px solid rgba(255,255,255,.55); }
+[data-modo="legacy"] .pz-sidebar__usuario p {
+  color: rgba(255,255,255,.88) !important;
+  text-transform: none;
+  letter-spacing: 0 !important;
+  line-height: 1.25;
+}
+[data-modo="legacy"] .pz-sidebar__rapidos { display: flex; }
+/* Barra apilada: cuando el ancho no da, o la letra grande se lo come, el nombre
+   se va (sigue en Mi cuenta) y la navegacion toma toda la fila. */
+@media (max-width: 991.98px) {
+  html[data-modo="legacy"] {
+    & .pz-sidebar {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas: "marca cuenta" "nav nav" "acciones acciones";
+    }
+    & .pz-sidebar__usuario { display: none; }
+    & .pz-sidebar__cuenta { justify-content: flex-end; padding-right: .75rem !important; }
+  }
+}
+@media (max-width: 1239.98px) {
+  html[data-modo="legacy"][data-letra="grande"] {
+    & .pz-sidebar {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas: "marca cuenta" "nav nav" "acciones acciones";
+    }
+    & .pz-sidebar__usuario { display: none; }
+    & .pz-sidebar__cuenta { justify-content: flex-end; padding-right: .75rem !important; }
+  }
+}
+@media (max-width: 1487.98px) {
+  html[data-modo="legacy"][data-letra="muy_grande"] {
+    & .pz-sidebar {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas: "marca cuenta" "nav nav" "acciones acciones";
+    }
+    & .pz-sidebar__usuario { display: none; }
+    & .pz-sidebar__cuenta { justify-content: flex-end; padding-right: .75rem !important; }
+  }
+}
+
+[data-modo="legacy"] .pz-navlink {
+  color: #fff;
+  font-family: var(--pz-body);
+  font-size: var(--fs-base);
+  padding: .55rem 1.1rem;
+  border: 0;
+  border-radius: 0;
+  gap: 0;
+}
+[data-modo="legacy"] .pz-navlink:hover { background: var(--pz-legacy-activo); }
+[data-modo="legacy"] .pz-navlink.is-active {
+  background: var(--pz-legacy-activo);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: none;
+}
+[data-modo="legacy"] .pz-sidebar__marca > *,
+[data-modo="legacy"] .pz-sidebar__acciones > * { margin: 0; }
+[data-modo="legacy"] .pz-btn--nav {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.6);
+  padding: .2rem .6rem;
+  width: auto;
+  white-space: nowrap;
+}
+[data-modo="legacy"] .pz-btn--nav:hover:not(:disabled) {
+  background: #fff;
+  color: var(--pz-legacy-banda);
+  border-color: #fff;
+}
+[data-modo="legacy"] .pz-aviso-flotante {
+  left: auto;
+  right: 1rem;
+  top: 1rem;
+  bottom: auto;
+  background: var(--pz-legacy-banda);
+}
+
+/* ---------- Encabezado de pagina ---------- */
 [data-modo="legacy"] .pz-header {
   min-height: 0;
-  padding-block: .3rem;
+  padding-block: .6rem;
+  background: var(--pz-paper);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border-bottom-width: 1px;
+  border-bottom: 1px solid var(--pz-line);
 }
+[data-modo="legacy"] .pz-header h1 { color: var(--pz-blue-deep); margin-top: 0; }
 [data-modo="legacy"] .pz-modal-fondo { backdrop-filter: none; -webkit-backdrop-filter: none; }
 
-/* Etiquetas como texto corriente, no como rotulos tecnicos. */
-[data-modo="legacy"] .pz-eyebrow,
-[data-modo="legacy"] .pz-label,
-[data-modo="legacy"] .pz-btn,
-[data-modo="legacy"] .pz-navlink,
-[data-modo="legacy"] .pz-nav-group,
-[data-modo="legacy"] .pz-chip,
-[data-modo="legacy"] .pz-seg__op,
-[data-modo="legacy"] .pz-rail__t,
-[data-modo="legacy"] .pz-grupo__t,
-[data-modo="legacy"] .pz-table > thead th,
-[data-modo="legacy"] .pz-tabla-cola > thead th,
-[data-modo="legacy"] .pz-form .form-label {
+/* ---------- Texto corriente, no rotulos tecnicos ---------- */
+[data-modo="legacy"] :is(
+  .pz-eyebrow, .pz-label, .pz-btn, .pz-chip, .pz-seg__op, .pz-rail__t,
+  .pz-grupo__t, .pz-vista__op, .pz-navlink, .pz-table > thead th, .pz-tabla-cola > thead th,
+  .pz-fila-cola__meta, .pz-form .form-label
+) {
   text-transform: none;
   letter-spacing: 0;
+  font-weight: 400;
 }
+[data-modo="legacy"] .pz-btn,
+[data-modo="legacy"] .pz-table > thead th,
+[data-modo="legacy"] .pz-tabla-cola > thead th { font-weight: 600; }
+[data-modo="legacy"] .pz-eyebrow { color: var(--pz-ink-3); }
+[data-modo="legacy"] .pz-eyebrow::before { display: none; }
 [data-modo="legacy"] h1,
-[data-modo="legacy"] .pz-panel__title { font-weight: 700; letter-spacing: 0; }
+[data-modo="legacy"] h2,
+[data-modo="legacy"] h3 { letter-spacing: 0; font-variation-settings: normal; font-weight: 600; }
 
-/* Paneles como secciones de formulario. */
-[data-modo="legacy"] .row { --bs-gutter-x: .5rem; --bs-gutter-y: .5rem; }
+/* ---------- Secciones, no tarjetas ---------- */
+[data-modo="legacy"] .pz-blueprint { background-image: none; padding: 1rem 1.25rem !important; }
+[data-modo="legacy"] :is(.pz-panel, .pz-grupo-campos, .pz-barra) {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+}
 [data-modo="legacy"] .pz-panel__head {
-  padding: .35rem .6rem;
-  background: var(--pz-paper-3);
-  border-bottom-width: 1px;
+  padding: 0 0 .3rem;
+  background: none;
+  border-bottom: 2px solid var(--pz-legacy-nav);
 }
-[data-modo="legacy"] .pz-panel__title { margin-top: 0; }
-[data-modo="legacy"] .pz-panel__sub { margin-top: 0; }
-[data-modo="legacy"] .pz-panel__body,
-[data-modo="legacy"] .pz-decision__seccion { padding: .6rem; }
-[data-modo="legacy"] .pz-filtros > .pz-panel__body { padding: .4rem .6rem; }
-[data-modo="legacy"] .pz-barra { padding: .4rem .6rem; }
+[data-modo="legacy"] .pz-panel__head .pz-eyebrow { display: none; }
+[data-modo="legacy"] .pz-panel__title { color: var(--pz-blue-deep); font-weight: 600; margin-top: 0; }
+[data-modo="legacy"] .pz-panel__sub { margin-top: .1rem; }
+[data-modo="legacy"] .pz-panel__body { padding: .75rem 0; }
+[data-modo="legacy"] .pz-filtros > .pz-panel__body { padding: .5rem 0; }
+[data-modo="legacy"] .pz-decision__seccion { padding: .75rem 0; border-top-width: 1px; }
+[data-modo="legacy"] .pz-barra { padding: .5rem 0; }
+[data-modo="legacy"] .pz-grupo-campos__head { padding: .4rem 0; border-bottom-width: 1px; }
+[data-modo="legacy"] .pz-campo { padding-inline: 0; }
 
-/* Riel de cifras como una fila de tabla. */
-[data-modo="legacy"] .pz-rail {
-  gap: 0;
-  border: 1px solid var(--pz-line);
-  background: var(--pz-paper);
-}
+/* Cifras del resumen como una fila de datos. */
+[data-modo="legacy"] .pz-rail { gap: 0; border-block: 1px solid var(--pz-line); }
 [data-modo="legacy"] .pz-rail__item {
+  background: transparent;
   border: 0;
   border-right: 1px solid var(--pz-line);
-  padding: .25rem .6rem;
+  padding: .4rem .75rem;
 }
 [data-modo="legacy"] .pz-rail__item:last-child { border-right: 0; }
 [data-modo="legacy"] .pz-rail__icono { display: none; }
-[data-modo="legacy"] .pz-rail__item .pz-num--lg { font-size: var(--fs-md); }
+[data-modo="legacy"] .pz-rail__item .pz-num--lg { font-size: var(--fs-lg); font-weight: 600; letter-spacing: 0; }
+[data-modo="legacy"] .pz-rail__t { color: var(--pz-ink-2); }
 
-/* Controles clasicos. */
-[data-modo="legacy"] .pz-btn { padding: .25rem .6rem; }
-[data-modo="legacy"] .pz-btn--block { padding-block: .35rem; }
-[data-modo="legacy"] .pz-btn,
+/* ---------- Tablas ----------
+   Siempre planilla: el selector de vista no aplica (ver useVistaLista). */
+[data-modo="legacy"] .pz-vista { display: none; }
+[data-modo="legacy"] .pz-planilla { border-top: 0; }
+[data-modo="legacy"] :is(.pz-table, .pz-tabla-cola) > thead th {
+  background: var(--pz-legacy-nav);
+  color: #fff;
+  border-bottom: 0;
+  border-right-color: rgba(255,255,255,.3);
+}
+[data-modo="legacy"] .pz-orden:hover,
+[data-modo="legacy"] .pz-orden.is-on { color: #fff; text-decoration: underline; }
+[data-modo="legacy"] .pz-tabla-cola > tbody tr > td.pz-tabla-cola__n { background: transparent; }
+[data-modo="legacy"] .pz-tabla-cola__dx { max-width: none; font-weight: 400; }
+[data-modo="legacy"] .pz-table > tbody td { padding: .4rem .6rem; }
+[data-modo="legacy"] .pz-table > thead th { padding: .45rem .6rem; }
+
+/* ---------- Controles ---------- */
+[data-modo="legacy"] .pz-btn { padding: .35rem .8rem; border-width: 1px; }
 [data-modo="legacy"] .pz-seg,
-[data-modo="legacy"] .pz-vista { border-width: 1px; }
-[data-modo="legacy"] .pz-seg__op { padding: .3rem .25rem; border-left-width: 1px; }
+[data-modo="legacy"] .pz-chip { border-width: 1px; }
+[data-modo="legacy"] .pz-seg__op { padding: .35rem .3rem; border-left-width: 1px; }
+[data-modo="legacy"] .pz-chip { border-radius: 0; padding: 0 .35rem; }
 [data-modo="legacy"] .pz-form .form-control,
 [data-modo="legacy"] .pz-form .form-select {
   border-width: 1px;
-  padding: .2rem .4rem;
+  padding: .3rem .5rem;
   font-size: var(--fs-sm);
 }
-[data-modo="legacy"] .pz-form .form-select { padding-right: 1.8rem; }
+[data-modo="legacy"] .pz-form .form-select { padding-right: 2rem; }
 [data-modo="legacy"] .pz-form .form-control:focus,
 [data-modo="legacy"] .pz-form .form-select:focus { box-shadow: none; }
-[data-modo="legacy"] .pz-chip { padding: 0 .3rem; border-radius: 0; }
-[data-modo="legacy"] .pz-navlink { padding: .3rem .5rem; box-shadow: none; }
-[data-modo="legacy"] .pz-navlink.is-active { box-shadow: none; }
-[data-modo="legacy"] .pz-vigente { font-size: 1.5rem; }
+[data-modo="legacy"] .pz-vigente { font-size: 1.6rem; font-weight: 700; letter-spacing: 0; }
 [data-modo="legacy"] .pz-meter,
 [data-modo="legacy"] .pz-meter__fill { border-radius: 0; }
 
-/* Siempre tabla: el selector de vista no aplica (ver useVistaLista). */
-[data-modo="legacy"] .pz-vista { display: none; }
-[data-modo="legacy"] .pz-tabla-cola > thead th { background: var(--pz-paper-3); }
+/* ---------- Pantallas angostas ----------
+   Las bandas se apilan y los accesos quedan como iconos: el texto sigue
+   en el DOM para el lector de pantalla. */
+@media (max-width: 991.98px) {
+  [data-modo="legacy"] .pz-sidebar__marca { padding-inline: .75rem !important; }
+  [data-modo="legacy"] .pz-sidebar__cuenta .pz-btn--nav { font-size: 0; gap: 0; padding-inline: .45rem; }
+  [data-modo="legacy"] .pz-sidebar__acciones { padding-inline: .5rem !important; }
+  [data-modo="legacy"] .pz-navlink { padding: .4rem .7rem; }
+  [data-modo="legacy"] .pz-blueprint { padding: .6rem !important; }
+}

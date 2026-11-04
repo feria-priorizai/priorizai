@@ -118,6 +118,21 @@ describe("PreferenciasInterfaz", () => {
 });
 
 describe("usePreferencias", () => {
+  it("el tema activo refleja al sistema operativo mientras no se elija", async () => {
+    const Tema = () => <output>{usePreferencias().temaActivo}</output>;
+    render(
+      <PreferenciasProvider>
+        <Tema />
+        <PreferenciasInterfaz />
+      </PreferenciasProvider>,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("claro");
+
+    await userEvent.setup().click(opcion("Sistema"));
+
+    expect(screen.getByRole("status")).toHaveTextContent("oscuro");
+  });
+
   it("exige estar dentro del proveedor", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const Consumidor = () => {

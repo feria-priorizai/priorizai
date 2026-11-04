@@ -1,14 +1,12 @@
 "use client";
 
 /**
- * Encabezado superior: a la izquierda la ruta actual, a la derecha el cambio de
- * modo y el establecimiento con su logo. El cambio de modo vive aquí para que
- * se pueda alternar sin salir de la vista (HDU-17).
+ * Encabezado superior: a la izquierda la ruta actual, a la derecha el
+ * establecimiento con su logo.
  */
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { usePreferencias } from "@/context/PreferenciasContext";
 import { ESTABLECIMIENTO } from "@/data/establecimiento";
 
 const titulosPorRuta: Record<string, { seccion: string; titulo: string }> = {
@@ -23,8 +21,6 @@ const LOGO_ESTABLECIMIENTO = "/img/hospital-san-juan-de-dios.png";
 
 export default function Header() {
   const pathname = usePathname();
-  const { preferencias, cambiarPreferencias } = usePreferencias();
-  const legacy = preferencias.modo_interfaz === "legacy";
   const [hayLogo, setHayLogo] = useState(false);
 
   useEffect(() => {
@@ -57,20 +53,6 @@ export default function Header() {
       </div>
 
       <div className="flex flex-none items-center gap-3">
-        <span className="hidden sm:block">
-          <button
-            type="button"
-            data-testid="alternar-modo"
-            className="pz-btn pz-btn--claro pz-btn--mini"
-            onClick={() =>
-              cambiarPreferencias({
-                modo_interfaz: legacy ? "estandar" : "legacy",
-              })
-            }
-          >
-            {legacy ? "Interfaz estándar" : "Modo legacy"}
-          </button>
-        </span>
         {hayLogo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

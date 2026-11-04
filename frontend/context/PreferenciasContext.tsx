@@ -11,20 +11,24 @@ import {
   useContext,
   useEffect,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { useSesion } from "@/context/SesionContext";
 import { guardarPreferencias } from "@/services/auth";
-import type { Preferencias } from "@/types/usuario";
+import type { Preferencias, Tema } from "@/types/usuario";
 import {
   aplicarPreferencias,
   escucharTemaDelSistema,
   guardarPreferenciasLocales,
   PREFERENCIAS_INICIALES,
+  temaDelSistema,
 } from "@/utils/preferencias";
 
 interface PreferenciasState {
   preferencias: Preferencias;
+  /** El tema que se está viendo, también cuando se sigue al sistema operativo. */
+  temaActivo: Tema;
   cambiarPreferencias: (cambios: Partial<Preferencias>) => void;
   error: string | null;
 }
@@ -43,13 +47,17 @@ export function PreferenciasProvider({ children }: { children: ReactNode }) {
       : PREFERENCIAS_INICIALES,
   );
   const [error, setError] = useState<string | null>(null);
+  const temaSistema = useSyncExternalStore(
+    escucharTemaDelSistema,
+    temaDelSistema,
+    () => "claro" as const,
+  );
+  const temaActivo = preferencias.tema ?? temaSistema;
 
   useEffect(() => {
     aplicarPreferencias(preferencias);
     guardarPreferenciasLocales(preferencias);
-    if (preferencias.tema !== null) return;
-    return escucharTemaDelSistema(() => aplicarPreferencias(preferencias));
-  }, [preferencias]);
+  }, [preferencias, temaSistema]);
 
   const cambiarPreferencias = useCallback((cambios: Partial<Preferencias>) => {
     setPreferencias((actuales) => ({ ...actuales, ...cambios }));
@@ -63,7 +71,7 @@ export function PreferenciasProvider({ children }: { children: ReactNode }) {
 
   return (
     <PreferenciasContext.Provider
-      value={{ preferencias, cambiarPreferencias, error }}
+      value={{ preferencias, temaActivo, cambiarPreferencias, error }}
     >
       {children}
     </PreferenciasContext.Provider>

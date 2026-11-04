@@ -54,9 +54,14 @@ export default function Sidebar() {
   const { camposObligatorios } = useConfiguracionImport();
   // En pantallas angostas el menú abierto se comía casi todo el ancho: parte
   // contraído. Se monta solo con sesión confirmada, así que window existe.
-  const { tamano_letra: letra } = usePreferencias().preferencias;
+  const { preferencias, temaActivo, cambiarPreferencias } = usePreferencias();
+  const { tamano_letra: letra } = preferencias;
+  const legacy = preferencias.modo_interfaz === "legacy";
+  const oscuro = temaActivo === "oscuro";
   const [letraMedida, setLetraMedida] = useState(letra);
-  const [colapsado, setColapsado] = useState(() => menuNoCabe(letra));
+  const [contraido, setColapsado] = useState(() => menuNoCabe(letra));
+  // En legacy el menú es una barra superior: no hay nada que contraer.
+  const colapsado = contraido && !legacy;
 
   if (letra !== letraMedida) {
     setLetraMedida(letra);
@@ -184,7 +189,7 @@ export default function Sidebar() {
       }`}
     >
       <div
-        className={`flex items-center gap-2 px-4 py-4 ${
+        className={`pz-sidebar__marca flex items-center gap-2 px-4 py-4 ${
           colapsado ? "justify-center" : "justify-between"
         }`}
         style={{ borderBottom: "1px solid var(--pz-night-line)" }}
@@ -225,7 +230,7 @@ export default function Sidebar() {
         </button>
       </div>
 
-      <nav className="px-3 pt-4">
+      <nav className="pz-sidebar__nav px-3 pt-4">
         {!colapsado && <span className="pz-nav-group">Navegación</span>}
         <ul className="flex flex-col gap-1.5">
           {items.map((item) => (
@@ -246,7 +251,7 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      <div className="px-3 pt-6">
+      <div className="pz-sidebar__acciones px-3 pt-6">
         {!colapsado && <span className="pz-nav-group">Acciones</span>}
         <input
           ref={inputArchivoRef}
@@ -292,11 +297,12 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <div className="flex-1" />
+      <div className="pz-sidebar__hueco flex-1" />
 
-      {/* Con el menú contraído el aviso flota junto a él en vez de desaparecer. */}
+      {/* Con el menú contraído, o como barra en legacy, el aviso flota en vez de
+          desaparecer. */}
       {notificacion && (
-        <div className={colapsado ? "pz-aviso-flotante" : "px-3 pb-3"}>
+        <div className={colapsado || legacy ? "pz-aviso-flotante" : "px-3 pb-3"}>
           <div
             role="status"
             aria-live="polite"
@@ -347,7 +353,7 @@ export default function Sidebar() {
       )}
 
       <div
-        className={`flex items-center gap-3 px-4 py-4 ${
+        className={`pz-sidebar__usuario flex items-center gap-3 px-4 py-4 ${
           colapsado ? "justify-center" : ""
         }`}
         style={{ borderTop: "1px solid var(--pz-night-line)" }}
@@ -388,7 +394,47 @@ export default function Sidebar() {
         )}
       </div>
 
-      <div className="flex flex-col gap-1.5 px-3 pb-4">
+      <div className="pz-sidebar__cuenta flex flex-col gap-1.5 px-3 pb-4">
+        <div
+          className={`pz-sidebar__rapidos grid gap-1.5 ${
+            colapsado ? "grid-cols-1" : "grid-cols-2"
+          }`}
+        >
+          <button
+            type="button"
+            data-testid="alternar-tema"
+            onClick={() =>
+              cambiarPreferencias({ tema: oscuro ? "claro" : "oscuro" })
+            }
+            title={oscuro ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            aria-label={oscuro ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            className={`pz-btn pz-btn--nav pz-btn--block ${
+              colapsado ? "pz-btn--icono" : ""
+            }`}
+          >
+            {oscuro ? <IconoSol /> : <IconoLuna />}
+            {!colapsado && (oscuro ? "Claro" : "Oscuro")}
+          </button>
+          <button
+            type="button"
+            data-testid="alternar-modo"
+            onClick={() =>
+              cambiarPreferencias({
+                modo_interfaz: legacy ? "estandar" : "legacy",
+              })
+            }
+            title={legacy ? "Volver a la interfaz estándar" : "Cambiar a modo legacy"}
+            aria-label={
+              legacy ? "Volver a la interfaz estándar" : "Cambiar a modo legacy"
+            }
+            className={`pz-btn pz-btn--nav pz-btn--block ${
+              colapsado ? "pz-btn--icono" : ""
+            }`}
+          >
+            <IconoModo />
+            {!colapsado && (legacy ? "Estándar" : "Legacy")}
+          </button>
+        </div>
         <Link
           href="/cuenta"
           title={colapsado ? "Mi cuenta" : undefined}
@@ -458,6 +504,32 @@ function IconoNavegacion({ tipo }: { tipo: ItemNavegacion["icono"] }) {
       <path d="M9 4H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2" />
       <path d="M9 12h6" />
       <path d="M9 16h4" />
+    </IconoBase>
+  );
+}
+
+function IconoLuna() {
+  return (
+    <IconoBase>
+      <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />
+    </IconoBase>
+  );
+}
+
+function IconoSol() {
+  return (
+    <IconoBase>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" />
+    </IconoBase>
+  );
+}
+
+function IconoModo() {
+  return (
+    <IconoBase>
+      <rect x="3" y="4" width="18" height="16" rx="1" />
+      <path d="M3 9h18M9 9v11" />
     </IconoBase>
   );
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Archivo, IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
+import { Archivo, IBM_Plex_Mono, Instrument_Sans, Open_Sans } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
 import { SCRIPT_PREFERENCIAS } from "@/utils/preferencias";
@@ -21,6 +21,13 @@ const ibmPlexMono = IBM_Plex_Mono({
   weight: ["400", "500", "600"],
 });
 
+// Solo la usa el modo legacy: no se precarga para el resto.
+const openSans = Open_Sans({
+  variable: "--font-legacy",
+  subsets: ["latin"],
+  preload: false,
+});
+
 export const metadata: Metadata = {
   title: "PriorizAI - Sistema de Priorización de Interconsultas",
   description:
@@ -37,7 +44,7 @@ export default function RootLayout({
     // SCRIPT_PREFERENCIAS escribe atributos en <html> antes de hidratar.
     <html
       lang="es"
-      className={`${archivo.variable} ${instrumentSans.variable} ${ibmPlexMono.variable} h-full antialiased`}
+      className={`${archivo.variable} ${instrumentSans.variable} ${ibmPlexMono.variable} ${openSans.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

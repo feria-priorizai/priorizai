@@ -54,7 +54,7 @@ function AppShellInner({ children }: AppShellProps) {
         >
           Saltar al contenido
         </a>
-        <div className="flex h-screen overflow-hidden">
+        <div className="pz-shell flex h-screen overflow-hidden">
           <Sidebar />
 
           <div className="flex flex-1 flex-col overflow-hidden">

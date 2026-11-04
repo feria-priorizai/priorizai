@@ -27,6 +27,7 @@ export default defineConfig({
       include: [
         "utils/**/*.ts",
         "services/**/*.ts",
+        "hooks/useTrampaFoco.ts",
         "components/ui/**/*.tsx",
         "components/auth/FormularioCambioPassword.tsx",
         "components/interconsultas/FormularioModificarPrioridad.tsx",

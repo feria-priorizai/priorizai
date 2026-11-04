@@ -97,3 +97,64 @@ describe("FormularioModificarPrioridad (HDU-2)", () => {
     expect(screen.getByTestId("solicitar-cambio-prioridad")).toBeDisabled();
   });
 });
+
+describe("FormularioModificarPrioridad con teclado (HDU-20)", () => {
+  it("cambia la prioridad y guarda sin usar el mouse", async () => {
+    const { usuario, onModificar } = renderizar();
+
+    await usuario.tab();
+    expect(screen.getByTestId("nueva-prioridad-alta")).toHaveFocus();
+    await usuario.keyboard(" ");
+    expect(screen.getByTestId("nueva-prioridad-alta")).toHaveAttribute("aria-pressed", "true");
+
+    await usuario.tab();
+    await usuario.tab();
+    await usuario.tab();
+    expect(screen.getByTestId("motivo-modificacion")).toHaveFocus();
+    await usuario.keyboard("Dolor torácico en reposo");
+    await usuario.tab();
+    expect(screen.getByTestId("solicitar-cambio-prioridad")).toHaveFocus();
+    await usuario.keyboard("{Enter}");
+
+    // El botón que tenía el foco desaparece: el foco pasa a la confirmación.
+    expect(screen.getByTestId("confirmar-modificacion")).toHaveFocus();
+    await usuario.keyboard("{Enter}");
+
+    expect(onModificar).toHaveBeenCalledWith("alta", "Dolor torácico en reposo");
+    expect(await screen.findByRole("status")).toHaveFocus();
+  });
+
+  it("envía desde el motivo con Ctrl+Enter y Enter solo agrega una línea", async () => {
+    const { usuario } = renderizar();
+
+    await usuario.click(screen.getByTestId("nueva-prioridad-baja"));
+    await usuario.click(screen.getByTestId("motivo-modificacion"));
+    await usuario.keyboard("Paciente estable{Enter}y controlado");
+    expect(screen.queryByTestId("confirmar-modificacion")).not.toBeInTheDocument();
+    expect(screen.getByTestId("motivo-modificacion")).toHaveValue("Paciente estable\ny controlado");
+
+    await usuario.keyboard("{Control>}{Enter}{/Control}");
+    expect(screen.getByTestId("confirmar-modificacion")).toHaveFocus();
+  });
+
+  it("devuelve el foco al motivo cuando falta o es muy corto", async () => {
+    const { usuario } = renderizar();
+
+    await usuario.click(screen.getByTestId("nueva-prioridad-alta"));
+    await usuario.click(screen.getByTestId("solicitar-cambio-prioridad"));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Debe ingresar un motivo");
+    expect(screen.getByTestId("motivo-modificacion")).toHaveFocus();
+  });
+
+  it("al cancelar la confirmación el foco vuelve al botón de cambio", async () => {
+    const { usuario } = renderizar();
+
+    await usuario.click(screen.getByTestId("nueva-prioridad-baja"));
+    await usuario.type(screen.getByTestId("motivo-modificacion"), "Paciente estable y controlado");
+    await usuario.click(screen.getByTestId("solicitar-cambio-prioridad"));
+    await usuario.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(screen.getByTestId("solicitar-cambio-prioridad")).toHaveFocus();
+  });
+});

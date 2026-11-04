@@ -430,7 +430,7 @@ docker compose -f docker-compose.qa.yml --profile pruebas down -v
 
 - **E2E** (`qa/e2e`): Playwright en Chromium headless sobre los flujos críticos:
   login y bloqueo, primer ingreso, carga de archivos, alertas clínicas, revisión
-  de prioridad con motivo, exportación y perfiles. Los selectores usan
+  de prioridad con motivo, exportación, perfiles y navegación por teclado. Los selectores usan
   `data-testid`. El reporte HTML queda en `qa/e2e/reportes/html` y, si una prueba
   falla, también la captura, el video y la traza.
 - **Carga** (`qa/carga`): k6 con usuarios concurrentes sobre el listado y el

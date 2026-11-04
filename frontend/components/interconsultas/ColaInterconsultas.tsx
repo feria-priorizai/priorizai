@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useState, type MouseEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
 import type { Interconsulta } from "@/types";
 import BadgeEstado from "@/components/ui/BadgeEstado";
 import BadgePrioridad from "@/components/ui/BadgePrioridad";
@@ -20,6 +27,9 @@ import {
   type OrdenTabla,
   type VistaLista,
 } from "@/utils/ordenLista";
+import { esTeclaLista, indiceDestino } from "@/utils/navegacionTeclado";
+
+const SELECTOR_FILA = '[data-testid="fila-interconsulta"]';
 
 type FormatoDescarga = "json" | "csv" | "xlsx";
 
@@ -142,6 +152,35 @@ export default function ColaInterconsultas({
     router.push(`/interconsultas/${id}`);
   };
 
+  // HDU-20: la lista es una sola parada del tabulador. Solo el folio de la
+  // fila activa entra en el orden de Tab; las flechas, Inicio y Fin mueven el
+  // foco entre filas y Enter abre el detalle, porque el folio es un enlace.
+  // Sin esto, llegar a lo que viene después de la lista costaba un Tab por
+  // interconsulta.
+  const listaRef = useRef<HTMLDivElement | null>(null);
+  const [filaEnfocada, setFilaEnfocada] = useState<string | null>(null);
+  const filaActiva =
+    filaEnfocada && visibles.some((ic) => ic.id === filaEnfocada)
+      ? filaEnfocada
+      : (visibles[0]?.id ?? null);
+
+  const moverConTeclado = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (!esTeclaLista(e.key) || e.altKey || e.ctrlKey || e.metaKey || !listaRef.current) {
+      return;
+    }
+    const origen = e.target as HTMLElement;
+    const fila = origen.closest<HTMLElement>(SELECTOR_FILA);
+    if (!fila) return;
+    const filas = Array.from(listaRef.current.querySelectorAll<HTMLElement>(SELECTOR_FILA));
+    const destino = filas[indiceDestino(e.key, filas.indexOf(fila), filas.length)];
+    e.preventDefault();
+    // En modo descarga, desde una casilla se pasa a la casilla de la otra fila
+    // para ir marcando con la barra espaciadora.
+    destino
+      ?.querySelector<HTMLElement>(origen.matches("input") ? "input" : "[data-folio]")
+      ?.focus();
+  };
+
   return (
     <div className="pz-panel">
       <div className="pz-panel__head flex flex-wrap items-start justify-between gap-3">
@@ -223,89 +262,98 @@ export default function ColaInterconsultas({
             {mensajeVacio ?? "No se encontraron interconsultas"}
           </span>
         </div>
-      ) : vista === "tabla" ? (
-        <TablaCola
-          filas={filasTabla}
-          orden={ordenTabla}
-          onOrdenar={alternarOrden}
-          modoDescargaMultiple={modoDescargaMultiple}
-          seleccionadas={seleccionadas}
-          onAlternar={alternarSeleccion}
-          onClickFila={alClickearFila}
-        />
       ) : (
-        porGrupo.map((grupo) => (
-          <section
-            key={grupo.clave}
-            aria-labelledby={`${idBase}-${grupo.clave}`}
-            className={`pz-zona pz-zona--${zonaDe(grupo.clave)}`}
-          >
-            <div className="pz-grupo">
-              <h3 id={`${idBase}-${grupo.clave}`} className="pz-grupo__t">
-                {grupo.titulo}
-              </h3>
-              <span className="pz-grupo__n">{grupo.items.length}</span>
-              <span className="pz-grupo__regla" aria-hidden="true" />
-            </div>
-
-            {grupo.items.map((ic) => (
-              <div
-                key={ic.id}
-                className="pz-fila-cola"
-                data-testid="fila-interconsulta"
-                data-id={ic.id}
-                onClick={(e) => alClickearFila(e, ic.id)}
+        <div ref={listaRef} onKeyDown={moverConTeclado}>
+          {vista === "tabla" ? (
+            <TablaCola
+              filas={filasTabla}
+              orden={ordenTabla}
+              onOrdenar={alternarOrden}
+              modoDescargaMultiple={modoDescargaMultiple}
+              seleccionadas={seleccionadas}
+              onAlternar={alternarSeleccion}
+              onClickFila={alClickearFila}
+              filaActiva={filaActiva}
+              onEnfocarFila={setFilaEnfocada}
+            />
+          ) : (
+            porGrupo.map((grupo) => (
+              <section
+                key={grupo.clave}
+                aria-labelledby={`${idBase}-${grupo.clave}`}
+                className={`pz-zona pz-zona--${zonaDe(grupo.clave)}`}
               >
-                {modoDescargaMultiple && (
-                  <input
-                    type="checkbox"
-                    className="form-check-input mt-1 flex-none"
-                    checked={seleccionadas.has(ic.id)}
-                    onChange={() => alternarSeleccion(ic.id)}
-                    aria-label={`Seleccionar ${ic.id.slice(0, 8)}`}
-                  />
-                )}
+                <div className="pz-grupo">
+                  <h3 id={`${idBase}-${grupo.clave}`} className="pz-grupo__t">
+                    {grupo.titulo}
+                  </h3>
+                  <span className="pz-grupo__n">{grupo.items.length}</span>
+                  <span className="pz-grupo__regla" aria-hidden="true" />
+                </div>
 
-                <div className="pz-fila-cola__id">
-                  <Link
-                    href={`/interconsultas/${ic.id}`}
-                    className="pz-mono font-bold tracking-[.04em] text-[var(--pz-blue-deep)]"
-                    style={{ fontSize: "var(--fs-sm)" }}
+                {grupo.items.map((ic) => (
+                  <div
+                    key={ic.id}
+                    className="pz-fila-cola"
+                    data-testid="fila-interconsulta"
+                    data-id={ic.id}
+                    onClick={(e) => alClickearFila(e, ic.id)}
+                    onFocus={() => setFilaEnfocada(ic.id)}
                   >
-                    {ic.id.slice(0, 8).toUpperCase()}
-                  </Link>
-                  <span className="pz-label mt-1">{ic.pacienteEdad} años</span>
-                </div>
+                    {modoDescargaMultiple && (
+                      <input
+                        type="checkbox"
+                        className="form-check-input mt-1 flex-none"
+                        checked={seleccionadas.has(ic.id)}
+                        onChange={() => alternarSeleccion(ic.id)}
+                        aria-label={`Seleccionar ${ic.id.slice(0, 8)}`}
+                      />
+                    )}
 
-                <div className="pz-fila-cola__cuerpo">
-                  <span className="pz-fila-cola__dx">{ic.diagnostico}</span>
-                  <span className="pz-fila-cola__meta">
-                    {ic.centroOrigen} → {ic.especialidad} · {fechaDe(ic)}
-                    {ic.prioridadForzadaPorRegla
-                      ? " · regla clínica"
-                      : certezaDe(ic) && ` · certeza ${certezaDe(ic)}`}
-                  </span>
-                </div>
+                    <div className="pz-fila-cola__id">
+                      <Link
+                        href={`/interconsultas/${ic.id}`}
+                        data-folio
+                        tabIndex={ic.id === filaActiva ? 0 : -1}
+                        className="pz-mono font-bold tracking-[.04em] text-[var(--pz-blue-deep)]"
+                        style={{ fontSize: "var(--fs-sm)" }}
+                      >
+                        {ic.id.slice(0, 8).toUpperCase()}
+                      </Link>
+                      <span className="pz-label mt-1">{ic.pacienteEdad} años</span>
+                    </div>
 
-                <div className="pz-fila-cola__lado">
-                  <BadgeEstado estado={ic.estado} />
-                  {ic.banderaRoja && (
-                    <span
-                      className="pz-chip pz-chip--flag"
-                      data-testid="bandera-roja"
-                      title={
-                        ic.terminosBanderaRoja.join(", ") ||
-                        "Bandera roja detectada"
-                      }
-                    >
-                      ⚑ {ic.terminosBanderaRoja[0] ?? "bandera roja"}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </section>
-        ))
+                    <div className="pz-fila-cola__cuerpo">
+                      <span className="pz-fila-cola__dx">{ic.diagnostico}</span>
+                      <span className="pz-fila-cola__meta">
+                        {ic.centroOrigen} → {ic.especialidad} · {fechaDe(ic)}
+                        {ic.prioridadForzadaPorRegla
+                          ? " · regla clínica"
+                          : certezaDe(ic) && ` · certeza ${certezaDe(ic)}`}
+                      </span>
+                    </div>
+
+                    <div className="pz-fila-cola__lado">
+                      <BadgeEstado estado={ic.estado} />
+                      {ic.banderaRoja && (
+                        <span
+                          className="pz-chip pz-chip--flag"
+                          data-testid="bandera-roja"
+                          title={
+                            ic.terminosBanderaRoja.join(", ") ||
+                            "Bandera roja detectada"
+                          }
+                        >
+                          ⚑ {ic.terminosBanderaRoja[0] ?? "bandera roja"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            ))
+          )}
+        </div>
       )}
     </div>
   );
@@ -379,6 +427,8 @@ function TablaCola({
   seleccionadas,
   onAlternar,
   onClickFila,
+  filaActiva,
+  onEnfocarFila,
 }: {
   filas: Interconsulta[];
   orden: OrdenTabla | null;
@@ -387,6 +437,8 @@ function TablaCola({
   seleccionadas: Set<string>;
   onAlternar: (id: string) => void;
   onClickFila: (e: MouseEvent<HTMLElement>, id: string) => void;
+  filaActiva: string | null;
+  onEnfocarFila: (id: string) => void;
 }) {
   return (
     <div className="pz-planilla custom-scrollbar">
@@ -444,6 +496,7 @@ function TablaCola({
                 data-testid="fila-interconsulta"
                 data-id={ic.id}
                 onClick={(e) => onClickFila(e, ic.id)}
+                onFocus={() => onEnfocarFila(ic.id)}
               >
                 <td className="pz-tabla-cola__n">{i + 1}</td>
                 {modoDescargaMultiple && (
@@ -458,7 +511,12 @@ function TablaCola({
                   </td>
                 )}
                 <td>
-                  <Link href={`/interconsultas/${ic.id}`} className="pz-tabla-cola__folio">
+                  <Link
+                    href={`/interconsultas/${ic.id}`}
+                    data-folio
+                    tabIndex={ic.id === filaActiva ? 0 : -1}
+                    className="pz-tabla-cola__folio"
+                  >
                     {ic.id.slice(0, 8).toUpperCase()}
                   </Link>
                 </td>

@@ -41,14 +41,7 @@ export default function Header() {
 
   return (
     <header
-      className="sticky top-0 z-10 flex flex-none items-center justify-between gap-4 px-4 md:px-7"
-      style={{
-        minHeight: "86px",
-        background: "rgba(198,215,240,.9)",
-        backdropFilter: "saturate(160%) blur(14px)",
-        WebkitBackdropFilter: "saturate(160%) blur(14px)",
-        borderBottom: "2px solid var(--pz-line-2)",
-      }}
+      className="pz-header sticky top-0 z-10 flex flex-none items-center justify-between gap-4 px-4 md:px-7"
     >
       <div className="min-w-0">
         <span className="pz-eyebrow">{seccion}</span>

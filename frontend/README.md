@@ -59,7 +59,7 @@ npm run test:coverage  # pruebas con reporte de cobertura
 | `components/configuracion/` | Plazos de revisión por prioridad y matriz de campos de importación y exportación |
 | `components/dashboard/`, `components/ui/` | Indicadores del resumen y piezas compartidas |
 | `services/` | Llamadas a la API (`api.ts` centraliza el fetch y el manejo del 401), sesión y mapeo de las respuestas al modelo del front |
-| `hooks/`, `context/` | Estado del listado y de la vista preferida, de la sesión (`SesionContext`) y de la configuración de campos |
+| `hooks/`, `context/` | Estado del listado y de la vista preferida, de la sesión (`SesionContext`), de las preferencias de interfaz (`PreferenciasContext`) y de la configuración de campos |
 | `types/` | Tipos compartidos del dominio |
 | `utils/` | Formato de fechas, orden de la lista de espera, validación de plazos y orden por atraso, y exportación a los distintos formatos |
 | `data/` | Datos fijos de la instalación, como el nombre del establecimiento |
@@ -91,6 +91,21 @@ Bootstrap da por sentadas. Ya ocurrió con el grosor de los bordes de los campos
 de formulario y con las canaletas de la grilla; ambas se reponen explícitamente
 en `globals.css`. Al usar un componente de Bootstrap que no esté ya en uso,
 conviene verificar que su espaciado y sus bordes sobrevivan al preflight.
+
+## Preferencias de interfaz
+
+Cada cuenta guarda tema, tamaño de letra y modo de interfaz en el backend. Tema
+y modo tienen botones rápidos en el menú; las tres se eligen en **Mi cuenta**.
+Se aplican como atributos en `<html>` (`data-tema`, `data-letra`, `data-modo`) y
+`app/globals.css` resuelve el resto, así que cambiarlas no vuelve a montar las
+vistas y se conservan filtros y selección.
+
+- **Tema oscuro:** solo redefine tokens. Un color nuevo debe ser un token con
+  valor en los dos temas; los fondos con texto blanco usan `--pz-relleno-*`.
+- **Tamaño de letra:** escala la raíz, así que todo debe medirse en `rem`.
+- **Modo legacy:** es solo CSS sobre los mismos componentes. Toma la estructura
+  de un sitio institucional de salud, sin logos ni emblemas: el menú lateral
+  pasa a barra superior, las tarjetas a secciones y la lista siempre a tabla.
 
 ## Logo del establecimiento
 

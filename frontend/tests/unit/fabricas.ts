@@ -1,4 +1,22 @@
 import type { Interconsulta } from "@/types";
+import type { Usuario } from "@/types/usuario";
+
+export function crearUsuario(parcial: Partial<Usuario> = {}): Usuario {
+  return {
+    id: "u-1",
+    alias: "medico1",
+    nombre: "Ana Pérez",
+    correo: null,
+    rol: "medico",
+    especialidad: "Cardiología",
+    activo: true,
+    debe_cambiar_password: false,
+    tema: null,
+    tamano_letra: "normal",
+    modo_interfaz: "estandar",
+    ...parcial,
+  };
+}
 
 /** Interconsulta sintética con valores por defecto razonables. */
 export function crearInterconsulta(parcial: Partial<Interconsulta> = {}): Interconsulta {

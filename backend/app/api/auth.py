@@ -7,7 +7,12 @@ from app.core import auditoria
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.usuario import Usuario
-from app.schemas.auth import CambiarPasswordRequest, LoginRequest, UsuarioResponse
+from app.schemas.auth import (
+    CambiarPasswordRequest,
+    LoginRequest,
+    PreferenciasRequest,
+    UsuarioResponse,
+)
 from app.services.auth import (
     ESPECIALIDADES,
     ROL_ADMINISTRADOR,
@@ -176,6 +181,22 @@ def logout(request: Request, db: Session = DbSession) -> Response:
 
 @router.get("/me", response_model=UsuarioResponse)
 def me(usuario: Usuario = SesionValida) -> Usuario:
+    return usuario
+
+
+@router.patch("/preferencias", response_model=UsuarioResponse)
+def actualizar_preferencias(
+    payload: PreferenciasRequest,
+    usuario: Usuario = UsuarioActual,
+    db: Session = DbSession,
+) -> Usuario:
+    """Tema, tamano de letra y modo de interfaz de la cuenta. Viven en la base y
+    no solo en el navegador: en el hospital los equipos se comparten y un medico
+    no siempre vuelve al mismo."""
+    for campo, valor in payload.model_dump(exclude_unset=True).items():
+        setattr(usuario, campo, valor)
+    db.commit()
+    db.refresh(usuario)
     return usuario
 
 

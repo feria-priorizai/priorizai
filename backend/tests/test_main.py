@@ -60,6 +60,11 @@ def test_el_lifespan_prepara_la_base_y_verifica_las_credenciales(
     )
     monkeypatch.setattr(
         main_module,
+        "_asegurar_columnas_usuarios",
+        lambda: llamadas.append("columnas_usuarios"),
+    )
+    monkeypatch.setattr(
+        main_module,
         "_migrar_roles_antiguos",
         lambda: llamadas.append("roles"),
     )
@@ -81,6 +86,7 @@ def test_el_lifespan_prepara_la_base_y_verifica_las_credenciales(
         "credenciales",
         "create_all",
         "columnas",
+        "columnas_usuarios",
         "roles",
         "admin_inicial",
         "versiones_modelo",

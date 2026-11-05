@@ -39,8 +39,19 @@ export const ESPECIALIDADES = [
   "Urología",
 ] as const;
 
+export type Tema = "claro" | "oscuro";
+export type TamanoLetra = "normal" | "grande" | "muy_grande";
+export type ModoInterfaz = "estandar" | "legacy";
+
+export interface Preferencias {
+  /** null: sigue el tema del sistema operativo. */
+  tema: Tema | null;
+  tamano_letra: TamanoLetra;
+  modo_interfaz: ModoInterfaz;
+}
+
 /** Datos del usuario autenticado en el sistema */
-export interface Usuario {
+export interface Usuario extends Preferencias {
   id: string;
   alias: string;
   nombre: string;

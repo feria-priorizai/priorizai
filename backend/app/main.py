@@ -81,6 +81,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     settings.verificar_credenciales()
     Base.metadata.create_all(bind=engine)
     _asegurar_columnas_interconsultas()
+    _asegurar_columnas_usuarios()
     _migrar_roles_antiguos()
     _crear_admin_inicial()
     _preparar_versiones_modelo()
@@ -490,12 +491,19 @@ COLUMNAS_NUEVAS = {
 }
 
 
-def _asegurar_columnas_interconsultas() -> None:
+COLUMNAS_NUEVAS_USUARIOS = {
+    "tema": "VARCHAR(10)",
+    "tamano_letra": "VARCHAR(10) DEFAULT 'normal' NOT NULL",
+    "modo_interfaz": "VARCHAR(10) DEFAULT 'estandar' NOT NULL",
+}
+
+
+def _asegurar_columnas(tabla: str, nuevas: dict[str, str]) -> None:
     inspector = inspect(engine)
-    columnas = {columna["name"] for columna in inspector.get_columns("interconsultas")}
+    columnas = {columna["name"] for columna in inspector.get_columns(tabla)}
     faltantes = {
         nombre: definicion
-        for nombre, definicion in COLUMNAS_NUEVAS.items()
+        for nombre, definicion in nuevas.items()
         if nombre not in columnas
     }
     if not faltantes:
@@ -504,8 +512,16 @@ def _asegurar_columnas_interconsultas() -> None:
     with engine.begin() as connection:
         for nombre, definicion in faltantes.items():
             connection.execute(
-                text(f"ALTER TABLE interconsultas ADD COLUMN {nombre} {definicion}")
+                text(f"ALTER TABLE {tabla} ADD COLUMN {nombre} {definicion}")
             )
+
+
+def _asegurar_columnas_interconsultas() -> None:
+    _asegurar_columnas("interconsultas", COLUMNAS_NUEVAS)
+
+
+def _asegurar_columnas_usuarios() -> None:
+    _asegurar_columnas("usuarios", COLUMNAS_NUEVAS_USUARIOS)
 
 
 def _migrar_roles_antiguos() -> None:

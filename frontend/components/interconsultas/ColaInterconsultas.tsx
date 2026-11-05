@@ -22,6 +22,7 @@ import {
   agruparPorPrioridad,
   grupoDe,
   guardarOrdenLista,
+  leerInterconsultaAbierta,
   ordenarPorColumna,
   type ClaveGrupo,
   type ColumnaOrden,
@@ -112,6 +113,7 @@ export default function ColaInterconsultas({
   const idBase = useId();
 
   const [ordenTabla, setOrdenTabla] = useState<OrdenTabla | null>(null);
+  const [ultimaAbierta] = useState(leerInterconsultaAbierta);
 
   // Agrupar por prioridad desharía el orden por atraso: con ese filtro va un
   // solo grupo y cada ficha muestra su prioridad, que ya no la da la zona.
@@ -295,6 +297,7 @@ export default function ColaInterconsultas({
               onClickFila={alClickearFila}
               filaActiva={filaActiva}
               onEnfocarFila={setFilaEnfocada}
+              ultimaAbierta={ultimaAbierta}
             />
           ) : (
             porGrupo.map((grupo) => (
@@ -314,7 +317,9 @@ export default function ColaInterconsultas({
                 {grupo.items.map((ic) => (
                   <div
                     key={ic.id}
-                    className="pz-fila-cola"
+                    className={`pz-fila-cola${
+                      ic.id === ultimaAbierta ? " is-ultima" : ""
+                    }`}
                     data-testid="fila-interconsulta"
                     data-id={ic.id}
                     onClick={(e) => alClickearFila(e, ic.id)}
@@ -454,6 +459,7 @@ function TablaCola({
   onClickFila,
   filaActiva,
   onEnfocarFila,
+  ultimaAbierta,
 }: {
   filas: Interconsulta[];
   orden: OrdenTabla | null;
@@ -464,6 +470,7 @@ function TablaCola({
   onClickFila: (e: MouseEvent<HTMLElement>, id: string) => void;
   filaActiva: string | null;
   onEnfocarFila: (id: string) => void;
+  ultimaAbierta: string | null;
 }) {
   return (
     <div className="pz-planilla custom-scrollbar">
@@ -517,7 +524,7 @@ function TablaCola({
                 key={ic.id}
                 className={`pz-tabla-cola__fila--${zonaDe(clave)}${
                   seleccionadas.has(ic.id) ? " is-sel" : ""
-                }`}
+                }${ic.id === ultimaAbierta ? " is-ultima" : ""}`}
                 data-testid="fila-interconsulta"
                 data-id={ic.id}
                 onClick={(e) => onClickFila(e, ic.id)}

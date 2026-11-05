@@ -7,6 +7,8 @@
 @import "bootstrap/dist/css/bootstrap.min.css" layer(bootstrap);
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-tema="oscuro"], [data-tema="oscuro"] *));
+
 /* ============================================================
    Sistema de diseno PriorizAI — aplicacion
    ============================================================
@@ -76,6 +78,28 @@
   --pz-zona-media:  #FAE8CA;
   --pz-zona-baja:   #CFF1E4;
   --pz-zona-sin:    #DFE7F5;
+
+  /* ---------- Rellenos con texto blanco ----------
+     Varios colores de marca son a la vez tinta y relleno. En el tema oscuro
+     la tinta se aclara y dejaria de sostener texto blanco, asi que los
+     rellenos tienen token propio. */
+  --pz-relleno-verde:  var(--pz-green-ink);
+  --pz-relleno-azul:   var(--pz-blue-deep);
+  --pz-relleno-morado: var(--pz-purple-ink);
+  --pz-relleno-alta:   var(--pz-alta);
+  --pz-relleno-alta-2: var(--pz-alta-fuerte);
+  --pz-relleno-media:  var(--pz-media);
+  --pz-relleno-tinta:  var(--pz-ink);
+
+  /* ---------- Superficies derivadas ---------- */
+  --pz-purple-bg:   #EAE2FB;
+  --pz-header-bg:   rgba(198,215,240,.9);
+  --pz-reticula:    rgba(255,255,255,.5);
+  --pz-ficha:       rgba(255,255,255,.78);
+  --pz-fila-par:    #F6F9FE;
+  --pz-fila-hover:  #E3EDFC;
+  --pz-fila-sel:    #DCE8FC;
+  --pz-foco:        rgba(0,61,150,.16);
 
   /* ---------- Reticula ---------- */
   --pz-grid: 32px;
@@ -149,6 +173,84 @@
   --bs-focus-ring-color: rgba(0, 61, 150, .3);
 }
 
+/* ============================================================
+   Tema oscuro (HDU-18)
+   ============================================================
+   Solo cambian tokens: cada regla de abajo sigue siendo la misma en
+   los dos temas. Las superficies se aclaran hacia arriba, igual que
+   la elevacion del tema claro, y los colores de triage pasan a tonos
+   claros que mantienen 4.5:1 sobre todas ellas.
+   El sidebar ya es nocturno y se queda como esta. */
+:root[data-tema="oscuro"] {
+  color-scheme: dark;
+
+  --pz-green-ink:  #4FD6A8;
+  --pz-blue-deep:  #8DB9F5;
+  --pz-purple-ink: #BDA8F2;
+  --pz-favor:      #A98BEB;
+  --pz-contra:     #3FC3D6;
+
+  --pz-canvas:     #0B1626;
+  --pz-canvas-2:   #101E33;
+  --pz-paper:      #142238;
+  --pz-paper-2:    #1B2C47;
+  --pz-paper-3:    #243857;
+
+  --pz-ink:        #EDF3FC;
+  --pz-ink-2:      #C3D1E6;
+  --pz-ink-3:      #9DB0CC;
+  --pz-line:       #2B3F5E;
+  --pz-line-2:     #40587C;
+
+  --pz-alta:        #F58B8B;
+  --pz-alta-fuerte: #FFB1B1;
+  --pz-media:       #EBB04E;
+  --pz-media-fuerte:#F7CB7C;
+  --pz-alta-bg:     #431C21;
+  --pz-media-bg:    #3D2C12;
+  --pz-baja-bg:     #12382D;
+
+  --pz-zona-alta:   #33191E;
+  --pz-zona-media:  #302512;
+  --pz-zona-baja:   #122C24;
+  --pz-zona-sin:    #1A2840;
+
+  --pz-relleno-verde:  #0A7F5C;
+  --pz-relleno-azul:   #2563C4;
+  --pz-relleno-morado: #6A47B8;
+  --pz-relleno-alta:   #C53030;
+  --pz-relleno-alta-2: #A32626;
+  --pz-relleno-media:  #96600A;
+  --pz-relleno-tinta:  #2F4A70;
+
+  --pz-purple-bg:   #2C2350;
+  --pz-header-bg:   rgba(11,22,38,.9);
+  --pz-reticula:    rgba(255,255,255,.03);
+  --pz-ficha:       rgba(20,34,56,.85);
+  --pz-fila-par:    #18273F;
+  --pz-fila-hover:  #24395A;
+  --pz-fila-sel:    #2A4369;
+  --pz-foco:        rgba(141,185,245,.3);
+
+  --primary-light: #24395A;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.2);
+  --shadow-md: 0 2px 5px rgba(0,0,0,.35), 0 10px 24px rgba(0,0,0,.3);
+  --shadow-lg: 0 6px 12px rgba(0,0,0,.4), 0 20px 48px rgba(0,0,0,.45);
+
+  --bs-primary-rgb: 141, 185, 245;
+  --bs-focus-ring-color: rgba(141, 185, 245, .3);
+}
+
+/* ============================================================
+   Tamano de letra (HDU-19)
+   ============================================================
+   Tipografia, espaciado y anchos estan en rem, asi que basta con
+   escalar la raiz. Los porcentajes deben coincidir con ESCALA_LETRA
+   (utils/preferencias.ts). */
+html[data-letra="grande"]     { font-size: 125%; }
+html[data-letra="muy_grande"] { font-size: 150%; }
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -194,7 +296,7 @@ h1, h2, h3, h4, h5 {
   font-weight: 700;
 }
 
-::selection { background: var(--pz-blue-deep); color: #fff; }
+::selection { background: var(--pz-relleno-azul); color: #fff; }
 
 :focus-visible {
   outline: 3px solid var(--pz-blue-deep);
@@ -210,7 +312,7 @@ h1, h2, h3, h4, h5 {
   left: .75rem;
   z-index: 1100;
   padding: .6rem 1rem;
-  background: var(--pz-blue-deep);
+  background: var(--pz-relleno-azul);
   color: #fff;
   font-weight: 600;
   border-radius: var(--radius-sm);
@@ -257,8 +359,8 @@ h1, h2, h3, h4, h5 {
 .pz-blueprint {
   background-color: var(--pz-canvas);
   background-image:
-    linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px);
+    linear-gradient(var(--pz-reticula) 1px, transparent 1px),
+    linear-gradient(90deg, var(--pz-reticula) 1px, transparent 1px);
   background-size: var(--pz-grid) var(--pz-grid);
   background-position: -1px -1px;
 }
@@ -386,12 +488,12 @@ h1, h2, h3, h4, h5 {
   white-space: nowrap;
   border: 1px solid transparent;
 }
-.pz-chip--alta    { background: var(--pz-alta-bg);  color: var(--pz-alta-fuerte);  border-color: rgba(176,29,29,.3); }
-.pz-chip--media   { background: var(--pz-media-bg); color: var(--pz-media-fuerte); border-color: rgba(138,82,0,.3); }
-.pz-chip--baja    { background: var(--pz-baja-bg);  color: var(--pz-green-ink);    border-color: rgba(4,112,79,.3); }
+.pz-chip--alta    { background: var(--pz-alta-bg);  color: var(--pz-alta-fuerte);  border-color: color-mix(in srgb, var(--pz-alta) 30%, transparent); }
+.pz-chip--media   { background: var(--pz-media-bg); color: var(--pz-media-fuerte); border-color: color-mix(in srgb, var(--pz-media) 30%, transparent); }
+.pz-chip--baja    { background: var(--pz-baja-bg);  color: var(--pz-green-ink);    border-color: color-mix(in srgb, var(--pz-green-ink) 30%, transparent); }
 .pz-chip--neutral { background: var(--pz-paper-3);  color: var(--pz-ink-2);        border-color: var(--pz-line-2); }
-.pz-chip--ink     { background: var(--pz-ink);      color: #fff; }
-.pz-chip--flag    { background: var(--pz-alta);     color: #fff; }
+.pz-chip--ink     { background: var(--pz-relleno-tinta); color: #fff; }
+.pz-chip--flag    { background: var(--pz-relleno-alta);  color: #fff; }
 /* Atrasada (HDU-22): contorno punteado en tinta. Tiene que distinguirse de la
    bandera roja de un vistazo y sin depender del color. */
 .pz-chip--atrasada { background: var(--pz-paper); color: var(--pz-ink); border: 1px dashed var(--pz-ink); }
@@ -429,24 +531,24 @@ h1, h2, h3, h4, h5 {
   opacity: .75;
 }
 
-.pz-btn--verde  { background: var(--pz-green-ink);  color: #fff; }
+.pz-btn--verde  { background: var(--pz-relleno-verde);  color: #fff; }
 .pz-btn--verde:hover:not(:disabled)  { background: #035C41; }
-.pz-btn--azul   { background: var(--pz-blue-deep);  color: #fff; }
+.pz-btn--azul   { background: var(--pz-relleno-azul);   color: #fff; }
 .pz-btn--azul:hover:not(:disabled)   { background: #002F76; }
-.pz-btn--morado { background: var(--pz-purple-ink); color: #fff; }
+.pz-btn--morado { background: var(--pz-relleno-morado); color: #fff; }
 .pz-btn--morado:hover:not(:disabled) { background: #38206F; }
-.pz-btn--rojo   { background: var(--pz-alta);       color: #fff; }
-.pz-btn--rojo:hover:not(:disabled)   { background: var(--pz-alta-fuerte); }
+.pz-btn--rojo   { background: var(--pz-relleno-alta);   color: #fff; }
+.pz-btn--rojo:hover:not(:disabled)   { background: var(--pz-relleno-alta-2); }
 .pz-btn--claro  { background: var(--pz-paper); color: var(--pz-ink); border-color: var(--pz-line-2); }
 .pz-btn--claro:hover:not(:disabled)  { background: var(--pz-paper-2); border-color: var(--pz-blue-deep); color: var(--pz-blue-deep); }
 
 /* Nombres anteriores, mapeados a la nueva escala de color. */
-.pz-btn--solid  { background: var(--pz-green-ink); color: #fff; }
+.pz-btn--solid  { background: var(--pz-relleno-verde); color: #fff; }
 .pz-btn--solid:hover:not(:disabled)  { background: #035C41; }
 .pz-btn--ghost  { background: var(--pz-paper); color: var(--pz-ink); border-color: var(--pz-line-2); }
 .pz-btn--ghost:hover:not(:disabled)  { background: var(--pz-paper-2); border-color: var(--pz-blue-deep); color: var(--pz-blue-deep); }
-.pz-btn--danger { background: var(--pz-alta); color: #fff; }
-.pz-btn--danger:hover:not(:disabled) { background: var(--pz-alta-fuerte); }
+.pz-btn--danger { background: var(--pz-relleno-alta); color: #fff; }
+.pz-btn--danger:hover:not(:disabled) { background: var(--pz-relleno-alta-2); }
 
 .pz-btn--block { width: 100%; }
 .pz-btn--mini  { padding: .55rem .9rem; font-size: var(--fs-chip); }
@@ -469,7 +571,7 @@ h1, h2, h3, h4, h5 {
 .pz-form .form-control:focus,
 .pz-form .form-select:focus {
   border-color: var(--pz-blue-deep);
-  box-shadow: 0 0 0 4px rgba(0,61,150,.16);
+  box-shadow: 0 0 0 4px var(--pz-foco);
 }
 .pz-form .form-control[aria-invalid="true"] { border-color: var(--pz-alta); }
 .pz-form .form-control::placeholder { color: var(--pz-ink-3); }
@@ -566,19 +668,19 @@ h1, h2, h3, h4, h5 {
   cursor: pointer;
 }
 .form-check-input:checked {
-  background-color: var(--pz-green-ink);
-  border-color: var(--pz-green-ink);
+  background-color: var(--pz-relleno-verde);
+  border-color: var(--pz-relleno-verde);
 }
 .form-check-input:focus {
   border-color: var(--pz-blue-deep);
-  box-shadow: 0 0 0 4px rgba(0,61,150,.16);
+  box-shadow: 0 0 0 4px var(--pz-foco);
 }
 .form-check-input:disabled { cursor: not-allowed; opacity: .5; }
 
 /* Interruptor grande: es el control que mas se toca en configuracion. */
 .form-switch .form-check-input { width: 3rem; height: 1.6rem; border-radius: 999px; }
-.form-switch--import .form-check-input:checked { background-color: var(--pz-blue-deep); border-color: var(--pz-blue-deep); }
-.form-switch--export .form-check-input:checked { background-color: var(--pz-purple-ink); border-color: var(--pz-purple-ink); }
+.form-switch--import .form-check-input:checked { background-color: var(--pz-relleno-azul); border-color: var(--pz-relleno-azul); }
+.form-switch--export .form-check-input:checked { background-color: var(--pz-relleno-morado); border-color: var(--pz-relleno-morado); }
 
 /* ---------- Modal ---------- */
 .pz-modal-fondo {
@@ -723,6 +825,15 @@ h1, h2, h3, h4, h5 {
   pointer-events: none;
 }
 .pz-login > * { position: relative; z-index: 1; }
+
+/* ---------- Encabezado ---------- */
+.pz-header {
+  min-height: 86px;
+  background: var(--pz-header-bg);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  border-bottom: 2px solid var(--pz-line-2);
+}
 
 /* ---------- Sidebar ---------- */
 .pz-sidebar {
@@ -876,7 +987,7 @@ h1, h2, h3, h4, h5 {
   gap: 1.1rem;
   margin: 0 .9rem .5rem;
   padding: .95rem 1.1rem;
-  background: rgba(255,255,255,.78);
+  background: var(--pz-ficha);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background-color .15s ease, box-shadow .15s ease, transform .15s ease;
@@ -890,6 +1001,7 @@ h1, h2, h3, h4, h5 {
 }
 .pz-fila-cola:hover .pz-fila-cola__dx,
 .pz-fila-cola:focus-within .pz-fila-cola__dx { text-decoration: underline; }
+.pz-fila-cola.is-ultima { outline: 2px solid var(--pz-blue-deep); outline-offset: -2px; }
 .pz-fila-cola__id { width: 7.5rem; flex: none; }
 .pz-fila-cola__cuerpo { flex: 1; min-width: 0; }
 .pz-fila-cola__dx {
@@ -968,10 +1080,12 @@ h1, h2, h3, h4, h5 {
   color: var(--pz-ink-2);
 }
 .pz-tabla-cola > tbody tr { cursor: pointer; }
-.pz-tabla-cola > tbody tr:nth-child(even) > td { background: #F6F9FE; }
+.pz-tabla-cola > tbody tr:nth-child(even) > td { background: var(--pz-fila-par); }
 .pz-tabla-cola > tbody tr:hover > td,
-.pz-tabla-cola > tbody tr:focus-within > td { background: #E3EDFC; }
-.pz-tabla-cola > tbody tr.is-sel > td { background: #DCE8FC; }
+.pz-tabla-cola > tbody tr:focus-within > td { background: var(--pz-fila-hover); }
+.pz-tabla-cola > tbody tr.is-sel > td { background: var(--pz-fila-sel); }
+/* Ultima interconsulta abierta: el punto donde se retoma la lista (HDU-17). */
+.pz-tabla-cola > tbody tr.is-ultima > td { box-shadow: inset 0 2px 0 var(--pz-blue-deep), inset 0 -2px 0 var(--pz-blue-deep); }
 .pz-tabla-cola > tbody tr:hover .pz-tabla-cola__dx,
 .pz-tabla-cola > tbody tr:focus-within .pz-tabla-cola__dx { text-decoration: underline; }
 
@@ -1067,7 +1181,7 @@ h1, h2, h3, h4, h5 {
 .pz-vista__op + .pz-vista__op { border-left: 2px solid var(--pz-line); }
 .pz-vista__op svg { width: 15px; height: 15px; flex: none; }
 .pz-vista__op:hover:not(.is-on) { background: var(--pz-paper-2); color: var(--pz-blue-deep); }
-.pz-vista__op.is-on { background: var(--pz-ink); color: #fff; }
+.pz-vista__op.is-on { background: var(--pz-relleno-tinta); color: #fff; }
 .pz-vista__op:focus-visible { outline: 2px solid var(--pz-blue-deep); outline-offset: -4px; }
 
 /* Navegacion entre interconsultas (HDU-12). */
@@ -1091,7 +1205,7 @@ h1, h2, h3, h4, h5 {
 .pz-navegador .pz-btn,
 .pz-navegador__pos { white-space: nowrap; }
 @media (max-width: 575.98px) {
-  .pz-navegador__pasos { width: 100%; justify-content: space-between; }
+  .pz-navegador__pasos { width: 100%; flex-wrap: wrap; justify-content: space-between; }
 }
 
 /* ---------- Columna de decision ---------- */
@@ -1141,9 +1255,9 @@ h1, h2, h3, h4, h5 {
 .pz-seg__op:hover:not(:disabled):not(.is-on) { background: var(--pz-paper-2); }
 .pz-seg__op:disabled { cursor: not-allowed; opacity: .5; }
 .pz-seg__op.is-on { color: #fff; }
-.pz-seg__op.is-on[data-nivel="alta"]  { background: var(--pz-alta); }
-.pz-seg__op.is-on[data-nivel="media"] { background: var(--pz-media); }
-.pz-seg__op.is-on[data-nivel="baja"]  { background: var(--pz-green-ink); }
+.pz-seg__op.is-on[data-nivel="alta"]  { background: var(--pz-relleno-alta); }
+.pz-seg__op.is-on[data-nivel="media"] { background: var(--pz-relleno-media); }
+.pz-seg__op.is-on[data-nivel="baja"]  { background: var(--pz-relleno-verde); }
 
 /* El mismo selector para elegir la vista de la explicacion. Morado y no un
    color de prioridad: elegir una vista no es elegir una prioridad. */
@@ -1153,7 +1267,7 @@ h1, h2, h3, h4, h5 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .pz-seg--vistas .pz-seg__op { padding: .6rem .35rem; letter-spacing: .04em; }
-.pz-seg--vistas .pz-seg__op.is-on { background: var(--pz-purple-ink); }
+.pz-seg--vistas .pz-seg__op.is-on { background: var(--pz-relleno-morado); }
 .pz-seg--vistas .pz-seg__op:focus-visible {
   outline: 2px solid var(--pz-purple);
   outline-offset: -4px;
@@ -1295,4 +1409,361 @@ h1, h2, h3, h4, h5 {
   .pz-btn:hover:not(:disabled), .pz-rail__item:hover,
   .pz-fila-cola:hover { transform: none; }
   .pz-meter__fill--indeterminado { animation: none; width: 100%; opacity: .5; }
+}
+
+/* ============================================================
+   Letra grande: los breakpoints no escalan con la raiz
+   ============================================================
+   Las media queries miden en px del navegador: a 150 % en 1280 px caben
+   los caracteres de 853 px, pero Bootstrap sigue en su maqueta de
+   escritorio. Bajo el ancho que le corresponde a esa escala (992 px por
+   el factor), todo se apila como en pantalla angosta. */
+@media (max-width: 1239.98px) {
+  html[data-letra="grande"] .row > [class*="col-lg-"] { flex: 0 0 100%; width: 100%; max-width: 100%; }
+  html[data-letra="grande"] .pz-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 1487.98px) {
+  html[data-letra="muy_grande"] .row > [class*="col-lg-"] { flex: 0 0 100%; width: 100%; max-width: 100%; }
+  html[data-letra="muy_grande"] .pz-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* En telefono el menu contraido y los margenes le quitaban a la vista el ancho
+   que la letra ya gasta, y lo que no parte linea se salia del panel. */
+html:is([data-letra="grande"], [data-letra="muy_grande"]) .pz-chip { white-space: normal; }
+@media (max-width: 767.98px) {
+  html:is([data-letra="grande"], [data-letra="muy_grande"]) {
+    & .pz-sidebar--colapsado { width: 3.25rem; }
+    & .pz-sidebar--colapsado > div { padding-inline: .3rem !important; }
+    & .pz-sidebar--colapsado nav { padding-inline: .3rem !important; }
+    & .pz-sidebar--colapsado .pz-btn--nav { padding-inline: 0; }
+    & .pz-blueprint { padding: .5rem !important; }
+    & .pz-panel__head, & .pz-panel__body, & .pz-decision__seccion { padding-inline: .7rem; }
+    & .pz-fila-cola { margin-inline: .3rem; padding-inline: .6rem; }
+    & .pz-vista, & .pz-campo, & .pz-decision__seccion .flex, & .pz-decision .flex { flex-wrap: wrap; }
+    & .pz-fila-cola__lado { flex: 1 1 100%; flex-wrap: wrap; margin-left: 0; }
+    & .pz-navegador .pz-btn, & .pz-navegador__pos { white-space: normal; }
+    & .pz-eyebrow { letter-spacing: .04em; }
+    & .pz-campo__sw { width: auto; }
+  }
+}
+/* En la planilla el diagnostico se corta por diseno; a esta escala es justo
+   lo que se pidio leer entero. La tabla ya tiene scroll propio. */
+html[data-letra="grande"] .pz-tabla-cola__dx,
+html[data-letra="muy_grande"] .pz-tabla-cola__dx {
+  min-width: 14rem;
+  white-space: normal;
+  overflow: visible;
+}
+
+/* ============================================================
+   Modo legacy (HDU-17)
+   ============================================================
+   Las mismas vistas y los mismos componentes con la estructura de un
+   sitio institucional de salud: pagina blanca, banda azul con el menu
+   horizontal, secciones sin tarjeta separadas por una regla y tablas
+   de encabezado azul. Colores y estructura de referencia, sin logos
+   ni emblemas de ninguna institucion.
+   Todo vive aqui porque es CSS: las acciones no cambian y alternar no
+   vuelve a montar nada. Tipografia en rem, asi que el tamano de letra
+   (HDU-19) se aplica igual, y superficies en tokens, asi que el tema
+   oscuro (HDU-18) tambien. */
+:root[data-modo="legacy"] {
+  --pz-display: var(--font-legacy), Arial, sans-serif;
+  --pz-body:    var(--font-legacy), Arial, sans-serif;
+  --pz-mono:    var(--font-legacy), Arial, sans-serif;
+
+  --pz-legacy-banda:  #2B388F;
+  --pz-legacy-nav:    #0F69B4;
+  --pz-legacy-activo: #0A4F8A;
+
+  --pz-night:      #2B388F;
+  --pz-night-2:    #2B388F;
+  --pz-night-line: rgba(255,255,255,.18);
+
+  --fs-micro: .8rem;
+  --fs-chip:  .75rem;
+  --fs-sm:    .875rem;
+  --fs-base:  .9375rem;
+  --fs-md:    1rem;
+  --fs-lg:    1.2rem;
+  --fs-xl:    1.5rem;
+
+  --radius-sm: 2px;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+}
+:root[data-modo="legacy"]:not([data-tema="oscuro"]) {
+  --pz-canvas:   #FFFFFF;
+  --pz-paper:    #FFFFFF;
+  --pz-paper-2:  #F7F7F7;
+  --pz-paper-3:  #EDEDED;
+  --pz-ink:      #333333;
+  --pz-ink-2:    #4A4A4A;
+  --pz-ink-3:    #666666;
+  --pz-line:     #DDDDDD;
+  --pz-line-2:   #BBBBBB;
+  --pz-blue-deep: #0F69B4;
+  --pz-header-bg: #FFFFFF;
+  --pz-fila-par:   #F5F8FB;
+  --pz-fila-hover: #E4EFF9;
+  --pz-fila-sel:   #D5E6F5;
+  --pz-relleno-azul:   #0F69B4;
+  --pz-relleno-morado: #0F69B4;
+  --pz-relleno-tinta:  #0F69B4;
+  --pz-relleno-alta:   #C8283B;
+  --pz-relleno-alta-2: #A81F30;
+}
+:root[data-modo="legacy"][data-tema="oscuro"] {
+  --pz-legacy-banda:  #1B2460;
+  --pz-legacy-nav:    #0C5592;
+  --pz-legacy-activo: #083C69;
+  --pz-night:      #1B2460;
+  --pz-night-2:    #1B2460;
+}
+
+/* Sin animaciones. */
+[data-modo="legacy"] *,
+[data-modo="legacy"] *::before,
+[data-modo="legacy"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+[data-modo="legacy"] .pz-btn:hover:not(:disabled),
+[data-modo="legacy"] .pz-rail__item:hover,
+[data-modo="legacy"] .pz-fila-cola:hover,
+[data-modo="legacy"] .pz-fila-cola:focus-within { transform: none; }
+
+/* ---------- El menu lateral pasa a dos bandas superiores ----------
+   Arriba marca, usuario y accesos; debajo la navegacion azul. */
+[data-modo="legacy"] .pz-shell { flex-direction: column; }
+[data-modo="legacy"] .pz-sidebar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "marca usuario cuenta"
+    "nav   nav     acciones";
+  flex: none;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  background: var(--pz-legacy-nav);
+  box-shadow: none;
+}
+[data-modo="legacy"] .pz-sidebar::before,
+[data-modo="legacy"] .pz-sidebar__hueco,
+[data-modo="legacy"] .pz-toggle,
+[data-modo="legacy"] .pz-nav-group,
+[data-modo="legacy"] .pz-navlink svg,
+[data-modo="legacy"] .pz-sidebar__usuario > div:first-child,
+[data-modo="legacy"] .pz-login::before { display: none; }
+[data-modo="legacy"] .pz-sidebar__marca,
+[data-modo="legacy"] .pz-sidebar__usuario,
+[data-modo="legacy"] .pz-sidebar__cuenta {
+  background: var(--pz-legacy-banda);
+  border: 0 !important;
+  /* !important: los .px-3 y .py-4 de Bootstrap lo traen y, por estar en una capa
+     inferior, ganan a cualquier regla sin capa que no lo declare. */
+  padding: .5rem 1.25rem !important;
+}
+[data-modo="legacy"] .pz-sidebar__marca   { grid-area: marca; }
+[data-modo="legacy"] .pz-sidebar__usuario { grid-area: usuario; justify-content: flex-end; text-align: right; padding-inline: .5rem !important; }
+[data-modo="legacy"] .pz-sidebar__cuenta  { grid-area: cuenta; flex-direction: row; align-items: center; padding-left: .5rem !important; }
+[data-modo="legacy"] .pz-sidebar__nav     { grid-area: nav; padding: 0 .5rem !important; align-self: stretch; }
+[data-modo="legacy"] .pz-sidebar__acciones { grid-area: acciones; display: flex; align-items: center; padding: .2rem 1.25rem .2rem .5rem !important; }
+[data-modo="legacy"] .pz-sidebar__acciones > div { display: flex; flex-direction: row; gap: .4rem; }
+[data-modo="legacy"] .pz-sidebar__nav ul { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0; }
+[data-modo="legacy"] .pz-sidebar__nav li + li { border-left: 1px solid rgba(255,255,255,.55); }
+[data-modo="legacy"] .pz-sidebar__usuario p {
+  color: rgba(255,255,255,.88) !important;
+  text-transform: none;
+  letter-spacing: 0 !important;
+  line-height: 1.25;
+}
+[data-modo="legacy"] .pz-sidebar__rapidos { display: flex; }
+/* Barra apilada: cuando el ancho no da, o la letra grande se lo come, el nombre
+   se va (sigue en Mi cuenta) y la navegacion toma toda la fila. */
+@media (max-width: 991.98px) {
+  html[data-modo="legacy"] {
+    & .pz-sidebar {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas: "marca cuenta" "nav nav" "acciones acciones";
+    }
+    & .pz-sidebar__usuario { display: none; }
+    & .pz-sidebar__cuenta { justify-content: flex-end; padding-right: .75rem !important; }
+  }
+}
+@media (max-width: 1239.98px) {
+  html[data-modo="legacy"][data-letra="grande"] {
+    & .pz-sidebar {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas: "marca cuenta" "nav nav" "acciones acciones";
+    }
+    & .pz-sidebar__usuario { display: none; }
+    & .pz-sidebar__cuenta { justify-content: flex-end; padding-right: .75rem !important; }
+  }
+}
+@media (max-width: 1487.98px) {
+  html[data-modo="legacy"][data-letra="muy_grande"] {
+    & .pz-sidebar {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas: "marca cuenta" "nav nav" "acciones acciones";
+    }
+    & .pz-sidebar__usuario { display: none; }
+    & .pz-sidebar__cuenta { justify-content: flex-end; padding-right: .75rem !important; }
+  }
+}
+
+[data-modo="legacy"] .pz-navlink {
+  color: #fff;
+  font-family: var(--pz-body);
+  font-size: var(--fs-base);
+  padding: .55rem 1.1rem;
+  border: 0;
+  border-radius: 0;
+  gap: 0;
+}
+[data-modo="legacy"] .pz-navlink:hover { background: var(--pz-legacy-activo); }
+[data-modo="legacy"] .pz-navlink.is-active {
+  background: var(--pz-legacy-activo);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: none;
+}
+[data-modo="legacy"] .pz-sidebar__marca > *,
+[data-modo="legacy"] .pz-sidebar__acciones > * { margin: 0; }
+[data-modo="legacy"] .pz-btn--nav {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.6);
+  padding: .2rem .6rem;
+  width: auto;
+  white-space: nowrap;
+}
+[data-modo="legacy"] .pz-btn--nav:hover:not(:disabled) {
+  background: #fff;
+  color: var(--pz-legacy-banda);
+  border-color: #fff;
+}
+[data-modo="legacy"] .pz-aviso-flotante {
+  left: auto;
+  right: 1rem;
+  top: 1rem;
+  bottom: auto;
+  background: var(--pz-legacy-banda);
+}
+
+/* ---------- Encabezado de pagina ---------- */
+[data-modo="legacy"] .pz-header {
+  min-height: 0;
+  padding-block: .6rem;
+  background: var(--pz-paper);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid var(--pz-line);
+}
+[data-modo="legacy"] .pz-header h1 { color: var(--pz-blue-deep); margin-top: 0; }
+[data-modo="legacy"] .pz-modal-fondo { backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* ---------- Texto corriente, no rotulos tecnicos ---------- */
+[data-modo="legacy"] :is(
+  .pz-eyebrow, .pz-label, .pz-btn, .pz-chip, .pz-seg__op, .pz-rail__t,
+  .pz-grupo__t, .pz-vista__op, .pz-navlink, .pz-table > thead th, .pz-tabla-cola > thead th,
+  .pz-fila-cola__meta, .pz-form .form-label
+) {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+[data-modo="legacy"] .pz-btn,
+[data-modo="legacy"] .pz-table > thead th,
+[data-modo="legacy"] .pz-tabla-cola > thead th { font-weight: 600; }
+[data-modo="legacy"] .pz-eyebrow { color: var(--pz-ink-3); }
+[data-modo="legacy"] .pz-eyebrow::before { display: none; }
+[data-modo="legacy"] h1,
+[data-modo="legacy"] h2,
+[data-modo="legacy"] h3 { letter-spacing: 0; font-variation-settings: normal; font-weight: 600; }
+
+/* ---------- Secciones, no tarjetas ---------- */
+[data-modo="legacy"] .pz-blueprint { background-image: none; padding: 1rem 1.25rem !important; }
+[data-modo="legacy"] :is(.pz-panel, .pz-grupo-campos, .pz-barra) {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+}
+[data-modo="legacy"] .pz-panel__head {
+  padding: 0 0 .3rem;
+  background: none;
+  border-bottom: 2px solid var(--pz-legacy-nav);
+}
+[data-modo="legacy"] .pz-panel__head .pz-eyebrow { display: none; }
+[data-modo="legacy"] .pz-panel__title { color: var(--pz-blue-deep); font-weight: 600; margin-top: 0; }
+[data-modo="legacy"] .pz-panel__sub { margin-top: .1rem; }
+[data-modo="legacy"] .pz-panel__body { padding: .75rem 0; }
+[data-modo="legacy"] .pz-filtros > .pz-panel__body { padding: .5rem 0; }
+[data-modo="legacy"] .pz-decision__seccion { padding: .75rem 0; border-top-width: 1px; }
+[data-modo="legacy"] .pz-barra { padding: .5rem 0; }
+[data-modo="legacy"] .pz-grupo-campos__head { padding: .4rem 0; border-bottom-width: 1px; }
+[data-modo="legacy"] .pz-campo { padding-inline: 0; }
+
+/* Cifras del resumen como una fila de datos. */
+[data-modo="legacy"] .pz-rail { gap: 0; border-block: 1px solid var(--pz-line); }
+[data-modo="legacy"] .pz-rail__item {
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--pz-line);
+  padding: .4rem .75rem;
+}
+[data-modo="legacy"] .pz-rail__item:last-child { border-right: 0; }
+[data-modo="legacy"] .pz-rail__icono { display: none; }
+[data-modo="legacy"] .pz-rail__item .pz-num--lg { font-size: var(--fs-lg); font-weight: 600; letter-spacing: 0; }
+[data-modo="legacy"] .pz-rail__t { color: var(--pz-ink-2); }
+
+/* ---------- Tablas ----------
+   Siempre planilla: el selector de vista no aplica (ver useVistaLista). */
+[data-modo="legacy"] .pz-vista { display: none; }
+[data-modo="legacy"] .pz-planilla { border-top: 0; }
+[data-modo="legacy"] :is(.pz-table, .pz-tabla-cola) > thead th {
+  background: var(--pz-legacy-nav);
+  color: #fff;
+  border-bottom: 0;
+  border-right-color: rgba(255,255,255,.3);
+}
+[data-modo="legacy"] .pz-orden:hover,
+[data-modo="legacy"] .pz-orden.is-on { color: #fff; text-decoration: underline; }
+[data-modo="legacy"] .pz-tabla-cola > tbody tr > td.pz-tabla-cola__n { background: transparent; }
+[data-modo="legacy"] .pz-tabla-cola__dx { max-width: none; font-weight: 400; }
+[data-modo="legacy"] .pz-table > tbody td { padding: .4rem .6rem; }
+[data-modo="legacy"] .pz-table > thead th { padding: .45rem .6rem; }
+
+/* ---------- Controles ---------- */
+[data-modo="legacy"] .pz-btn { padding: .35rem .8rem; border-width: 1px; }
+[data-modo="legacy"] .pz-seg,
+[data-modo="legacy"] .pz-chip { border-width: 1px; }
+[data-modo="legacy"] .pz-seg__op { padding: .35rem .3rem; border-left-width: 1px; }
+[data-modo="legacy"] .pz-chip { border-radius: 0; padding: 0 .35rem; }
+[data-modo="legacy"] .pz-form .form-control,
+[data-modo="legacy"] .pz-form .form-select {
+  border-width: 1px;
+  padding: .3rem .5rem;
+  font-size: var(--fs-sm);
+}
+[data-modo="legacy"] .pz-form .form-select { padding-right: 2rem; }
+[data-modo="legacy"] .pz-form .form-control:focus,
+[data-modo="legacy"] .pz-form .form-select:focus { box-shadow: none; }
+[data-modo="legacy"] .pz-vigente { font-size: 1.6rem; font-weight: 700; letter-spacing: 0; }
+[data-modo="legacy"] .pz-meter,
+[data-modo="legacy"] .pz-meter__fill { border-radius: 0; }
+
+/* ---------- Pantallas angostas ----------
+   Las bandas se apilan y los accesos quedan como iconos: el texto sigue
+   en el DOM para el lector de pantalla. */
+@media (max-width: 991.98px) {
+  [data-modo="legacy"] .pz-sidebar__marca { padding-inline: .75rem !important; }
+  [data-modo="legacy"] .pz-sidebar__cuenta .pz-btn--nav { font-size: 0; gap: 0; padding-inline: .45rem; }
+  [data-modo="legacy"] .pz-sidebar__acciones { padding-inline: .5rem !important; }
+  [data-modo="legacy"] .pz-navlink { padding: .4rem .7rem; }
+  [data-modo="legacy"] .pz-blueprint { padding: .6rem !important; }
 }

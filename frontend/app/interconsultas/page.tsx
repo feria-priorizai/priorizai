@@ -23,7 +23,7 @@ export default function InterconsultasPage() {
     actualizarFiltros,
     limpiarFiltros,
     hayFiltrosActivos,
-  } = useInterconsultas();
+  } = useInterconsultas(usuario?.id);
   const { config } = useConfiguracionExport();
   const [vista, setVista] = useVistaLista();
 

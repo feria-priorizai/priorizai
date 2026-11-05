@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import type { NivelPrioridad } from "@/types";
 import { useInterconsultaDetalle } from "@/hooks/useInterconsultas";
 import { useSesion } from "@/context/SesionContext";
@@ -14,6 +14,7 @@ import NavegacionInterconsultas from "@/components/interconsultas/NavegacionInte
 import EstadoVista from "@/components/ui/EstadoVista";
 import { useConfiguracionExport } from "@/hooks/useConfiguracionCampos";
 import { exportarInterconsulta } from "@/utils/exportUtils";
+import { guardarInterconsultaAbierta } from "@/utils/ordenLista";
 import Link from "next/link";
 
 interface PageProps {
@@ -40,6 +41,8 @@ export default function InterconsultaDetallePage({ params }: PageProps) {
   const { config } = useConfiguracionExport();
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
   const [formato, setFormato] = useState<FormatoExportacion>("json");
+
+  useEffect(() => guardarInterconsultaAbierta(id), [id]);
 
   if (!usuario) {
     return null; // SesionProvider redirige al login si no hay usuario

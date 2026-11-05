@@ -12,6 +12,7 @@ import { useSesion } from "@/context/SesionContext";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { ConfiguracionProvider } from "@/context/ConfiguracionContext";
+import { PreferenciasProvider } from "@/context/PreferenciasContext";
 import { SesionProvider } from "@/context/SesionContext";
 import { ModalResultadoCarga } from "@/components/interconsultas/ModalResultadoCarga";
 
@@ -37,38 +38,40 @@ function AppShellInner({ children }: AppShellProps) {
   }
 
   return (
-    <ConfiguracionProvider>
-      {/* Primer elemento del tabulador (HDU-20): sin él, cada vista obliga a
-          recorrer todo el menú lateral antes de llegar al contenido. */}
-      <a
-        href="#contenido"
-        className="pz-saltar"
-        data-testid="saltar-contenido"
-        onClick={(e) => {
-          // Se enfoca a mano para no dejar #contenido en la URL de cada vista.
-          e.preventDefault();
-          document.getElementById("contenido")?.focus();
-        }}
-      >
-        Saltar al contenido
-      </a>
-      <div className="flex h-screen overflow-hidden">
-        <Sidebar />
+    <PreferenciasProvider>
+      <ConfiguracionProvider>
+        {/* Primer elemento del tabulador (HDU-20): sin él, cada vista obliga a
+            recorrer todo el menú lateral antes de llegar al contenido. */}
+        <a
+          href="#contenido"
+          className="pz-saltar"
+          data-testid="saltar-contenido"
+          onClick={(e) => {
+            // Se enfoca a mano para no dejar #contenido en la URL de cada vista.
+            e.preventDefault();
+            document.getElementById("contenido")?.focus();
+          }}
+        >
+          Saltar al contenido
+        </a>
+        <div className="pz-shell flex h-screen overflow-hidden">
+          <Sidebar />
 
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <Header />
-          <main
-            id="contenido"
-            tabIndex={-1}
-            className="pz-blueprint custom-scrollbar flex-1 overflow-y-auto p-[1rem] md:p-[1.5rem]"
-          >
-            {children}
-          </main>
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <Header />
+            <main
+              id="contenido"
+              tabIndex={-1}
+              className="pz-blueprint custom-scrollbar flex-1 overflow-y-auto p-[1rem] md:p-[1.5rem]"
+            >
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
 
-      <ModalResultadoCarga />
-    </ConfiguracionProvider>
+        <ModalResultadoCarga />
+      </ConfiguracionProvider>
+    </PreferenciasProvider>
   );
 }
 

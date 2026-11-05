@@ -6,6 +6,7 @@ import {
   crearUsuario,
   editarUsuario,
   eliminarUsuario,
+  guardarPreferencias,
   iniciarSesion,
   listarUsuarios,
   obtenerSesion,
@@ -22,6 +23,9 @@ const usuario: Usuario = {
   especialidad: "Cardiología",
   activo: true,
   debe_cambiar_password: false,
+  tema: null,
+  tamano_letra: "normal",
+  modo_interfaz: "estandar",
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -166,5 +170,25 @@ describe("cuentas", () => {
   it("informa si no pudo eliminar la cuenta", async () => {
     fetchMock.mockResolvedValue(respuestaJson({ detail: "No puedes eliminar tu propia cuenta" }, { status: 400 }));
     await expect(eliminarUsuario("u-1")).rejects.toThrow("No puedes eliminar tu propia cuenta");
+  });
+});
+
+describe("guardarPreferencias", () => {
+  it("envía solo lo que cambió", async () => {
+    fetchMock.mockResolvedValue(respuestaJson(usuario));
+
+    await guardarPreferencias({ tema: null });
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/auth/preferencias");
+    expect(fetchMock.mock.calls[0][1].method).toBe("PATCH");
+    expect(cuerpoEnviado()).toEqual({ tema: null });
+  });
+
+  it("lanza el mensaje del backend si falla", async () => {
+    fetchMock.mockResolvedValue(respuestaJson({ detail: "Sin permiso" }, { status: 403 }));
+
+    await expect(guardarPreferencias({ tema: "oscuro" })).rejects.toThrow(
+      "Sin permiso",
+    );
   });
 });

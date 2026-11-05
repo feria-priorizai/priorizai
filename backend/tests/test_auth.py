@@ -89,6 +89,9 @@ def test_login_valido_devuelve_el_usuario_y_abre_sesion(
         "especialidad": "Cardiología",
         "activo": True,
         "debe_cambiar_password": False,
+        "tema": None,
+        "tamano_letra": "normal",
+        "modo_interfaz": "estandar",
         "bloqueado_por_intentos": False,
     }
     me = cliente.get("/api/auth/me")
@@ -175,6 +178,7 @@ def test_usuario_inactivo_no_puede_entrar(
     ("metodo", "ruta"),
     [
         ("get", "/api/auth/me"),
+        ("patch", "/api/auth/preferencias"),
         ("get", "/api/interconsultas"),
         ("get", "/api/interconsultas/ic-001"),
         ("patch", "/api/interconsultas/ic-001/prioridad"),
@@ -1007,6 +1011,9 @@ def test_el_admin_edita_los_datos_de_una_cuenta(
         "especialidad": "Medicina Interna",
         "activo": True,
         "debe_cambiar_password": False,
+        "tema": None,
+        "tamano_letra": "normal",
+        "modo_interfaz": "estandar",
         "bloqueado_por_intentos": False,
     }
 
@@ -1331,3 +1338,92 @@ def test_el_arranque_pasa_los_roles_antiguos_a_medico(
         "admin": "administrador",
         "jperez": "medico",
     }
+
+
+def _preferencias(cliente: TestClient, **cambios: str | None):
+    return cliente.patch("/api/auth/preferencias", json=cambios)
+
+
+def test_las_preferencias_sobreviven_a_cerrar_sesion(
+    cliente: TestClient, usuario: Usuario
+) -> None:
+    _login(cliente)
+
+    response = _preferencias(
+        cliente, tema="oscuro", tamano_letra="muy_grande", modo_interfaz="legacy"
+    )
+    assert response.status_code == 200
+
+    cliente.post("/api/auth/logout")
+    me = _login(cliente).json()
+
+    assert me["tema"] == "oscuro"
+    assert me["tamano_letra"] == "muy_grande"
+    assert me["modo_interfaz"] == "legacy"
+
+
+def test_cambiar_una_preferencia_no_toca_las_demas(
+    cliente: TestClient, usuario: Usuario
+) -> None:
+    _login(cliente)
+    _preferencias(cliente, tema="oscuro", modo_interfaz="legacy")
+
+    me = _preferencias(cliente, tamano_letra="grande").json()
+
+    assert me["tema"] == "oscuro"
+    assert me["tamano_letra"] == "grande"
+    assert me["modo_interfaz"] == "legacy"
+
+
+def test_tema_nulo_vuelve_a_seguir_al_sistema_operativo(
+    cliente: TestClient, usuario: Usuario
+) -> None:
+    _login(cliente)
+    _preferencias(cliente, tema="oscuro")
+
+    assert _preferencias(cliente, tema=None).json()["tema"] is None
+
+
+def test_las_preferencias_son_de_cada_cuenta(
+    cliente: TestClient, usuario: Usuario, db: Session
+) -> None:
+    _cuenta_en_uso(
+        db,
+        alias="mrojas",
+        nombre="Dra. María Rojas",
+        correo="maria@hospital.cl",
+        rol="medico",
+        especialidad="Cardiología",
+    )
+    _login(cliente)
+    _preferencias(cliente, tema="oscuro")
+    cliente.post("/api/auth/logout")
+
+    assert _login(cliente, alias="mrojas").json()["tema"] is None
+
+
+@pytest.mark.parametrize(
+    "cambio",
+    [
+        {"tema": "azul"},
+        {"tamano_letra": "enorme"},
+        {"tamano_letra": None},
+        {"modo_interfaz": "retro"},
+        {"modo_interfaz": None},
+    ],
+)
+def test_preferencia_fuera_de_catalogo_se_rechaza(
+    cliente: TestClient, usuario: Usuario, cambio: dict[str, str | None]
+) -> None:
+    _login(cliente)
+
+    assert _preferencias(cliente, **cambio).status_code == 422
+    assert cliente.get("/api/auth/me").json()["tamano_letra"] == "normal"
+
+
+def test_preferencias_exigen_cambiar_la_contrasena_inicial(
+    cliente: TestClient, cuenta_nueva: Usuario
+) -> None:
+    _login(cliente, alias="mrojas")
+
+    assert _preferencias(cliente, tema="oscuro").status_code == 403

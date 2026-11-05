@@ -68,6 +68,11 @@ def test_el_lifespan_prepara_la_base_y_verifica_las_credenciales(
         "_crear_admin_inicial",
         lambda: llamadas.append("admin_inicial"),
     )
+    monkeypatch.setattr(
+        main_module,
+        "_preparar_versiones_modelo",
+        lambda: llamadas.append("versiones_modelo"),
+    )
 
     with TestClient(main_module.app) as cliente:
         assert cliente.get("/health").status_code == 200
@@ -78,6 +83,7 @@ def test_el_lifespan_prepara_la_base_y_verifica_las_credenciales(
         "columnas",
         "roles",
         "admin_inicial",
+        "versiones_modelo",
     ]
 
 

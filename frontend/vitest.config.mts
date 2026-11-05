@@ -31,6 +31,8 @@ export default defineConfig({
         "components/ui/**/*.tsx",
         "components/auth/FormularioCambioPassword.tsx",
         "components/interconsultas/FormularioModificarPrioridad.tsx",
+        "components/reentrenamiento/FormularioReentrenamiento.tsx",
+        "components/reentrenamiento/PanelEjecucion.tsx",
       ],
       thresholds: {
         lines: 90,

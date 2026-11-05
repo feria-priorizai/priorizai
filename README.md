@@ -15,7 +15,7 @@ El sistema está diseñado para ejecutarse dentro de la red del establecimiento.
 | `backend/` | API REST en FastAPI, modelos de datos y servicios de priorización, NER y banderas rojas |
 | `frontend/` | Aplicación web en Next.js (App Router) que consume la API |
 | `landing/` | Sitio estático de presentación del producto |
-| `scripts/` | Priorización por lotes fuera de la aplicación |
+| `scripts/` | Priorización por lotes fuera de la aplicación y datos sintéticos para probar el reentrenamiento |
 | `qa/` | Ambiente de pruebas: E2E (Playwright), carga (k6), datos sintéticos y servicio de modelos falso |
 | `docker/` | Imagen de Jenkins |
 | `docs/` | Documentación técnica |
@@ -50,7 +50,8 @@ cp .env.example .env
 | `MODEL_SERVICE_URL` | *(vacía)* | URL del servicio de modelos externo. Vacía, los modelos corren dentro del backend |
 | `MODEL_SERVICE_TIMEOUT` | `300` | Segundos de espera por respuesta del servicio |
 | `MODEL_SERVICE_API_KEY` | *(vacía)* | Clave que exige el servicio. Es un secreto: solo en el `.env` local |
-
+| `REENTRENAMIENTO_MINIMO` | `100` | Interconsultas con prioridad (revisadas o de archivos) necesarias para poder reentrenar |
+| `REENTRENAMIENTO_MODELO_BASE` | `PlanTL-GOB-ES/bsc-bio-ehr-es` | RoBERTa de partida: id de Hugging Face o carpeta local (servidores sin internet) |
 El backend acepta además `MODEL_PATH`, `NER_MODEL_PATH` y `MODEL_LABELS`, que
 `docker-compose.yml` ya define apuntando a la carpeta `models/`. Solo se usan
 cuando `MODEL_SERVICE_URL` está vacía.
@@ -249,6 +250,65 @@ Tres límites que hay que tener presentes:
 - **Necesita el modelo dentro del backend.** Con `MODEL_SERVICE_URL`, el
   servicio externo no expone explicaciones y el endpoint responde 503.
 
+### Reentrenamiento
+
+Un administrador puede reentrenar el modelo desde **Reentrenamiento** en el
+menú, con las interconsultas cuya prioridad un médico confirmó (estado
+`revisada`) o corrigió. Las que solo priorizó el modelo o una bandera roja no se
+usan: el modelo aprendería de sí mismo. Un médico no ve la opción, y la API le
+responde 403.
+
+- **Archivos con interconsultas ya priorizadas.** Además de las revisadas en la
+  app, se puede subir un `.csv`, `.xlsx` o `.json` con interconsultas que ya
+  tienen prioridad (por ejemplo, el histórico del hospital) y elegir con qué
+  fuentes entrenar. Usa las mismas columnas de la carga de interconsultas; solo
+  `PRIORIDAD` (alta, media o baja) e `HISTORIA_CLINICA` son obligatorias. El
+  archivo queda guardado en el servidor (`models/versiones/datos/`) para
+  próximos reentrenamientos, y las filas que no sirven se informan sin detener
+  la carga. Si una interconsulta viene en más de una fuente, se usa una vez.
+- **Qué entrena.** RoBERTa (`REENTRENAMIENTO_MODELO_BASE`) con su capa de
+  clasificación. El modelo queda en el mismo formato que la app ya carga, así
+  que la explicabilidad funciona igual con él.
+- **Configuración.** «El sistema elige por ti» entrena una vez con valores
+  probados. Si no, se configuran de una a tres corridas (épocas, learning
+  rate, batch, largo máximo, paciencia) y se elige CPU o GPU. En CPU puede
+  tardar horas.
+- **Comparación justa.** Antes de entrenar se aparta un conjunto de
+  evaluación, estratificado por prioridad. El modelo en uso y los nuevos se
+  miden sobre ese mismo conjunto: exactitud, F1 macro y sensibilidad de la
+  prioridad alta.
+- **Nada entra en uso solo.** Cada modelo nuevo queda guardado como versión.
+  Se activa con un botón, y en ese momento cambia el modelo sin reiniciar el
+  backend. Las interconsultas ya priorizadas no se tocan.
+- **Versiones y reversión.** Se puede volver a cualquier versión anterior.
+  Cada cambio queda registrado con quién lo hizo y cuándo.
+- **Corre aparte.** El entrenamiento corre en un proceso separado
+  (`app/entrenamiento/entrenar.py`), así que la app sigue priorizando mientras
+  tanto. Hay uno solo a la vez y se puede cancelar. Si el backend se reinicia a
+  mitad de camino, queda marcado como interrumpido.
+
+Los modelos se guardan en el disco del servidor que hostea la app
+(`models/versiones/`). Los datos del hospital y lo entrenado con ellos no salen
+de ahí. Al terminar un reentrenamiento, el resultado muestra la carpeta de cada
+modelo nuevo y un botón para descargarlo, aunque no se active. Con Docker la
+carpeta se muestra como `models/versiones/...` del proyecto
+(`MODELOS_VERSIONES_DIR_VISIBLE`), no con la ruta interna del contenedor. Para llevar un modelo a otro computador, se descarga como `.zip` desde
+la tabla de versiones y se sube en el otro con «Subir modelo». Solo se aceptan
+pesos `.safetensors`, porque un `.bin` de PyTorch puede ejecutar código al
+cargarse.
+
+Con `MODEL_SERVICE_URL` definida no se puede reentrenar ni activar versiones:
+el modelo en uso vive en ese servicio.
+
+Para probarlo sin datos reales,
+`scripts/generar_interconsultas_reentrenamiento.py` arma un `.xlsx` sintético
+listo para subir (`python scripts/generar_interconsultas_reentrenamiento.py
+salida.xlsx 300`). Cada diagnóstico aparece en las tres prioridades y lo que
+decide es la gravedad del cuadro, con casos limítrofes y algo de desacuerdo
+entre priorizadores. Por eso un buen modelo no debería pasar de un 90 % de
+exactitud. Métricas cercanas al 100 % indican que los datos delatan la
+prioridad.
+
 ## Ejecutar con Docker
 
 ```bash
@@ -340,6 +400,17 @@ docker compose down -v
 | `POST` | `/api/interconsultas/priorizar` | Ejecuta el modelo sobre los identificadores indicados |
 | `POST` | `/api/interconsultas/priorizar-pendientes` | Ejecuta el modelo sobre las que aún no tienen prioridad |
 | `POST` | `/api/interconsultas/reevaluar-banderas` | Vuelve a aplicar el catálogo de términos de alarma |
+| `GET` | `/api/reentrenamiento/resumen` | Interconsultas disponibles para reentrenar, si se puede iniciar y si hay GPU (solo administrador) |
+| `GET` / `POST` | `/api/reentrenamiento/trabajos` | Historial de reentrenamientos / lanza uno y responde 202 (solo administrador) |
+| `GET` | `/api/reentrenamiento/trabajos/{id}` | Estado, avance, log y resultados de un reentrenamiento |
+| `POST` | `/api/reentrenamiento/trabajos/{id}/cancelar` | Cancela el reentrenamiento en curso |
+| `GET` | `/api/reentrenamiento/versiones` | Versiones del modelo guardadas en el servidor |
+| `POST` | `/api/reentrenamiento/versiones/{id}/activar` | Pone una versión en uso (activar o revertir) y lo registra |
+| `GET` | `/api/reentrenamiento/versiones/{id}/descargar` | Descarga la versión como `.zip` |
+| `POST` | `/api/reentrenamiento/versiones/subir` | Sube un `.zip` de otro servidor como versión nueva, sin activarla |
+| `GET` | `/api/reentrenamiento/cambios` | Registro de activaciones y reversiones |
+| `GET` / `POST` | `/api/reentrenamiento/datos` | Archivos con interconsultas ya priorizadas / sube uno (`.csv`, `.xlsx` o `.json`) |
+| `DELETE` | `/api/reentrenamiento/datos/{id}` | Borra un archivo y sus datos del servidor |
 | `GET` | `/api/plazos-revision` | Plazos máximos de revisión, en días, de cada prioridad |
 | `PUT` | `/api/plazos-revision` | Define los tres plazos: enteros positivos, sin que una prioridad más alta tenga más días que una más baja (solo administrador) |
 

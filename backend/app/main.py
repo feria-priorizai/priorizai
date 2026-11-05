@@ -22,6 +22,7 @@ from app.api.auth import router as auth_router
 from app.api.interconsultas import encolar_explicaciones
 from app.api.interconsultas import router as interconsultas_router
 from app.api.plazos_revision import router as plazos_revision_router
+from app.api.reentrenamiento import router as reentrenamiento_router
 from app.api.usuarios import router as usuarios_router
 from app.core.config import settings
 from app.core.database import SessionLocal, engine
@@ -36,6 +37,8 @@ from app.services.priorizador import (
     get_priorizador,
     tiene_informacion_clinica,
 )
+from app.services.reentrenamiento import get_priorizador_local
+from app.services.reentrenamiento import preparar as preparar_reentrenamiento
 
 UPLOAD_FILE = File(...)
 CAMPOS_OBLIGATORIOS_FORM = Form(None)
@@ -80,6 +83,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     _asegurar_columnas_interconsultas()
     _migrar_roles_antiguos()
     _crear_admin_inicial()
+    _preparar_versiones_modelo()
     yield
 
 
@@ -142,6 +146,7 @@ app.include_router(auth_router)
 app.include_router(interconsultas_router)
 app.include_router(plazos_revision_router)
 app.include_router(usuarios_router)
+app.include_router(reentrenamiento_router)
 
 
 @app.get("/")
@@ -517,6 +522,14 @@ def _crear_admin_inicial() -> None:
     session = SessionLocal()
     try:
         asegurar_admin_inicial(session)
+    finally:
+        session.close()
+
+
+def _preparar_versiones_modelo() -> None:
+    session = SessionLocal()
+    try:
+        preparar_reentrenamiento(session, get_priorizador_local())
     finally:
         session.close()
 

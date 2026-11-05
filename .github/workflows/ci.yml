@@ -22,6 +22,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # El runner trae unos 14 GB libres y, sin caché, la imagen del backend
+      # (torch con las librerías CUDA) no cabe: el build fallaba con "no space
+      # left on device". Se borran herramientas que este pipeline no usa.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup
+          docker image prune --all --force
+          df -h /
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -107,6 +116,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # El runner trae unos 14 GB libres y, sin caché, la imagen del backend
+      # (torch con las librerías CUDA) no cabe: el build fallaba con "no space
+      # left on device". Se borran herramientas que este pipeline no usa.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup
+          docker image prune --all --force
+          df -h /
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
